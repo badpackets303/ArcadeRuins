@@ -1,0 +1,92 @@
+name: SpikeAU
+options:
+  bundleIdPrefix: com.badpackets303
+  createIntermediateGroups: true
+  deploymentTarget:
+    macCatalyst: "14.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    # No Apple Developer account on this machine (ADR-005) -> ad-hoc signing.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGNING_REQUIRED: YES
+    DEVELOPMENT_TEAM: ""
+    PROVISIONING_PROFILE_SPECIFIER: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  SpikeAU:
+    type: application
+    supportedDestinations: [macCatalyst]
+    sources: [App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.SpikeAU
+        PRODUCT_NAME: SpikeAU
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        DEVELOPMENT_TEAM: ""
+        PROVISIONING_PROFILE_SPECIFIER: ""
+    entitlements:
+      path: App/SpikeAU.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: SpikeAU
+        CFBundleDisplayName: SpikeAU
+        CFBundlePackageType: APPL
+        UILaunchScreen: {}
+        LSApplicationCategoryType: public.app-category.music
+    dependencies:
+      - target: SpikeAUExtension
+        embed: true
+        codeSign: true
+
+  SpikeAUExtension:
+    type: app-extension
+    supportedDestinations: [macCatalyst]
+    sources: [AU]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.SpikeAU.AUv3
+        PRODUCT_NAME: SpikeAUExtension
+        PRODUCT_MODULE_NAME: SpikeAUExtension
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        DEVELOPMENT_TEAM: ""
+        PROVISIONING_PROFILE_SPECIFIER: ""
+    entitlements:
+      path: AU/SpikeAUExtension.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    info:
+      path: AU/Info.plist
+      properties:
+        CFBundleName: SpikeAUExtension
+        CFBundleDisplayName: SpikeAUExtension
+        CFBundlePackageType: XPC!
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.AudioUnit-UI
+          NSExtensionPrincipalClass: SpikeAUExtension.SpikeAudioUnitViewController
+          NSExtensionAttributes:
+            AudioComponentBundle: SpikeAUExtension
+            AudioComponents:
+              - name: "BadPackets: SpikeAU"
+                description: Catalyst AUv3 feasibility spike
+                manufacturer: BP03
+                type: aumu
+                subtype: spk1
+                version: 65536
+                sandboxSafe: true
+                tags: [Synthesizer]

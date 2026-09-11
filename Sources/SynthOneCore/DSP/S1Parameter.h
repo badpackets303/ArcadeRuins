@@ -1,0 +1,181 @@
+//
+//  S1Parameter.h
+//  AudioKit
+//
+//  Created by AudioKit Contributors on 12/24/17.
+//  Copyright © 2017 AudioKit. All rights reserved.
+//
+
+// PORT FIX (P1-6): framework-style import + a named include guard.
+// S1Parameter.h is now a public header of SynthOneCore, and Xcode flattens
+// public headers into Headers/, so the "AudioKit/..." path does not survive.
+// The guard replaces `#pragma once` because this file is legitimately reached
+// by two different paths inside the framework build — the source tree for the
+// Obj-C++ kernel, and the copied public header for anything that comes in
+// through <SynthOneCore/...>. `#pragma once` keys on file identity, so it would
+// let the enum be defined twice; a macro guard does not.
+#import <SynthOneCore/AKInterop.h>
+
+#ifndef S1_PARAMETER_H
+#define S1_PARAMETER_H
+
+typedef AK_ENUM(S1Parameter) {
+    index1 = 0,
+    index2 = 1,
+    morphBalance = 2,
+    morph1SemitoneOffset = 3,
+    morph2SemitoneOffset = 4,
+    morph1Volume = 5,
+    morph2Volume = 6,
+    subVolume = 7,
+    subOctaveDown = 8,
+    subIsSquare = 9,
+    fmVolume = 10,
+    fmAmount = 11,
+    noiseVolume = 12,
+    lfo1Index = 13,
+    lfo1Amplitude = 14,
+    lfo1Rate = 15, // hz
+    cutoff = 16,
+    resonance = 17,
+    filterMix = 18, // unused...hard coded to 1
+    filterADSRMix = 19,
+    isMono = 20,
+    glide = 21,
+    filterAttackDuration = 22,
+    filterDecayDuration = 23,
+    filterSustainLevel = 24,
+    filterReleaseDuration = 25,
+    attackDuration = 26,
+    decayDuration = 27,
+    sustainLevel = 28,
+    releaseDuration = 29,
+    morph2Detuning = 30,
+    detuningMultiplier = 31,
+    masterVolume = 32,
+    bitCrushDepth = 33,//bitCrushDepth is unused
+    bitCrushSampleRate = 34,
+    autoPanAmount = 35,
+    autoPanFrequency = 36,
+    reverbOn = 37,
+    reverbFeedback = 38,
+    reverbHighPass = 39,
+    reverbMix = 40,
+    delayOn = 41,
+    delayFeedback = 42,
+    delayTime = 43,
+    delayMix = 44,
+    lfo2Index = 45,
+    lfo2Amplitude = 46,
+    lfo2Rate = 47, // hz
+    cutoffLFO = 48,
+    resonanceLFO = 49,
+    oscMixLFO = 50,
+    reverbMixLFO = 51,
+    decayLFO = 52,
+    noiseLFO = 53,
+    fmLFO = 54,
+    detuneLFO = 55,
+    filterEnvLFO = 56,
+    pitchLFO = 57,
+    bitcrushLFO = 58,
+    tremoloLFO = 59,
+    arpDirection = 60,
+    arpInterval = 61,
+    arpIsOn = 62,
+    arpOctave = 63,
+    arpRate = 64, // rate in bpm, not hz
+    arpIsSequencer = 65,
+    arpTotalSteps = 66,
+    sequencerPattern00 = 67,
+    sequencerPattern01 = 68,
+    sequencerPattern02 = 69,
+    sequencerPattern03 = 70,
+    sequencerPattern04 = 71,
+    sequencerPattern05 = 72,
+    sequencerPattern06 = 73,
+    sequencerPattern07 = 74,
+    sequencerPattern08 = 75,
+    sequencerPattern09 = 76,
+    sequencerPattern10 = 77,
+    sequencerPattern11 = 78,
+    sequencerPattern12 = 79,
+    sequencerPattern13 = 80,
+    sequencerPattern14 = 81,
+    sequencerPattern15 = 82,
+    sequencerOctBoost00 = 83,
+    sequencerOctBoost01 = 84,
+    sequencerOctBoost02 = 85,
+    sequencerOctBoost03 = 86,
+    sequencerOctBoost04 = 87,
+    sequencerOctBoost05 = 88,
+    sequencerOctBoost06 = 89,
+    sequencerOctBoost07 = 90,
+    sequencerOctBoost08 = 91,
+    sequencerOctBoost09 = 92,
+    sequencerOctBoost10 = 93,
+    sequencerOctBoost11 = 94,
+    sequencerOctBoost12 = 95,
+    sequencerOctBoost13 = 96,
+    sequencerOctBoost14 = 97,
+    sequencerOctBoost15 = 98,
+    sequencerNoteOn00 = 99,
+    sequencerNoteOn01 = 100,
+    sequencerNoteOn02 = 101,
+    sequencerNoteOn03 = 102,
+    sequencerNoteOn04 = 103,
+    sequencerNoteOn05 = 104,
+    sequencerNoteOn06 = 105,
+    sequencerNoteOn07 = 106,
+    sequencerNoteOn08 = 107,
+    sequencerNoteOn09 = 108,
+    sequencerNoteOn10 = 109,
+    sequencerNoteOn11 = 110,
+    sequencerNoteOn12 = 111,
+    sequencerNoteOn13 = 112,
+    sequencerNoteOn14 = 113,
+    sequencerNoteOn15 = 114,
+    filterType = 115,
+    phaserMix = 116,
+    phaserRate = 117,
+    phaserFeedback = 118,
+    phaserNotchWidth = 119,
+    monoIsLegato = 120, // range [0 = legato, 1 = portamento (default)]
+    widen = 121,
+    compressorMasterRatio = 122,
+    compressorReverbInputRatio = 123,
+    compressorReverbWetRatio = 124,
+    compressorMasterThreshold = 125,
+    compressorReverbInputThreshold = 126,
+    compressorReverbWetThreshold = 127,
+    compressorMasterAttack = 128,
+    compressorReverbInputAttack = 129,
+    compressorReverbWetAttack = 130,
+    compressorMasterRelease = 131,
+    compressorReverbInputRelease = 132,
+    compressorReverbWetRelease = 133,
+    compressorMasterMakeupGain = 134,
+    compressorReverbInputMakeupGain = 135,
+    compressorReverbWetMakeupGain = 136,
+    delayInputCutoffTrackingRatio = 137,
+    delayInputResonance = 138,
+    tempoSyncToArpRate = 139,
+    pitchbend = 140,
+    pitchbendMinSemitones = 141,
+    pitchbendMaxSemitones = 142,
+    frequencyA4 = 143,
+    portamentoHalfTime = 144,
+
+    oscBandlimitIndexOverride = 145, // deprecated
+    oscBandlimitEnable = 146,
+
+    arpSeqTempoMultiplier = 147,
+
+    transpose = 148,
+
+    adsrPitchTracking = 149,
+
+    S1ParameterCount = 150
+} S1Parameter;
+
+#endif /* S1_PARAMETER_H */

@@ -1,0 +1,1725 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="ipad9_7" orientation="landscape" layout="fullscreen" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15509"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--iPhone Synth One-->
+        <scene sceneID="9OV-GN-MVo">
+            <objects>
+                <viewController storyboardIdentifier="iPhoneParentVC" id="ATT-v0-t3Z" userLabel="iPhone Synth One" customClass="Manager" customModule="AudioKitSynthOne" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="0vi-gB-nau"/>
+                        <viewControllerLayoutGuide type="bottom" id="Snv-Cp-FiC"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="ONJ-nj-oqT">
+                        <rect key="frame" x="0.0" y="0.0" width="812" height="375"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Goc-E4-LLj">
+                                <rect key="frame" x="72.5" y="0.0" width="667" height="375"/>
+                                <subviews>
+                                    <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="GEZ-Ki-wOH" userLabel="Header View Container">
+                                        <rect key="frame" x="0.0" y="0.0" width="667" height="26"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="667" id="Slq-n3-f7E"/>
+                                            <constraint firstAttribute="height" constant="26" id="zrP-AF-QVo"/>
+                                        </constraints>
+                                        <connections>
+                                            <segue destination="eky-JD-VtV" kind="embed" id="SKb-uk-5PE"/>
+                                        </connections>
+                                    </containerView>
+                                    <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="A4E-fM-RwT" userLabel="Panel View Container">
+                                        <rect key="frame" x="0.0" y="26" width="667" height="236"/>
+                                        <color key="backgroundColor" red="0.15686274510000001" green="0.15686274510000001" blue="0.15686274510000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="236" id="AUg-8D-3pO"/>
+                                        </constraints>
+                                        <connections>
+                                            <segue destination="cl1-uI-Igd" kind="embed" id="WBY-OZ-8as"/>
+                                        </connections>
+                                    </containerView>
+                                </subviews>
+                                <color key="backgroundColor" red="0.094117647058823528" green="0.094117647058823528" blue="0.094117647058823528" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="375" id="191-8u-PZf"/>
+                                    <constraint firstItem="A4E-fM-RwT" firstAttribute="leading" secondItem="Goc-E4-LLj" secondAttribute="leading" id="1y9-pG-kXq"/>
+                                    <constraint firstItem="A4E-fM-RwT" firstAttribute="top" secondItem="GEZ-Ki-wOH" secondAttribute="bottom" id="FbI-Qa-i5s"/>
+                                    <constraint firstItem="GEZ-Ki-wOH" firstAttribute="top" secondItem="Goc-E4-LLj" secondAttribute="top" id="K65-kC-JB1"/>
+                                    <constraint firstAttribute="width" constant="667" id="Or7-Yw-JOd"/>
+                                    <constraint firstAttribute="trailing" secondItem="GEZ-Ki-wOH" secondAttribute="trailing" id="VHU-Sv-OiE"/>
+                                    <constraint firstAttribute="trailing" secondItem="A4E-fM-RwT" secondAttribute="trailing" id="fPA-u4-1DE"/>
+                                    <constraint firstItem="GEZ-Ki-wOH" firstAttribute="leading" secondItem="Goc-E4-LLj" secondAttribute="leading" id="hZl-cA-gPi"/>
+                                </constraints>
+                            </view>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="rack-left" translatesAutoresizingMaskIntoConstraints="NO" id="nOC-fL-84F">
+                                <rect key="frame" x="48.5" y="0.0" width="20" height="375"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="20" id="JDk-kP-QZV"/>
+                                </constraints>
+                            </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="rack-left" translatesAutoresizingMaskIntoConstraints="NO" id="8ZZ-vt-Xhv">
+                                <rect key="frame" x="743.5" y="0.0" width="20" height="375"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="20" id="ol6-kV-WCp"/>
+                                </constraints>
+                            </imageView>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="rJt-Cb-A4b">
+                                <rect key="frame" x="739.5" y="0.0" width="4" height="375"/>
+                                <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="4" id="5Ec-m3-phk"/>
+                                </constraints>
+                            </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="8ZO-u3-H8d" userLabel="KeyboardContainer">
+                                <rect key="frame" x="0.0" y="257" width="812" height="118"/>
+                                <subviews>
+                                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="keyboard_top" translatesAutoresizingMaskIntoConstraints="NO" id="MqC-SA-Pyl">
+                                        <rect key="frame" x="0.0" y="0.0" width="812" height="41"/>
+                                        <color key="backgroundColor" red="0.15800479054450989" green="0.15815737843513489" blue="0.15802845358848572" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="41" id="x92-2p-QMx"/>
+                                        </constraints>
+                                    </imageView>
+                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="kXT-sY-0sO">
+                                        <rect key="frame" x="6" y="38" width="104" height="80"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Pitch" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FlR-na-B7K">
+                                                <rect key="frame" x="7" y="357" width="39" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                                <color key="textColor" red="0.4941176471" green="0.4941176471" blue="0.51372549020000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Mod" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="t2a-Gr-uyB">
+                                                <rect key="frame" x="60" y="357" width="39" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                                <color key="textColor" red="0.4941176471" green="0.4941176471" blue="0.51372549020000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <view clipsSubviews="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="3aq-Yc-WNC" customClass="AKVerticalPad" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                                <rect key="frame" x="53" y="5" width="44" height="68"/>
+                                                <color key="backgroundColor" red="0.10980392160000001" green="0.10980392160000001" blue="0.10980392160000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <accessibility key="accessibilityConfiguration" label="Mod Wheel">
+                                                    <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                                <constraints>
+                                                    <constraint firstAttribute="width" constant="44" id="s9C-do-nsE"/>
+                                                </constraints>
+                                            </view>
+                                            <view clipsSubviews="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="kzH-H2-qmM" customClass="AKVerticalPad" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                                <rect key="frame" x="4" y="5" width="44" height="68"/>
+                                                <color key="backgroundColor" red="0.10980392160000001" green="0.10980392160000001" blue="0.10980392160000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <accessibility key="accessibilityConfiguration" label="Pitch Bend">
+                                                    <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                                <constraints>
+                                                    <constraint firstAttribute="width" constant="44" id="hgv-6l-Z6V"/>
+                                                </constraints>
+                                            </view>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.15686274509803921" green="0.15686274509803921" blue="0.15686274509803921" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <constraints>
+                                            <constraint firstItem="kzH-H2-qmM" firstAttribute="top" secondItem="kXT-sY-0sO" secondAttribute="top" constant="5" id="2aa-Lb-oGx"/>
+                                            <constraint firstItem="3aq-Yc-WNC" firstAttribute="leading" secondItem="kzH-H2-qmM" secondAttribute="trailing" constant="5" id="Igx-2d-w7V"/>
+                                            <constraint firstAttribute="bottom" secondItem="kzH-H2-qmM" secondAttribute="bottom" constant="7" id="TqZ-SN-vqj"/>
+                                            <constraint firstAttribute="width" constant="104" id="a0y-t2-7zA"/>
+                                            <constraint firstAttribute="bottom" secondItem="3aq-Yc-WNC" secondAttribute="bottom" constant="7" id="bF4-b1-Kvz"/>
+                                            <constraint firstItem="3aq-Yc-WNC" firstAttribute="top" secondItem="kXT-sY-0sO" secondAttribute="top" constant="5" id="hRf-ab-hot"/>
+                                            <constraint firstItem="kzH-H2-qmM" firstAttribute="leading" secondItem="kXT-sY-0sO" secondAttribute="leading" constant="4" id="y0E-fZ-2Qq"/>
+                                        </constraints>
+                                    </view>
+                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="mrU-09-D8c" customClass="KeyboardView" customModule="SynthOneCore">
+                                        <rect key="frame" x="111" y="39" width="694" height="80"/>
+                                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                        <userDefinedRuntimeAttributes>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="octaveCount">
+                                                <integer key="value" value="2"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="labelMode">
+                                                <integer key="value" value="1"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="boolean" keyPath="darkMode" value="NO"/>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="firstOctave">
+                                                <integer key="value" value="2"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="boolean" keyPath="tuningMode" value="NO"/>
+                                        </userDefinedRuntimeAttributes>
+                                    </view>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OTo-Qn-gdZ" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="9" y="6" width="58" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.2001093477" green="0.20010487739999999" blue="0.20010755960000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Settings"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Settings">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Settings button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                        <connections>
+                                            <segue destination="wQW-DI-keW" kind="popoverPresentation" identifier="SegueToMIDI" popoverAnchorView="OTo-Qn-gdZ" id="kIC-Kt-utx">
+                                                <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                                            </segue>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" selected="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="IKE-z6-srA" userLabel="Keyboard Toggle" customClass="KeyboardShowButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="75" y="6" width="36" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.2001093477" green="0.20010487739999999" blue="0.20010755960000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Hide">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="wYt-Lq-EWA" customClass="AKBluetoothMIDIButton" customModule="SynthOneCore">
+                                        <rect key="frame" x="118" y="6" width="36" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.15686274510000001" green="0.15686274510000001" blue="0.15686274510000001" alpha="1" colorSpace="calibratedRGB"/>
+                                        <accessibility key="accessibilityConfiguration" label="Bluetooth"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" image="bluetooth">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="calibratedRGB"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        </state>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="uwe-sp-zlA" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="163" y="6" width="45" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Wheel"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Wheels">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Mod Wheel &amp; Pitch Wheel button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                        <connections>
+                                            <segue destination="qsj-iI-Pz6" kind="popoverPresentation" identifier="SegueToMOD" popoverAnchorView="uwe-sp-zlA" id="eFx-2G-dJI">
+                                                <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                                            </segue>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Sg0-Cu-xh3" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="217" y="6" width="33" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Keys"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Keys">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Keyboard Keys settings  button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                        <connections>
+                                            <segue destination="9qI-Vs-eLW" kind="popoverPresentation" identifier="SegueToKeyboardSettings" popoverAnchorView="Sg0-Cu-xh3" id="uQl-Oi-SV4">
+                                                <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                                            </segue>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="wO9-99-Ybd" customClass="AKLinkButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="258" y="6" width="36" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Link"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Link">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Ableton Link button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="KgM-0f-PIM" customClass="MIDISynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="301" y="6" width="36" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Hold"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Hold">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Keyboard hold button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="MoL-gC-ltD" customClass="MIDISynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="348" y="6" width="40" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Mono">
+                                            <accessibilityTraits key="traits" button="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Mono">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Mono/Poly toggle button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="3aX-2m-9dq" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="398" y="6" width="65" height="26"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="MIDI Learn"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="MIDI Learn">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Midi Learn button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yH0-mi-zfm" customClass="MIDIStepper" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="469" y="4" width="100" height="31"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Adjusts Keyboard Octave." identifier="KeyboardOctaveStepper" label="Octave Range">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="LyF-GB-awR" customClass="Stepper" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="568" y="4" width="100" height="31"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Adjusts Keyboard Octave." identifier="KeyboardOctaveStepper" label="Octave Range">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                </subviews>
+                                <color key="backgroundColor" red="0.074509803920000006" green="0.074509803920000006" blue="0.074509803920000006" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstItem="kXT-sY-0sO" firstAttribute="top" secondItem="8ZO-u3-H8d" secondAttribute="top" constant="38" id="1OX-Ek-zcG"/>
+                                    <constraint firstItem="mrU-09-D8c" firstAttribute="leading" secondItem="8ZO-u3-H8d" secondAttribute="leading" constant="111" id="4GH-Fc-lLU"/>
+                                    <constraint firstAttribute="bottom" secondItem="mrU-09-D8c" secondAttribute="bottom" constant="-1" id="5dc-Bj-Gnu"/>
+                                    <constraint firstAttribute="trailing" secondItem="MqC-SA-Pyl" secondAttribute="trailing" id="9ye-YD-rpH"/>
+                                    <constraint firstAttribute="bottom" secondItem="kXT-sY-0sO" secondAttribute="bottom" id="BYu-WO-jRn"/>
+                                    <constraint firstItem="MqC-SA-Pyl" firstAttribute="leading" secondItem="8ZO-u3-H8d" secondAttribute="leading" id="Ifi-XA-pOS"/>
+                                    <constraint firstItem="mrU-09-D8c" firstAttribute="top" secondItem="8ZO-u3-H8d" secondAttribute="top" constant="39" id="dyP-bA-oOy"/>
+                                    <constraint firstAttribute="trailing" secondItem="mrU-09-D8c" secondAttribute="trailing" constant="7" id="guB-zf-lvX"/>
+                                    <constraint firstItem="MqC-SA-Pyl" firstAttribute="top" secondItem="8ZO-u3-H8d" secondAttribute="top" id="tPn-S8-3BE"/>
+                                    <constraint firstItem="kXT-sY-0sO" firstAttribute="leading" secondItem="8ZO-u3-H8d" secondAttribute="leading" constant="6" id="zFb-YH-28C"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="nOC-fL-84F" firstAttribute="top" secondItem="ONJ-nj-oqT" secondAttribute="top" id="22l-Rr-AMc"/>
+                            <constraint firstItem="8ZO-u3-H8d" firstAttribute="leading" secondItem="ONJ-nj-oqT" secondAttribute="leading" id="2ND-V8-3qW"/>
+                            <constraint firstItem="Goc-E4-LLj" firstAttribute="top" secondItem="ONJ-nj-oqT" secondAttribute="top" id="3Cr-Pp-3sr"/>
+                            <constraint firstItem="Snv-Cp-FiC" firstAttribute="top" secondItem="nOC-fL-84F" secondAttribute="bottom" id="4B8-7R-eAh"/>
+                            <constraint firstItem="8ZZ-vt-Xhv" firstAttribute="top" secondItem="ONJ-nj-oqT" secondAttribute="top" id="CM5-2F-7na"/>
+                            <constraint firstItem="Goc-E4-LLj" firstAttribute="leading" secondItem="nOC-fL-84F" secondAttribute="trailing" constant="4" id="HU9-Vy-2m6"/>
+                            <constraint firstItem="8ZO-u3-H8d" firstAttribute="top" secondItem="0vi-gB-nau" secondAttribute="bottom" constant="257" id="MUQ-y2-Ykb"/>
+                            <constraint firstItem="Snv-Cp-FiC" firstAttribute="top" secondItem="8ZZ-vt-Xhv" secondAttribute="bottom" id="O0j-SR-wqW"/>
+                            <constraint firstItem="Snv-Cp-FiC" firstAttribute="top" secondItem="8ZO-u3-H8d" secondAttribute="bottom" id="Rb6-Kv-Tpz"/>
+                            <constraint firstAttribute="trailing" secondItem="8ZO-u3-H8d" secondAttribute="trailing" id="T5D-9b-3DD"/>
+                            <constraint firstItem="rJt-Cb-A4b" firstAttribute="leading" secondItem="Goc-E4-LLj" secondAttribute="trailing" id="jNe-zd-o3l"/>
+                            <constraint firstItem="8ZZ-vt-Xhv" firstAttribute="leading" secondItem="Goc-E4-LLj" secondAttribute="trailing" constant="4" id="ke6-8b-cCh"/>
+                            <constraint firstItem="Goc-E4-LLj" firstAttribute="centerX" secondItem="ONJ-nj-oqT" secondAttribute="centerX" id="rBP-2P-kem"/>
+                            <constraint firstItem="Snv-Cp-FiC" firstAttribute="top" secondItem="Goc-E4-LLj" secondAttribute="bottom" id="uh6-sr-Io0"/>
+                            <constraint firstAttribute="bottom" secondItem="rJt-Cb-A4b" secondAttribute="bottom" id="x9v-1N-n4b"/>
+                            <constraint firstItem="rJt-Cb-A4b" firstAttribute="top" secondItem="ONJ-nj-oqT" secondAttribute="top" id="yGo-Rt-ib4"/>
+                            <constraint firstItem="8ZZ-vt-Xhv" firstAttribute="leading" secondItem="rJt-Cb-A4b" secondAttribute="trailing" id="zw0-WN-4bp"/>
+                        </constraints>
+                    </view>
+                    <size key="freeformSize" width="812" height="375"/>
+                    <connections>
+                        <outlet property="bluetoothButton" destination="wYt-Lq-EWA" id="qVc-Ct-Vsp"/>
+                        <outlet property="configKeyboardButton" destination="Sg0-Cu-xh3" id="lgL-13-Mne"/>
+                        <outlet property="holdButton" destination="KgM-0f-PIM" id="8Mx-WY-VTx"/>
+                        <outlet property="keyboardLeftConstraint" destination="2ND-V8-3qW" id="6JK-NI-WfW"/>
+                        <outlet property="keyboardRightConstraint" destination="T5D-9b-3DD" id="jev-Ao-xuV"/>
+                        <outlet property="keyboardToggle" destination="IKE-z6-srA" id="9m5-0t-lVg"/>
+                        <outlet property="keyboardTopConstraint" destination="MUQ-y2-Ykb" id="YOa-GF-hSv"/>
+                        <outlet property="keyboardView" destination="mrU-09-D8c" id="PXu-L4-4kb"/>
+                        <outlet property="linkButton" destination="wO9-99-Ybd" id="lEF-yE-kaa"/>
+                        <outlet property="midiButton" destination="OTo-Qn-gdZ" id="AUz-bq-f3f"/>
+                        <outlet property="midiLearnToggle" destination="3aX-2m-9dq" id="rCd-8Z-sSF"/>
+                        <outlet property="modWheelPad" destination="3aq-Yc-WNC" id="rYC-su-SZf"/>
+                        <outlet property="modWheelSettings" destination="uwe-sp-zlA" id="OW0-x5-zIE"/>
+                        <outlet property="monoButton" destination="MoL-gC-ltD" id="sJJ-40-jEd"/>
+                        <outlet property="octaveStepper" destination="LyF-GB-awR" id="Fcb-D9-Z8z"/>
+                        <outlet property="pitchBend" destination="kzH-H2-qmM" id="WES-lV-8c5"/>
+                        <outlet property="topContainerView" destination="A4E-fM-RwT" id="gwL-d9-oBm"/>
+                        <outlet property="transposeStepper" destination="yH0-mi-zfm" id="urH-Fj-jq3"/>
+                        <segue destination="8P9-DY-HCH" kind="presentation" identifier="SegueToAbout" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="V8h-iZ-Ly2"/>
+                        <segue destination="M7f-x2-kSI" kind="presentation" identifier="SegueToMailingList" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="y4G-gB-dDe"/>
+                        <segue destination="mL0-tn-PDC" kind="presentation" identifier="SegueToWelcome" id="8ID-d8-Qnm"/>
+                        <segue destination="180-2e-dHd" kind="presentation" identifier="SegueToMore" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="3Wa-R3-dV5"/>
+                        <segue destination="vaE-RL-nKW" kind="presentation" identifier="SegueToPhoneShare" id="NZS-gI-nAN"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="ZkY-CW-6Da" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1574.4140625" y="-1069.140625"/>
+        </scene>
+        <!--Synth One-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController storyboardIdentifier="ParentViewController" id="BYZ-38-t0r" userLabel="Synth One" customClass="Manager" customModule="AudioKitSynthOne" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="1024" height="768"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="circuit" translatesAutoresizingMaskIntoConstraints="NO" id="oI3-DX-etX">
+                                <rect key="frame" x="0.0" y="38" width="1024" height="659"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                            </imageView>
+                            <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="RnT-Kx-qNG" userLabel="Header View Container">
+                                <rect key="frame" x="0.0" y="0.0" width="1024" height="38"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="38" id="F87-vg-HNl"/>
+                                    <constraint firstAttribute="width" constant="1024" id="XTM-iX-Krx"/>
+                                </constraints>
+                                <connections>
+                                    <segue destination="cdj-63-74S" kind="embed" id="o6a-ad-Byg"/>
+                                </connections>
+                            </containerView>
+                            <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="FVi-Ld-MF5" userLabel="Panel View Container">
+                                <rect key="frame" x="0.0" y="38" width="1024" height="299"/>
+                                <color key="backgroundColor" red="0.15686274509803921" green="0.15686274509803921" blue="0.15686274509803921" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="299" id="065-6c-Sa4"/>
+                                    <constraint firstAttribute="width" constant="1024" id="S6i-gk-s21"/>
+                                </constraints>
+                                <connections>
+                                    <segue destination="HVB-nG-S7N" kind="embed" id="HhG-xY-TwR"/>
+                                </connections>
+                            </containerView>
+                            <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="B3C-71-5ce">
+                                <rect key="frame" x="0.0" y="337" width="1024" height="299"/>
+                                <color key="backgroundColor" red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="299" id="EwK-D6-SeG"/>
+                                    <constraint firstAttribute="width" constant="1024" id="LFW-n6-Wa7"/>
+                                </constraints>
+                            </containerView>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="uw2-JG-GSz" userLabel="KeyboardContainer">
+                                <rect key="frame" x="0.0" y="636" width="1024" height="431"/>
+                                <subviews>
+                                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="keyboard_top" translatesAutoresizingMaskIntoConstraints="NO" id="oOK-6u-M58">
+                                        <rect key="frame" x="0.0" y="0.0" width="1024" height="47"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                    </imageView>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="eos-Os-2YY">
+                                        <rect key="frame" x="9" y="45" width="111" height="386"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Pitch" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="OTn-XD-KmQ">
+                                                <rect key="frame" x="7" y="357" width="39" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                                <color key="textColor" red="0.4941176471" green="0.4941176471" blue="0.51372549020000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Mod" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="GdY-Af-kY1">
+                                                <rect key="frame" x="60" y="357" width="39" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="14"/>
+                                                <color key="textColor" red="0.4941176471" green="0.4941176471" blue="0.51372549020000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <view clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="SJO-uT-R2c" customClass="AKVerticalPad" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                                <rect key="frame" x="57" y="11" width="44" height="340"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
+                                                <color key="backgroundColor" red="0.10980392160000001" green="0.10980392160000001" blue="0.10980392160000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <accessibility key="accessibilityConfiguration" label="Mod Wheel">
+                                                    <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                            </view>
+                                            <view clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="RfU-sr-0bT" customClass="AKVerticalPad" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                                <rect key="frame" x="5" y="11" width="44" height="340"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
+                                                <color key="backgroundColor" red="0.10980392160000001" green="0.10980392160000001" blue="0.10980392160000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <accessibility key="accessibilityConfiguration" label="Pitch Bend">
+                                                    <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                            </view>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.15686274509803921" green="0.15686274509803921" blue="0.15686274509803921" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    </view>
+                                    <view contentMode="redraw" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="kQD-gK-cOc" customClass="KeyboardView" customModule="SynthOneCore">
+                                        <rect key="frame" x="118" y="44" width="898" height="387"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
+                                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" updatesFrequently="YES" allowsDirectInteraction="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                        <userDefinedRuntimeAttributes>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="octaveCount">
+                                                <integer key="value" value="4"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="labelMode">
+                                                <integer key="value" value="1"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="boolean" keyPath="darkMode" value="NO"/>
+                                            <userDefinedRuntimeAttribute type="number" keyPath="firstOctave">
+                                                <integer key="value" value="2"/>
+                                            </userDefinedRuntimeAttribute>
+                                            <userDefinedRuntimeAttribute type="boolean" keyPath="tuningMode" value="NO"/>
+                                        </userDefinedRuntimeAttributes>
+                                    </view>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="C9j-zW-Pky" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="9" y="7" width="106" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20010934770107269" green="0.20010487735271454" blue="0.20010755956172943" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Settings"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Settings">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Settings button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="h3Z-Sy-dKC" customClass="AKBluetoothMIDIButton" customModule="SynthOneCore">
+                                        <rect key="frame" x="123" y="7" width="36" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.15686274509803921" green="0.15686274509803921" blue="0.15686274509803921" alpha="1" colorSpace="calibratedRGB"/>
+                                        <accessibility key="accessibilityConfiguration" label="Bluetooth"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" image="bluetooth">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="calibratedRGB"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        </state>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OxM-Pu-Zba" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="166" y="7" width="69" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Wheel"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Wheels">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Mod Wheel &amp; Pitch Wheel button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Z4W-Gh-RiQ" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="242" y="7" width="50" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Keys"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Keys">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Keyboard Keys settings  button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                        <connections>
+                                            <segue destination="9qI-Vs-eLW" kind="popoverPresentation" identifier="SegueToKeyboardSettings" animates="NO" popoverAnchorView="Z4W-Gh-RiQ" id="OFW-mz-IhX">
+                                                <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                                            </segue>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="xv6-Gi-7B2" customClass="AKLinkButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="299" y="7" width="50" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Link"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Link">
+                                            <color key="titleColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Ableton Link button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="39J-5A-Jtm" customClass="MIDISynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="366" y="7" width="50" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Hold"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Hold">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Keyboard hold button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FTi-x2-zwk" customClass="MIDISynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="423" y="7" width="50" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="Mono">
+                                            <accessibilityTraits key="traits" button="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Mono">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Mono/Poly toggle button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="VNg-MV-vHn" customClass="SynthButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="480" y="7" width="100" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20000000000000001" green="0.20000000000000001" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" label="MIDI Learn"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="MIDI Learn">
+                                            <color key="titleColor" red="0.73333333333333328" green="0.73333333333333328" blue="0.73333333333333328" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <attributedString key="userComments">
+                                            <fragment content="Midi Learn button (keep this text as short as possible)">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" selected="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="O7h-tw-s2d" userLabel="Keyboard Toggle" customClass="KeyboardShowButton" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="934" y="7" width="75" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.20010934770107269" green="0.20010487735271454" blue="0.20010755956172943" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Hide">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                    </button>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Transpose:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="EVT-5m-BTf">
+                                        <rect key="frame" x="589" y="11" width="62" height="22"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.3921568627" green="0.3921568627" blue="0.41176470590000003" alpha="1" colorSpace="calibratedRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="uep-y6-Gb1" customClass="MIDIStepper" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="653" y="6" width="108" height="35"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Adjusts Keyboard Octave." identifier="KeyboardOctaveStepper" label="Octave Range">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Octave:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="ACV-Ri-7nN">
+                                        <rect key="frame" x="770" y="11" width="47" height="22"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.39215686274509803" green="0.39215686274509803" blue="0.41176470588235292" alpha="1" colorSpace="calibratedRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ZJ3-lz-BGf" customClass="Stepper" customModule="AudioKitSynthOne" customModuleProvider="target">
+                                        <rect key="frame" x="819" y="6" width="108" height="35"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Adjusts Keyboard Octave." identifier="KeyboardOctaveStepper" label="Octave Range">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                </subviews>
+                                <color key="backgroundColor" red="0.074509803921568626" green="0.074509803921568626" blue="0.074509803921568626" alpha="1" colorSpace="calibratedRGB"/>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstAttribute="trailing" secondItem="RnT-Kx-qNG" secondAttribute="trailing" id="3Lo-qO-BtL"/>
+                            <constraint firstItem="FVi-Ld-MF5" firstAttribute="top" secondItem="RnT-Kx-qNG" secondAttribute="bottom" id="4mP-L3-8Up"/>
+                            <constraint firstItem="FVi-Ld-MF5" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="4ps-Uq-68M"/>
+                            <constraint firstItem="uw2-JG-GSz" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="FKN-cN-JL9"/>
+                            <constraint firstAttribute="trailing" secondItem="uw2-JG-GSz" secondAttribute="trailing" id="ON3-m1-RXe"/>
+                            <constraint firstItem="RnT-Kx-qNG" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="U2m-cp-QYv"/>
+                            <constraint firstAttribute="trailing" secondItem="B3C-71-5ce" secondAttribute="trailing" id="WKF-2m-U1a"/>
+                            <constraint firstItem="FVi-Ld-MF5" firstAttribute="top" secondItem="RnT-Kx-qNG" secondAttribute="bottom" id="hT0-7c-nJX"/>
+                            <constraint firstAttribute="trailing" secondItem="FVi-Ld-MF5" secondAttribute="trailing" id="iYc-5k-z6U"/>
+                            <constraint firstItem="B3C-71-5ce" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="rKM-Cz-kj5"/>
+                            <constraint firstItem="uw2-JG-GSz" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" constant="636" id="rfH-SN-1pR"/>
+                            <constraint firstAttribute="bottom" secondItem="uw2-JG-GSz" secondAttribute="bottom" id="kbD-Bd-8Hx"/>
+                            <constraint firstItem="RnT-Kx-qNG" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" id="uyo-mL-gwX"/>
+                            <constraint firstItem="B3C-71-5ce" firstAttribute="top" secondItem="FVi-Ld-MF5" secondAttribute="bottom" id="uzg-qm-Ucv"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="bluetoothButton" destination="h3Z-Sy-dKC" id="bw3-iG-pcQ"/>
+                        <outlet property="bottomContainerView" destination="B3C-71-5ce" id="tpQ-EA-Ba9"/>
+                        <outlet property="configKeyboardButton" destination="Z4W-Gh-RiQ" id="oed-gQ-ajB"/>
+                        <outlet property="holdButton" destination="39J-5A-Jtm" id="jKu-XJ-QBn"/>
+                        <outlet property="keyboardToggle" destination="O7h-tw-s2d" id="4MG-Tz-Df0"/>
+                        <outlet property="keyboardTopConstraint" destination="rfH-SN-1pR" id="UKj-vN-chB"/>
+                        <outlet property="keyboardView" destination="kQD-gK-cOc" id="qex-X3-Wi8"/>
+                        <outlet property="linkButton" destination="xv6-Gi-7B2" id="lkM-xb-iza"/>
+                        <outlet property="midiButton" destination="C9j-zW-Pky" id="Xwb-TL-joD"/>
+                        <outlet property="midiLearnToggle" destination="VNg-MV-vHn" id="cjB-sS-aDd"/>
+                        <outlet property="modWheelPad" destination="SJO-uT-R2c" id="CgQ-Uz-iwX"/>
+                        <outlet property="modWheelSettings" destination="OxM-Pu-Zba" id="KMo-fd-i8c"/>
+                        <outlet property="monoButton" destination="FTi-x2-zwk" id="6K7-cc-Waz"/>
+                        <outlet property="octaveStepper" destination="ZJ3-lz-BGf" id="3yD-ED-e4v"/>
+                        <outlet property="pitchBend" destination="RfU-sr-0bT" id="ZL5-ID-1hP"/>
+                        <outlet property="topContainerView" destination="FVi-Ld-MF5" id="hUr-7n-IQP"/>
+                        <outlet property="topPanelheight" destination="065-6c-Sa4" id="pwh-6g-OsJ"/>
+                        <outlet property="transposeStepper" destination="uep-y6-Gb1" id="MCZ-sf-KlE"/>
+                        <segue destination="qsj-iI-Pz6" kind="popoverPresentation" identifier="SegueToMOD" popoverAnchorView="OxM-Pu-Zba" id="TVa-dv-w7i">
+                            <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                        </segue>
+                        <segue destination="wQW-DI-keW" kind="popoverPresentation" identifier="SegueToMIDI" popoverAnchorView="C9j-zW-Pky" id="P92-2d-IvO">
+                            <popoverArrowDirection key="popoverArrowDirection" up="YES" down="YES" left="YES" right="YES"/>
+                        </segue>
+                        <segue destination="vru-hZ-pY9" kind="presentation" identifier="SegueToAbout" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="aOL-Mc-Pza"/>
+                        <segue destination="MLy-jo-gU4" kind="presentation" identifier="SegueToMailingList" modalPresentationStyle="currentContext" modalTransitionStyle="crossDissolve" id="o4F-0u-K2y"/>
+                        <segue destination="0bp-Jd-82Y" kind="presentation" identifier="SegueToMore" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="1BH-Lq-qpz"/>
+                        <segue destination="PKD-Zy-awT" kind="presentation" identifier="SegueToApps" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="NQT-0p-RfY"/>
+                        <segue destination="JZQ-7S-Tum" kind="presentation" identifier="SegueToSharing" id="CsM-By-T1b"/>
+                        <segue destination="qyS-HD-ewE" kind="presentation" identifier="SegueToFM" modalPresentationStyle="overCurrentContext" modalTransitionStyle="crossDissolve" id="LHr-Z9-rua"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1490.0390625" y="-541.40625"/>
+        </scene>
+        <!--Keyboard Settings View Controller-->
+        <scene sceneID="nVT-JB-zlP">
+            <objects>
+                <viewController storyboardIdentifier="KeyboardSettingsViewController" id="9qI-Vs-eLW" customClass="KeyboardSettingsViewController" customModule="AudioKitSynthOne" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="6Jm-dk-ghz"/>
+                        <viewControllerLayoutGuide type="bottom" id="nli-Me-Dhp"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="v2e-Sw-8cj">
+                        <rect key="frame" x="0.0" y="0.0" width="300" height="280"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="R0K-Tv-Y7T">
+                                <rect key="frame" x="0.0" y="0.0" width="300" height="51"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="KEYBOARD SETTINGS" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.59999999999999998" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IUb-c8-F17">
+                                        <rect key="frame" x="29" y="14" width="151" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.93333333333333335" green="0.93333333333333335" blue="0.93333333333333335" alpha="1" colorSpace="calibratedRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                </subviews>
+                                <color key="backgroundColor" red="0.094117647058823528" green="0.094117647058823528" blue="0.094117647058823528" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="51" id="qAj-dB-PXd"/>
+                                </constraints>
+                            </view>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hNP-KG-OgZ">
+                                <rect key="frame" x="209" y="8" width="87" height="36"/>
+                                <accessibility key="accessibilityConfiguration" identifier="DoneButton"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="36" id="7Hm-Ud-zay"/>
+                                    <constraint firstAttribute="width" constant="87" id="HhC-qG-0rQ"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="17"/>
+                                <state key="normal" title="DONE">
+                                    <color key="titleColor" red="0.90196078430000004" green="0.53333333329999999" blue="0.0078431372550000003" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                </state>
+                                <connections>
+                                    <action selector="closeButton:" destination="9qI-Vs-eLW" eventType="touchUpInside" id="zSA-Xy-cuW"/>
+                                </connections>
+                            </button>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="CcS-hz-gcx">
+                                <rect key="frame" x="0.0" y="73" width="300" height="197"/>
+                                <subviews>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="9Nq-KG-x1Y">
+                                        <rect key="frame" x="112" y="0.0" width="162" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <segments>
+                                            <segment title="White"/>
+                                            <segment title="Dark"/>
+                                            <segment title="System"/>
+                                        </segments>
+                                        <color key="tintColor" red="0.8666666666666667" green="0.8666666666666667" blue="0.8666666666666667" alpha="1" colorSpace="calibratedRGB"/>
+                                        <connections>
+                                            <action selector="keyboardModeDidChange:" destination="9qI-Vs-eLW" eventType="valueChanged" id="ePM-4J-ESC"/>
+                                        </connections>
+                                    </segmentedControl>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Key Color:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="OMU-nM-0hz">
+                                        <rect key="frame" x="12" y="3" width="90" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803921568629" green="0.74509803921568629" blue="0.76470588235294112" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Color for keyboard keys (black or white)">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="kgu-qC-jCb">
+                                        <rect key="frame" x="112" y="109" width="162" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <segments>
+                                            <segment title="None"/>
+                                            <segment title="C"/>
+                                            <segment title="All"/>
+                                        </segments>
+                                        <color key="tintColor" red="0.8666666666666667" green="0.8666666666666667" blue="0.8666666666666667" alpha="1" colorSpace="calibratedRGB"/>
+                                        <connections>
+                                            <action selector="keyLabelDidChange:" destination="9qI-Vs-eLW" eventType="valueChanged" id="CyH-Oq-NE5"/>
+                                        </connections>
+                                    </segmentedControl>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Key Labels:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fmL-Ud-aaA">
+                                        <rect key="frame" x="12" y="113" width="91" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803921568629" green="0.74509803921568629" blue="0.76470588235294112" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Note labels on keyboard keys">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="Ai9-6v-51K">
+                                        <rect key="frame" x="112" y="55" width="162" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <segments>
+                                            <segment title="1"/>
+                                            <segment title="2"/>
+                                            <segment title="3"/>
+                                            <segment title="4"/>
+                                            <segment title="5"/>
+                                        </segments>
+                                        <color key="tintColor" red="0.8666666666666667" green="0.8666666666666667" blue="0.8666666666666667" alpha="1" colorSpace="calibratedRGB"/>
+                                        <connections>
+                                            <action selector="octaveRangeDidChange:" destination="9qI-Vs-eLW" eventType="valueChanged" id="gH5-od-8iO"/>
+                                        </connections>
+                                    </segmentedControl>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Octave Range:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="icQ-Ei-YHr">
+                                        <rect key="frame" x="12" y="58" width="91" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803921568629" green="0.74509803921568629" blue="0.76470588235294112" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Octaves displayed in keyboard">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="ef3-Vf-i2z">
+                                        <rect key="frame" x="112" y="161" width="162" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <segments>
+                                            <segment title="12ET"/>
+                                            <segment title="Microtonal"/>
+                                        </segments>
+                                        <color key="tintColor" red="0.74807985980000002" green="0.74360033969999995" blue="0.75255937989999999" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <connections>
+                                            <action selector="keyboardTuningModeDidChange:" destination="9qI-Vs-eLW" eventType="valueChanged" id="69X-c2-jkZ"/>
+                                        </connections>
+                                    </segmentedControl>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Tuning Mode:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="joz-Ra-0iY">
+                                        <rect key="frame" x="12" y="162" width="91" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Note labels on keyboard keys">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                </subviews>
+                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="197" id="IDM-8e-zqu"/>
+                                    <constraint firstAttribute="width" constant="300" id="rgR-Vm-4Jx"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstItem="hNP-KG-OgZ" firstAttribute="top" secondItem="v2e-Sw-8cj" secondAttribute="top" constant="8" id="1rj-Ep-tWK"/>
+                            <constraint firstAttribute="trailing" secondItem="hNP-KG-OgZ" secondAttribute="trailing" constant="4" id="GXt-Oa-y0w"/>
+                            <constraint firstItem="CcS-hz-gcx" firstAttribute="centerX" secondItem="v2e-Sw-8cj" secondAttribute="centerX" id="R76-63-wqH"/>
+                            <constraint firstItem="R0K-Tv-Y7T" firstAttribute="leading" secondItem="v2e-Sw-8cj" secondAttribute="leading" id="cR7-F4-bvo"/>
+                            <constraint firstItem="R0K-Tv-Y7T" firstAttribute="top" secondItem="v2e-Sw-8cj" secondAttribute="top" id="dvO-ky-p5T"/>
+                            <constraint firstAttribute="trailing" secondItem="R0K-Tv-Y7T" secondAttribute="trailing" id="fDV-8I-B3o"/>
+                            <constraint firstItem="CcS-hz-gcx" firstAttribute="top" secondItem="R0K-Tv-Y7T" secondAttribute="bottom" constant="22" id="jll-Up-VoV"/>
+                        </constraints>
+                    </view>
+                    <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+                    <size key="freeformSize" width="300" height="300"/>
+                    <connections>
+                        <outlet property="keyboardModeSegment" destination="9Nq-KG-x1Y" id="qV2-N2-vgV"/>
+                        <outlet property="keyboardTuningModeSegment" destination="ef3-Vf-i2z" id="QRY-Au-hZo"/>
+                        <outlet property="labelModeSegment" destination="kgu-qC-jCb" id="Qda-gl-naF"/>
+                        <outlet property="octaveRangeSegment" destination="Ai9-6v-51K" id="VIQ-Eg-JVA"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="rCz-Ja-PHC" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1893.1640624999998" y="-12.5"/>
+        </scene>
+        <!--Presets-->
+        <scene sceneID="LMX-EE-nfA">
+            <objects>
+                <viewControllerPlaceholder storyboardName="Presets" id="HVB-nG-S7N" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="QSH-qx-Po5" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1002" y="-1031"/>
+        </scene>
+        <!--Wheel Settings View Controller-->
+        <scene sceneID="2nO-a2-8tJ">
+            <objects>
+                <viewController storyboardIdentifier="WheelSettingsViewController" id="qsj-iI-Pz6" customClass="WheelSettingsViewController" customModule="AudioKitSynthOne" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="ZDf-m7-snJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="06P-ho-gDh"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Fdp-uV-03z">
+                        <rect key="frame" x="0.0" y="0.0" width="300" height="270"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="enB-JQ-PVy">
+                                <rect key="frame" x="0.0" y="63" width="300" height="211"/>
+                                <subviews>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="iLo-Gv-XoX">
+                                        <rect key="frame" x="25" y="31" width="252" height="29"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <segments>
+                                            <segment title="Cutoff"/>
+                                            <segment title="LFO 1"/>
+                                            <segment title="LFO 2"/>
+                                        </segments>
+                                        <color key="tintColor" red="0.8666666666666667" green="0.8666666666666667" blue="0.8666666666666667" alpha="1" colorSpace="calibratedRGB"/>
+                                        <connections>
+                                            <action selector="routingValueDidChange:" destination="qsj-iI-Pz6" eventType="valueChanged" id="HfM-fI-Hvv"/>
+                                        </connections>
+                                    </segmentedControl>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MOD WHEEL DESTINATION:" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="dKG-AP-qCg">
+                                        <rect key="frame" x="25" y="0.0" width="252" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803921568629" green="0.74509803921568629" blue="0.76470588235294112" alpha="1" colorSpace="calibratedRGB"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Routing for Mod Wheel">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="waf-K4-R6N" customClass="Stepper" customModule="SynthOneCore">
+                                        <rect key="frame" x="175" y="110" width="108" height="32"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Set Pitch Bend Upper Limit" identifier="PitchBendUpperStepper" label="Pitch Bend Upper Limit">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Pitch Bend range is saved with each preset." textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2ZX-Ka-zjh">
+                                        <rect key="frame" x="4" y="187" width="293" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.53333333329999999" green="0.53333333329999999" blue="0.53333333329999999" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Pitch Bend Upper Limit:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="sdT-EI-8gk">
+                                        <rect key="frame" x="7" y="114" width="157" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Pitch Bend Wheel maximum ">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="St2-fP-of5" customClass="Stepper" customModule="SynthOneCore">
+                                        <rect key="frame" x="175" y="150" width="108" height="32"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Set Pitch Bend Lower Limit." identifier="PitchBendLowerStepper" label="Pitch Bend Lower Limit">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Mod Wheel Routing is saved with each preset." textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="r3w-Dk-TAj">
+                                        <rect key="frame" x="19" y="68" width="266" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.53333333333333333" green="0.53333333333333333" blue="0.53333333333333333" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Pitch Bend Lower Limit:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="3ac-lw-QYe">
+                                        <rect key="frame" x="7" y="154" width="157" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="Pitch Bend Wheel minimum">
+                                                <attributes>
+                                                    <font key="NSFont" size="11" name="HelveticaNeue"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="left" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0" allowsDefaultTighteningForTruncation="NO"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                </subviews>
+                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="300" id="6z4-EH-WVK"/>
+                                    <constraint firstAttribute="height" constant="211" id="b0W-Pv-47X"/>
+                                </constraints>
+                            </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="G3n-Wx-LHm">
+                                <rect key="frame" x="0.0" y="0.0" width="301" height="51"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MOD / PITCH WHEELS" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.59999999999999998" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="WyC-Si-j7H">
+                                        <rect key="frame" x="17" y="13" width="184" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration" label="Mod / Pitch Wheels">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="calibratedRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OyT-Kr-q8s">
+                                        <rect key="frame" x="212" y="8" width="77" height="36"/>
+                                        <accessibility key="accessibilityConfiguration" identifier="DoneButton" label="Done"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="36" id="7fl-6J-4Il"/>
+                                            <constraint firstAttribute="width" constant="77" id="hQJ-0j-dP4"/>
+                                        </constraints>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="17"/>
+                                        <state key="normal" title="DONE">
+                                            <color key="titleColor" red="0.82352941180000006" green="0.45098039220000002" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="closeButton:" destination="qsj-iI-Pz6" eventType="touchUpInside" id="On0-Dt-7vW"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                                <color key="backgroundColor" red="0.094117647060000004" green="0.094117647060000004" blue="0.094117647060000004" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="51" id="2e8-I9-DuQ"/>
+                                    <constraint firstAttribute="trailing" secondItem="OyT-Kr-q8s" secondAttribute="trailing" constant="12" id="cSR-P8-Xtg"/>
+                                    <constraint firstItem="OyT-Kr-q8s" firstAttribute="top" secondItem="G3n-Wx-LHm" secondAttribute="top" constant="8" id="eSq-dK-Ra7"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.1333333333" green="0.1333333333" blue="0.1333333333" alpha="1" colorSpace="calibratedRGB"/>
+                        <accessibility key="accessibilityConfiguration">
+                            <accessibilityTraits key="traits" adjustable="YES"/>
+                        </accessibility>
+                        <constraints>
+                            <constraint firstItem="enB-JQ-PVy" firstAttribute="top" secondItem="G3n-Wx-LHm" secondAttribute="bottom" constant="12" id="0Zh-yD-hOz"/>
+                            <constraint firstItem="enB-JQ-PVy" firstAttribute="centerX" secondItem="Fdp-uV-03z" secondAttribute="centerX" id="Du1-nz-Io7"/>
+                            <constraint firstAttribute="trailing" secondItem="G3n-Wx-LHm" secondAttribute="trailing" constant="-1" id="eCA-QI-mw0"/>
+                            <constraint firstItem="G3n-Wx-LHm" firstAttribute="leading" secondItem="Fdp-uV-03z" secondAttribute="leading" id="uO5-V3-OHz"/>
+                            <constraint firstItem="G3n-Wx-LHm" firstAttribute="top" secondItem="Fdp-uV-03z" secondAttribute="top" id="xzJ-gw-CQY"/>
+                        </constraints>
+                    </view>
+                    <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+                    <size key="freeformSize" width="300" height="290"/>
+                    <connections>
+                        <outlet property="modWheelSegment" destination="iLo-Gv-XoX" id="og7-A9-VK8"/>
+                        <outlet property="pitchLowerRange" destination="St2-fP-of5" id="FRg-Bo-yEy"/>
+                        <outlet property="pitchUpperRange" destination="waf-K4-R6N" id="AS2-22-vAu"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Oqg-EK-98k" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1244" y="168"/>
+        </scene>
+        <!--Settings View Controller-->
+        <scene sceneID="fqU-aQ-kCC">
+            <objects>
+                <viewController storyboardIdentifier="MIDISettingsViewController" id="wQW-DI-keW" customClass="MIDISettingsViewController" customModule="AudioKitSynthOne" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="fBZ-Yb-aLt"/>
+                        <viewControllerLayoutGuide type="bottom" id="LJL-6a-0Xy"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="IRU-OW-W2j">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="620"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nB9-I2-C9Z">
+                                <rect key="frame" x="-2" y="480" width="301" height="184"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MIDI Inputs (tap to toggle on/off):" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ZV6-Yu-spa">
+                                        <rect key="frame" x="15" y="12" width="258" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <tableView clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="aoz-eh-ksY">
+                                        <rect key="frame" x="15" y="41" width="258" height="108"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <prototypes>
+                                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" selectionStyle="gray" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="MIDICell" id="O5p-sy-YOD" customClass="MIDICell" customModule="SynthOneCore">
+                                                <rect key="frame" x="0.0" y="28" width="258" height="44"/>
+                                                <autoresizingMask key="autoresizingMask"/>
+                                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="O5p-sy-YOD" id="ziz-EX-i8u">
+                                                    <rect key="frame" x="0.0" y="0.0" width="258" height="44"/>
+                                                    <autoresizingMask key="autoresizingMask"/>
+                                                    <subviews>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="MIDI Input" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="mUh-rB-ciV" userLabel="Preset Label">
+                                                            <rect key="frame" x="26" y="12" width="0.0" height="20.5"/>
+                                                            <fontDescription key="fontDescription" name="AvenirNext-Regular" family="Avenir Next" pointSize="15"/>
+                                                            <color key="textColor" red="0.73333333329999995" green="0.73333333329999995" blue="0.73333333329999995" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <nil key="highlightedColor"/>
+                                                        </label>
+                                                    </subviews>
+                                                    <constraints>
+                                                        <constraint firstItem="mUh-rB-ciV" firstAttribute="centerY" secondItem="ziz-EX-i8u" secondAttribute="centerY" id="1gD-ZW-iEq"/>
+                                                        <constraint firstItem="mUh-rB-ciV" firstAttribute="leading" secondItem="ziz-EX-i8u" secondAttribute="leadingMargin" constant="11" id="6F6-qW-ONA"/>
+                                                        <constraint firstItem="mUh-rB-ciV" firstAttribute="trailing" secondItem="ziz-EX-i8u" secondAttribute="trailingMargin" id="8b3-3I-kgO"/>
+                                                    </constraints>
+                                                </tableViewCellContentView>
+                                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                                <color key="tintColor" red="0.68235294120000001" green="0.68235294120000001" blue="0.70196078429999997" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <connections>
+                                                    <outlet property="cellLabel" destination="mUh-rB-ciV" id="o9F-ms-1S0"/>
+                                                </connections>
+                                            </tableViewCell>
+                                        </prototypes>
+                                        <connections>
+                                            <outlet property="dataSource" destination="wQW-DI-keW" id="lKv-9N-cXw"/>
+                                            <outlet property="delegate" destination="wQW-DI-keW" id="Yfw-md-77K"/>
+                                        </connections>
+                                    </tableView>
+                                </subviews>
+                                <color key="backgroundColor" red="0.15686274510000001" green="0.15686274510000001" blue="0.15686274510000001" alpha="1" colorSpace="calibratedRGB"/>
+                            </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="tKC-fD-PQm">
+                                <rect key="frame" x="0.0" y="0.0" width="600" height="378"/>
+                                <subviews>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Spu-aU-mjx">
+                                        <rect key="frame" x="0.0" y="0.0" width="636" height="44"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MIDI / SETTINGS" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.59999999999999998" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ksJ-GG-fPC">
+                                                <rect key="frame" x="25" y="11" width="175" height="24"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration">
+                                                    <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                                </accessibility>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.93333333330000001" green="0.93333333330000001" blue="0.93333333330000001" alpha="1" colorSpace="calibratedRGB"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="lW8-Xt-97c">
+                                                <rect key="frame" x="524" y="5" width="77" height="36"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration" identifier="DoneButton"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="17"/>
+                                                <state key="normal" title="DONE">
+                                                    <color key="titleColor" red="0.82352941180000006" green="0.45098039220000002" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                </state>
+                                                <connections>
+                                                    <action selector="closeButton:" destination="wQW-DI-keW" eventType="touchUpInside" id="42Y-2G-KvZ"/>
+                                                </connections>
+                                            </button>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.094117647060000004" green="0.094117647060000004" blue="0.094117647060000004" alpha="1" colorSpace="calibratedRGB"/>
+                                    </view>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="JmX-eX-97E">
+                                        <rect key="frame" x="308" y="44" width="343" height="364"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Buffer Size:" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="dbD-NB-qaM">
+                                                <rect key="frame" x="79" y="31" width="140" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-DemiBold" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.70588235290000001" green="0.70588235290000001" blue="0.72549019609999998" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                            </label>
+                                            <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="aHe-gl-BT6">
+                                                <rect key="frame" x="25" y="61" width="249" height="29"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <segments>
+                                                    <segment title="32"/>
+                                                    <segment title="64"/>
+                                                    <segment title="128"/>
+                                                    <segment title="256"/>
+                                                    <segment title="512"/>
+                                                    <segment title="1024"/>
+                                                </segments>
+                                                <color key="tintColor" red="0.57254901960000004" green="0.57254901960000004" blue="0.59215686270000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <connections>
+                                                    <action selector="bufferSizeChanged:" destination="wQW-DI-keW" eventType="valueChanged" id="tLV-eM-hvR"/>
+                                                </connections>
+                                            </segmentedControl>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Raise the buffer if you're hearing crackles." textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Fbu-9N-2fS">
+                                                <rect key="frame" x="18" y="103" width="263" height="24"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration">
+                                                    <accessibilityTraits key="traits" notEnabled="YES"/>
+                                                    <bool key="isElement" value="NO"/>
+                                                </accessibility>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="On older iPads, close all other apps. Or, restart your iPad with only Synth One running." textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsLetterSpacingToFitWidth="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sEd-Th-Wg6">
+                                                <rect key="frame" x="15" y="148" width="268" height="60"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration">
+                                                    <accessibilityTraits key="traits" notEnabled="YES"/>
+                                                    <bool key="isElement" value="NO"/>
+                                                </accessibility>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.14509803921568626" green="0.14509803921568626" blue="0.14509803921568626" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MIDI Input Channel: Omni" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="pI1-4q-bLo">
+                                        <rect key="frame" x="25" y="53" width="268" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" staticText="YES" notEnabled="YES"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="j6L-yF-WkZ" customClass="ChannelStepper" customModule="SynthOneCore">
+                                        <rect key="frame" x="103" y="79" width="108" height="35"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <accessibility key="accessibilityConfiguration" identifier="MIDIInputStepper" label="MIDI Input Channel">
+                                            <accessibilityTraits key="traits" adjustable="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="MIDI Learn Knobs:" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="VLa-3E-3Kt">
+                                        <rect key="frame" x="25" y="122" width="263" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="MQe-Qa-FAj" customClass="SynthButton" customModule="SynthOneCore">
+                                        <rect key="frame" x="42" y="147" width="235" height="34"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" red="0.26693210010000001" green="0.26649737359999998" blue="0.28525885940000001" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <accessibility key="accessibilityConfiguration" identifier="ResetMIDILearnButton" label="Reset MIDI Learn Knobs"/>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Regular" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        <state key="normal" title="Reset MIDI Learn Knobs">
+                                            <color key="titleColor" red="0.80000000000000004" green="0.80000000000000004" blue="0.80000000000000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
+                                        <state key="selected">
+                                            <color key="titleColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        </state>
+                                    </button>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Velocity Sensitive MIDI: " textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nzb-kU-xl1">
+                                        <rect key="frame" x="23" y="202" width="180" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                        <attributedString key="userComments">
+                                            <fragment content="MIDI input velocity sensitive">
+                                                <attributes>
+                                                    <font key="NSFont" metaFont="message" size="11"/>
+                                                    <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                </attributes>
+                                            </fragment>
+                                        </attributedString>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ciI-3c-py9" customClass="ToggleSwitch" customModule="SynthOneCore">
+                                        <rect key="frame" x="212" y="197" width="49" height="36"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                        <accessibility key="accessibilityConfiguration" identifier="VelocitySensitiveToggle" label="Velocity Sensitive MIDI">
+                                            <accessibilityTraits key="traits" button="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5pp-Bd-T3Z">
+                                        <rect key="frame" x="6" y="232" width="302" height="35"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="App Always on / Don't sleep:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="UeB-Ec-gRc">
+                                                <rect key="frame" x="15" y="6" width="181" height="24"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration">
+                                                    <accessibilityTraits key="traits" notEnabled="YES"/>
+                                                    <bool key="isElement" value="NO"/>
+                                                </accessibility>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <nil key="highlightedColor"/>
+                                                <attributedString key="userComments">
+                                                    <fragment content="App will not go into background mode toggle">
+                                                        <attributes>
+                                                            <font key="NSFont" metaFont="message" size="11"/>
+                                                            <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
+                                                        </attributes>
+                                                    </fragment>
+                                                </attributedString>
+                                            </label>
+                                            <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2qN-E6-I52" customClass="ToggleSwitch" customModule="SynthOneCore">
+                                                <rect key="frame" x="204" y="3" width="49" height="36"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                <accessibility key="accessibilityConfiguration" hint="App does not sleep." identifier="AlwaysOnToggle" label="App Always On">
+                                                    <accessibilityTraits key="traits" button="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                            </view>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.15686274509803921" green="0.15686274509803921" blue="0.15686274509803921" alpha="1" colorSpace="calibratedRGB"/>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Background Audio Always On:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="sxO-Cg-8JK">
+                                        <rect key="frame" x="22" y="275" width="180" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="a3K-SY-hHt">
+                                        <rect key="frame" x="6" y="305" width="302" height="35"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <subviews>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Save + Load Tuning With Preset:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="MlE-O3-Ji5">
+                                                <rect key="frame" x="8" y="6" width="189" height="24"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <accessibility key="accessibilityConfiguration">
+                                                    <accessibilityTraits key="traits" notEnabled="YES"/>
+                                                    <bool key="isElement" value="NO"/>
+                                                </accessibility>
+                                                <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                                <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                            <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="QvN-tN-KKa" customClass="ToggleSwitch" customModule="SynthOneCore">
+                                                <rect key="frame" x="206" y="3" width="49" height="36"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                <accessibility key="accessibilityConfiguration" hint="Saves Tuning Panel with Preset" identifier="SaveTuningToggle" label="Save Tuning">
+                                                    <accessibilityTraits key="traits" button="YES"/>
+                                                    <bool key="isElement" value="YES"/>
+                                                </accessibility>
+                                            </view>
+                                        </subviews>
+                                        <color key="backgroundColor" red="0.15686274510000001" green="0.15686274510000001" blue="0.15686274510000001" alpha="1" colorSpace="calibratedRGB"/>
+                                    </view>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="cMA-Db-Y5l" customClass="ToggleSwitch" customModule="SynthOneCore">
+                                        <rect key="frame" x="213" y="345" width="49" height="36"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Sets if apps plays in the background." identifier="BackgroundAudioToggle" label="Background Audio">
+                                            <accessibilityTraits key="traits" button="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Launch With Last Tuning:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fAs-Es-4DF">
+                                        <rect key="frame" x="23" y="348" width="180" height="24"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <accessibility key="accessibilityConfiguration">
+                                            <accessibilityTraits key="traits" notEnabled="YES"/>
+                                            <bool key="isElement" value="NO"/>
+                                        </accessibility>
+                                        <fontDescription key="fontDescription" name="AvenirNextCondensed-Medium" family="Avenir Next Condensed" pointSize="16"/>
+                                        <color key="textColor" red="0.74509803919999995" green="0.74509803919999995" blue="0.76470588240000004" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="qK0-RZ-jCN" customClass="ToggleSwitch" customModule="SynthOneCore">
+                                        <rect key="frame" x="212" y="272" width="49" height="36"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                        <accessibility key="accessibilityConfiguration" hint="Sets if apps plays in the background." identifier="BackgroundAudioToggle" label="Background Audio">
+                                            <accessibilityTraits key="traits" button="YES"/>
+                                            <bool key="isElement" value="YES"/>
+                                        </accessibility>
+                                    </view>
+                                </subviews>
+                                <color key="backgroundColor" red="0.13333333333333333" green="0.13333333333333333" blue="0.13333333333333333" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="378" id="pcF-wM-383"/>
+                                    <constraint firstAttribute="width" constant="600" id="v1M-fU-Z86"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.20067340135574341" green="0.20070812106132507" blue="0.20066580176353455" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="tKC-fD-PQm" firstAttribute="centerX" secondItem="IRU-OW-W2j" secondAttribute="centerX" id="Itu-vL-vCW"/>
+                            <constraint firstItem="tKC-fD-PQm" firstAttribute="top" secondItem="IRU-OW-W2j" secondAttribute="top" id="Qgf-gk-bmN"/>
+                        </constraints>
+                    </view>
+                    <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+                    <size key="freeformSize" width="600" height="640"/>
+                    <connections>
+                        <outlet property="backgroundAudioToggle" destination="qK0-RZ-jCN" id="vnm-XN-2xB"/>
+                        <outlet property="bufferSizeSegmentedControl" destination="aHe-gl-BT6" id="XMo-rh-sMG"/>
+                        <outlet property="channelLabel" destination="pI1-4q-bLo" id="d6Z-FY-piO"/>
+                        <outlet property="channelStepper" destination="j6L-yF-WkZ" id="SFr-on-CxL"/>
+                        <outlet property="inputTable" destination="aoz-eh-ksY" id="9O6-yt-1ig"/>
+                        <outlet property="launchWithLastTuningToggle" destination="cMA-Db-Y5l" id="hBI-fh-5E9"/>
+                        <outlet property="resetButton" destination="MQe-Qa-FAj" id="te0-AY-fj6"/>
+                        <outlet property="saveTuningToggle" destination="QvN-tN-KKa" id="ldK-LI-seM"/>
+                        <outlet property="sleepToggle" destination="2qN-E6-I52" id="XJj-mg-6vF"/>
+                        <outlet property="velocityToggle" destination="ciI-3c-py9" id="U3a-tY-JDX"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="tKD-rW-qhY" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1564.453125" y="177.34375"/>
+        </scene>
+        <!--About-->
+        <scene sceneID="VcE-Ju-YHE">
+            <objects>
+                <viewControllerPlaceholder storyboardName="About" id="vru-hZ-pY9" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="R6F-Nv-wwo" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-990" y="-952"/>
+        </scene>
+        <!--MailingList-->
+        <scene sceneID="2Ji-0o-Niz">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" id="MLy-jo-gU4" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="0fj-Zq-gJi" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-981" y="-890"/>
+        </scene>
+        <!--InfoView-->
+        <scene sceneID="u34-cr-DFR">
+            <objects>
+                <viewControllerPlaceholder storyboardIdentifier="I" storyboardName="About" referencedIdentifier="InfoView" id="0bp-Jd-82Y" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="cB9-h0-oem" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-985" y="-791"/>
+        </scene>
+        <!--Apps-->
+        <scene sceneID="HZF-Kd-ZjS">
+            <objects>
+                <viewControllerPlaceholder storyboardName="About" referencedIdentifier="Apps" id="PKD-Zy-awT" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Ahp-6b-fVQ" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-943" y="-631"/>
+        </scene>
+        <!--FMPlayer2-->
+        <scene sceneID="DSN-aZ-ygh">
+            <objects>
+                <viewControllerPlaceholder storyboardName="About" referencedIdentifier="FMPlayer2" id="qyS-HD-ewE" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="tcu-X0-N8s" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-940" y="-561"/>
+        </scene>
+        <!--SharingIsCaring-->
+        <scene sceneID="Miu-CI-d0u">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" referencedIdentifier="SharingIsCaring" id="JZQ-7S-Tum" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="2sk-EO-RLE" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1027" y="-503"/>
+        </scene>
+        <!--iPhoneAbout-->
+        <scene sceneID="X3t-Ca-5If">
+            <objects>
+                <viewControllerPlaceholder storyboardName="About" referencedIdentifier="iPhoneAbout" id="8P9-DY-HCH" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="AWM-iD-fgy" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1099" y="-1388"/>
+        </scene>
+        <!--iPhonePresets-->
+        <scene sceneID="hFZ-gj-4EN">
+            <objects>
+                <viewControllerPlaceholder storyboardName="Presets" referencedIdentifier="iPhonePresets" id="cl1-uI-Igd" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="K5d-bu-9wc" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1096" y="-1331"/>
+        </scene>
+        <!--iPhoneHeaderVC-->
+        <scene sceneID="JOz-t8-Ok7">
+            <objects>
+                <viewControllerPlaceholder storyboardIdentifier="iPhoneHeaderVC" storyboardName="Header" referencedIdentifier="iPhoneHeaderVC" id="eky-JD-VtV" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="eOg-qd-2Hd" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1079" y="-1291"/>
+        </scene>
+        <!--iPhoneMore-->
+        <scene sceneID="nhy-z7-Ytk">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" referencedIdentifier="iPhoneMore" id="180-2e-dHd" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="noM-hl-QX0" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1160" y="-1489"/>
+        </scene>
+        <!--iPhoneWelcome-->
+        <scene sceneID="fdo-GQ-pZN">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" referencedIdentifier="iPhoneWelcome" id="mL0-tn-PDC" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="kgK-uX-EM7" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1213" y="-1531"/>
+        </scene>
+        <!--iPhoneShare-->
+        <scene sceneID="aE0-T7-Ac3">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" referencedIdentifier="iPhoneShare" id="vaE-RL-nKW" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="l7K-5e-Zpx" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1143" y="-1459"/>
+        </scene>
+        <!--iPhoneMailingList-->
+        <scene sceneID="bnA-4z-ea7">
+            <objects>
+                <viewControllerPlaceholder storyboardName="MailingList" referencedIdentifier="iPhoneMailingList" id="M7f-x2-kSI" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="KDA-nG-Rwk" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1143" y="-1435"/>
+        </scene>
+        <!--Header-->
+        <scene sceneID="GZ3-G8-AZd">
+            <objects>
+                <viewControllerPlaceholder storyboardName="Header" id="cdj-63-74S" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="lr0-Ph-Pc7" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-1096" y="-1166"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="bluetooth" width="13.5" height="18"/>
+        <image name="circuit" width="857" height="527.5"/>
+        <image name="keyboard_top" width="1023" height="47"/>
+        <image name="rack-left" width="100" height="375"/>
+    </resources>
+    <inferredMetricsTieBreakers>
+        <segue reference="P92-2d-IvO"/>
+        <segue reference="TVa-dv-w7i"/>
+        <segue reference="OFW-mz-IhX"/>
+    </inferredMetricsTieBreakers>
+</document>

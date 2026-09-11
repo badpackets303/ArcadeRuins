@@ -1,0 +1,63 @@
+/* Number of milliseconds */
+"%.00f ms" = "%.00f ms";
+
+/* Alert Message:  MIDI Learn Reset */
+"All MIDI learn knob assignments have been removed." = "すべてのMIDI学習ノブの割り当てが削除されました。";
+
+/* Alert Message: MIDI Panic */
+"All notes have been turned off." = "すべての音符はオフになっています。";
+
+/* Alert Title: Confirm Email Address */
+"Almost done!" = "ほぼ完了！";
+
+/* Alert Message: Background Audio */
+"Background audio will drain the battery faster. Please turn off when not in use." = "バックグラウンド・オーディオの使用により、バッテリーが早く消耗されます。使用していない時、電源を切ってください。";
+
+/* Alert Title: Presets Added */
+"Congratulations! 🎉" = "おめでとう！ 🎉";
+
+/* No comment provided by engineer. */
+"Couldn't prepare the output format (error %d/%4.4s)" = "出力形式の準備が出来ませんでした（エラー： %1$d/%2$.4s）";
+
+/* Alert Title: Allows On Mode */
+"Don't Sleep Mode" = "スリープモードをしない";
+
+/* Alert Title: Background Audio */
+"Important" = "重要";
+
+/* Main Panel Abbreviation */
+"MAIN" = "MAIN";
+
+/* MIDI Learn Instructions */
+"MIDI Learn: Touch a knob to assign" = "ノブをタッチして割当てる";
+
+/* Alert Message: Too High */
+"MIDI Note > 127. G8 is the highest playable key. Take it down a notch 😉" = "MIDIノート ＞ 127. G8は再生可能な最高のキーです。それを１ノッチ下げて下さい😉";
+
+/* Alert Title: Invalid Email Address */
+"Oops!" = "おっとっと！";
+
+/* Alert Title: Allow notifications */
+"Stay informed!" = "最新情報を常にゲット！";
+
+/* Alert Title: Rate App */
+"Thank you" = "ありがとうございました！";
+
+/* Alert Message: Duplicate Bank Name */
+"There is already a bank with the name '\(bankName)'. Please rename one of them to keep things working smoothly." = "バンク名「\(bankName)」が既に使われています。アプリをスムーズに起動出来るように、一つの名前を変更してください。";
+
+/* Alert Message: Rate App */
+"This is a FREE app built by volunteers. Please help with a Great rating so we can make more apps! Thanks for being awesome." = "このアプリは、ボランティアによって構築された無料アプリです。これからもアプリを造りつづけられるように、良い評価で応援してあげて下さい！素晴らしい評価に予め感謝します。";
+
+/* Alert Message: Allows On Mode */
+"This mode is great for playing live. Background audio will also stay on. Note: It will use more power and could drain your battery faster" = "このモードはライブ演奏に最適です。バックグラウンド音声もそのまま残ります。注：この場合には、より多くの電力を使用し、バッテリーをより早く消耗させる恐れがあります";
+
+/* Alert Title: Too High */
+"Too High" = "高すぎます。";
+
+/* MIDI Learn Instructions */
+"Twist knob on your MIDI Controller" = "MIDIコントローラーのノブを回して下さい。";
+
+/* Alert Message: Allow notifications */
+"We'll send Free updates, sounds, and apps. Allow notifications!" = "無料アップデート、サウンド、アプリ情報を送信します。通知を許可して下さい！";
+

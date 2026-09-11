@@ -1,0 +1,4 @@
+module S1SupportC {
+    header "AKSettingsBridge.h"
+    export *
+}

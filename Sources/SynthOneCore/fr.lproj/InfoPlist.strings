@@ -1,0 +1,9 @@
+/* Bundle display name */
+"CFBundleDisplayName" = "Arcade Ruins";
+
+/* Bundle name */
+"CFBundleName" = "$(PRODUCT_NAME)";
+
+/* Privacy - Camera Usage Description */
+"NSCameraUsageDescription" = "$(PRODUCT_NAME) utilisation de la caméra.";
+

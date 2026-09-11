@@ -1,0 +1,338 @@
+name: SynthOne
+options:
+  bundleIdPrefix: com.badpackets303
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  minimumXcodeGenVersion: "2.40.0"
+
+# ---------------------------------------------------------------------------
+# Track A: Mac Catalyst (ADR-001). No CocoaPods; everything is vendored source.
+# The app and the plugin are signed with the owner's team, 8RSH7U3222, so they can
+# share an App Group for presets (ADR-041, superseding ADR-005's ad-hoc signing and
+# ADR-006). The framework and the test bundle stay ad-hoc: the app re-signs the
+# framework when it embeds it, and the tests need no identity at all.
+# ---------------------------------------------------------------------------
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"                 # R-6: pin the language mode; modernise deliberately, later
+    IPHONEOS_DEPLOYMENT_TARGET: "14.0"   # -> macOS 11 under Catalyst
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CLANG_ENABLE_MODULES: YES
+    # gnu11, not c11: TAAE uses GNU extensions such as typeof().
+    GCC_C_LANGUAGE_STANDARD: gnu11
+    CLANG_CXX_LANGUAGE_STANDARD: "gnu++17"
+    # S1Support's Swift re-exports the S1SupportC module map, so anything that
+    # imports SynthOneCore (including the test bundle) must be able to find it.
+    SWIFT_INCLUDE_PATHS:
+      - $(SRCROOT)/Sources/S1Support/include
+      - $(SRCROOT)/Sources/Soundpipe/include
+    HEADER_SEARCH_PATHS:
+      - $(SRCROOT)/Sources/Soundpipe/lib/dr_wav
+
+# Ad-hoc signing has to be repeated per target: XcodeGen writes its own
+# CODE_SIGN_IDENTITY preset at target level, which overrides the project base.
+targetTemplates:
+  AdHocSigned:
+    settings:
+      base:
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        CODE_SIGNING_ALLOWED: YES
+        DEVELOPMENT_TEAM: ""
+        PROVISIONING_PROFILE_SPECIFIER: ""
+  # ADR-041: the two products that share presets. Automatic signing registers their
+  # app IDs and the App Group with the team; build with `-allowProvisioningUpdates
+  # -allowProvisioningDeviceRegistration` so it can.
+  TeamSigned:
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 8RSH7U3222
+        CODE_SIGN_IDENTITY: "Apple Development"
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "Apple Development"
+        CODE_SIGNING_ALLOWED: YES
+        # Notarisation requires the hardened runtime (Scripts/release.sh). The effective setting
+        # read NO even though team-signed builds already carried the runtime flag, so it is stated.
+        ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+
+  # --- Soundpipe: vendored C DSP primitives (MIT). Filled in at P1-2. ---------
+  Soundpipe:
+    type: library.static
+    supportedDestinations: [macCatalyst]
+    sources:
+      - path: Sources/Soundpipe
+        excludes: ["**/*.md"]
+    settings:
+      base:
+        PRODUCT_NAME: Soundpipe
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/Sources/Soundpipe/include
+          - $(SRCROOT)/Sources/Soundpipe/lib/faust
+          # soundpipe.h declares sp_wavin, whose struct needs dr_wav's types.
+          # Declarations only — dr_wav.c is not compiled and sp_wavin is unused.
+          - $(SRCROOT)/Sources/Soundpipe/lib/dr_wav
+        # Soundpipe only needs libsndfile for file I/O we never use.
+        GCC_PREPROCESSOR_DEFINITIONS: [$(inherited), NO_LIBSNDFILE=1]
+        # The module map exists for Swift consumers. These C sources must compile
+        # textually: oscmorph2d.c includes soundpipeextension.h directly, and if
+        # modules are on, Clang also pulls it in via the Soundpipe module and the
+        # typedef is defined twice.
+        CLANG_ENABLE_MODULES: NO
+        GCC_WARN_INHIBIT_ALL_WARNINGS: YES   # vendored third-party C
+        MODULEMAP_FILE: $(SRCROOT)/Sources/Soundpipe/include/module.modulemap
+
+  # --- S1Support: our replacements for the AudioKit glue. Filled in at P1-3. --
+  S1Support:
+    type: library.static
+    supportedDestinations: [macCatalyst]
+    sources:
+      - path: Sources/S1Support
+        excludes: ["**/*.md"]
+    settings:
+      base:
+        PRODUCT_NAME: S1Support
+        PRODUCT_MODULE_NAME: S1Support
+        HEADER_SEARCH_PATHS: [$(SRCROOT)/Sources/S1Support/include]
+        MODULEMAP_FILE: $(SRCROOT)/Sources/S1Support/include/module.modulemap
+        SWIFT_INCLUDE_PATHS: [$(SRCROOT)/Sources/S1Support/include]
+
+  # --- SynthOneCore: the DSP kernel, model, presets, tunings and ALL the UI. --
+  # Both products consume this, which is what stops the app and the plugin
+  # drifting apart (docs/00-architecture.md).
+  SynthOneCore:
+    type: framework
+    supportedDestinations: [macCatalyst]
+    templates: [AdHocSigned]
+    sources:
+      # P1-6: the public surface is declared FIRST, then the directory sweeps up
+      # everything else as `project`. Order matters — XcodeGen keeps the first
+      # entry that matches a file, so listing the directory first would swallow
+      # these and the framework would ship no public headers at all.
+      #
+      # Why bother: XcodeGen's default is `public`, which put all 30 headers —
+      # the C++ ones included — into SynthOneCore.framework/Headers and made
+      # clang warn "umbrella header does not include header X" 25 times over.
+      # The umbrella must stay parseable by Swift, so no .hpp may ever join it.
+      - path: Sources/SynthOneCore/SynthOneCore.h
+        headerVisibility: public
+      - path: Sources/SynthOneCore/AudioUnitBase/AudioKit/AKAudioUnit.h
+        headerVisibility: public
+      - path: Sources/SynthOneCore/AudioUnitBase/AudioKit/AKInterop.h
+        headerVisibility: public
+      - path: Sources/SynthOneCore/AudioUnitBase/AudioKit/S1TestToneAudioUnit.h
+        headerVisibility: public
+      # The synth itself, reached from Swift by the P1-6 harness and later by
+      # AKSynthOne.swift (P2-1) and the AUv3 view controller (P4-6).
+      - path: Sources/SynthOneCore/DSP/S1Parameter.h
+        headerVisibility: public
+      - path: Sources/SynthOneCore/DSP/Audio Unit/S1AudioUnit.h
+        headerVisibility: public
+      - path: Sources/SynthOneCore
+        headerVisibility: project
+        # Documentation, not resources. Two directories each carry a PORTING.md,
+        # which would otherwise collide in the framework's Resources folder.
+        excludes: ["**/*.md"]
+    dependencies:
+      - target: Soundpipe
+        link: true
+      - target: S1Support
+        link: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.ArcadeRuinsCore
+        PRODUCT_NAME: SynthOneCore
+        PRODUCT_MODULE_NAME: SynthOneCore
+        DEFINES_MODULE: YES
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+        # AudioUnitBase is on the search path so ported kernel sources keep their
+        # `#import "AudioKit/AKSoundpipeKernel.hpp"` lines verbatim (ADR-009).
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/Sources/Soundpipe/include
+          - $(SRCROOT)/Sources/Soundpipe/lib/dr_wav
+          - $(SRCROOT)/Sources/S1Support/include
+          - $(SRCROOT)/Sources/SynthOneCore/AudioUnitBase
+          - $(SRCROOT)/Sources/SynthOneCore/DSP
+          - $(SRCROOT)/Sources/SynthOneCore/DSP/Kernel
+          - $(SRCROOT)/Sources/SynthOneCore/DSP/Rate
+          - $(SRCROOT)/Sources/SynthOneCore/DSP/Sequencer
+          - $(SRCROOT)/Sources/SynthOneCore/DSP/TAAE
+          - "$(SRCROOT)/Sources/SynthOneCore/DSP/Note State"
+          - "$(SRCROOT)/Sources/SynthOneCore/DSP/Audio Unit"
+
+  # --- SynthOne: the standalone Catalyst app. -------------------------------
+  SynthOne:
+    type: application
+    supportedDestinations: [macCatalyst]
+    templates: [TeamSigned]
+    sources:
+      - path: Sources/SynthOne
+    dependencies:
+      - target: SynthOneCore
+        embed: true
+        codeSign: true
+      - target: SynthOneAU
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.ArcadeRuins
+        PRODUCT_NAME: ArcadeRuins
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # P3-1b — **Optimize Interface for Mac** (ADR-007), the owner's decision.
+        # Device family 6 is Mac. Including it is what Xcode's General tab writes for
+        # "Optimize Interface for Mac"; the built Info.plist then carries
+        # `UIDeviceFamily = [6]` and UIKit reports `.mac` instead of `.pad`.
+        # Without it Catalyst renders the whole iPad layout at 77%. Measured, not
+        # assumed — `AudioUnitPackagingTests` pins the built plist.
+        TARGETED_DEVICE_FAMILY: "2,6"
+    entitlements:
+      path: Sources/SynthOne/SynthOne.entitlements
+      properties:
+        # NOT sandboxed, and that is a measured decision, not laziness (ADR-018).
+        #
+        # Presets and tunings have to live somewhere the app and the plugin can both
+        # see. App Groups are the sanctioned way and need a Team ID (ADR-006). The
+        # documented fallback — a temporary-exception entitlement naming one folder —
+        # was tried and **is denied under ad-hoc signing**: the entitlement appears
+        # in the signature and the sandbox refuses the write anyway
+        # (`NSPOSIXErrorDomain 1, Operation not permitted`). Measured, not assumed.
+        #
+        # This app is local-only and unsigned by choice (ADR-005), so there is no
+        # App Store requirement to sandbox it. Revisit the moment a Team ID exists.
+        #
+        # ADR-041: the Team ID exists. The app stays unsandboxed, which keeps its
+        # settings and the one-time copy of the old preset folder where they are, and
+        # joins the App Group so it and the plugin share banks, presets and tunings.
+        com.apple.security.app-sandbox: false
+        com.apple.security.application-groups:
+          - 8RSH7U3222.com.badpackets303.ArcadeRuins
+        # Kept so re-enabling the sandbox is a one-line change.
+        com.apple.security.files.user-selected.read-write: true
+        # No `device.audio-input`: the synth never records audio input. Asking for it
+        # made macOS prompt for microphone access at launch (P3-4).
+    info:
+      path: Sources/SynthOne/Info.plist
+      properties:
+        CFBundleName: ArcadeRuins
+        CFBundleDisplayName: Arcade Ruins
+        CFBundlePackageType: APPL
+        UILaunchScreen: {}
+        LSApplicationCategoryType: public.app-category.music
+        # No NSMicrophoneUsageDescription: nothing here opens an input device.
+        # `AudioRecorder` taps the mixer's output (P2-3).
+
+  # --- SynthOneAU: the AUv3 instrument extension. Fleshed out at P4-1. -------
+  SynthOneAU:
+    type: app-extension
+    supportedDestinations: [macCatalyst]
+    templates: [TeamSigned]
+    sources:
+      - path: Sources/SynthOneAU
+    dependencies:
+      - target: SynthOneCore
+        link: true
+        embed: false        # the containing app embeds it
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.ArcadeRuins.AUv3
+        PRODUCT_NAME: ArcadeRuinsAU
+        PRODUCT_MODULE_NAME: ArcadeRuinsAU
+        # The same idiom as the app (P3-1b, ADR-007). The extension is its own
+        # process and needs its own copy, or the plugin panel would draw at 77%
+        # inside a host while the standalone drew at 100%. **The visual half is
+        # unverifiable until P4-6**, when the plugin first has a UI.
+        TARGETED_DEVICE_FAMILY: "2,6"
+    entitlements:
+      path: Sources/SynthOneAU/SynthOneAU.entitlements
+      properties:
+        # **Must** be sandboxed, and this was tested rather than assumed (P4-1):
+        # with `app-sandbox: false` the system refuses to open the component at all —
+        # `auval` fails at `OpenAComponent: result: 4` and the extension is never
+        # instantiated. macOS requires app extensions to be sandboxed.
+        #
+        # ⚠️ The plugin cannot reach the app's preset folder *implicitly* — that is
+        # unsolvable without a Team ID (ADR-018, ADR-020). Factory banks are framework
+        # resources and load fine.
+        com.apple.security.app-sandbox: true
+        # ADR-041: the App Group is the folder the sandbox lets it share with the app,
+        # so the plugin can finally save presets, favourites and tunings. Its settings
+        # stay in its own container.
+        com.apple.security.application-groups:
+          - 8RSH7U3222.com.badpackets303.ArcadeRuins
+        # But the user can hand it access explicitly. A document picker grants a
+        # sandboxed process whatever the user chooses, and a security-scoped bookmark
+        # makes that grant survive relaunches — pick the presets *folder* once and the
+        # plugin can read everything in it from then on. `PresetsViewController`
+        # already has the import code. Untested inside an extension: P4-6. ADR-020.
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.files.bookmarks.app-scope: true
+    info:
+      path: Sources/SynthOneAU/Info.plist
+      properties:
+        CFBundleName: ArcadeRuinsAU
+        CFBundleDisplayName: Arcade Ruins
+        CFBundlePackageType: XPC!
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.AudioUnit-UI
+          NSExtensionPrincipalClass: ArcadeRuinsAU.SynthOneAudioUnitViewController
+          NSExtensionAttributes:
+            AudioComponentBundle: ArcadeRuinsAU
+            AudioComponents:
+              # Manufacturer BP03 per ADR-005.
+              #
+              # ⚠️ **`manufacturer` + `subtype` are the plugin's permanent identity.**
+              # A host stores that pair in its session file, not the name, so changing
+              # either one orphans the plugin in every project that ever loaded it.
+              # `aks1` stood for "AudioKit Synth One"; it was renamed at P5-4 while
+              # nothing had been distributed and the change was still free. It is not
+              # free any more. ADR-029.
+              - name: "BadPackets: Arcade Ruins"
+                description: Arcade Ruins polyphonic synthesizer
+                manufacturer: BP03
+                type: aumu
+                subtype: ruin
+                version: 65536
+                sandboxSafe: true
+                tags: [Synthesizer]
+
+  # --- Tests ----------------------------------------------------------------
+  SynthOneTests:
+    type: bundle.unit-test
+    supportedDestinations: [macCatalyst]
+    templates: [AdHocSigned]
+    sources:
+      - path: Tests/SynthOneTests
+    dependencies:
+      - target: SynthOneCore
+        link: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.SynthOneTests
+        GENERATE_INFOPLIST_FILE: YES
+        # ADR-036: redirects Disk to a temporary folder before any test runs.
+        INFOPLIST_KEY_NSPrincipalClass: S1TestStorageIsolation
+
+schemes:
+  SynthOne:
+    build:
+      targets:
+        SynthOne: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [SynthOneTests]
+  SynthOneCore:
+    build:
+      targets:
+        SynthOneCore: all
+    test:
+      config: Debug
+      targets: [SynthOneTests]
