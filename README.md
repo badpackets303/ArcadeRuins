@@ -44,6 +44,10 @@ This is a personal project, shared for testing. It is not on the App Store.
 **One download holds both the standalone app and the plugin.** An AUv3 plugin lives inside its app;
 there is no separate `.component` to install.
 
+> **The first build is with Apple for notarisation and will appear under
+> [Releases](https://github.com/badpackets303/ArcadeRuins/releases) shortly.** Until then, the source
+> here builds and runs — see [Building](#building).
+
 1. Download `ArcadeRuins-<version>-macOS.zip` from the
    [latest release](https://github.com/badpackets303/ArcadeRuins/releases/latest) and unzip it.
 2. Move **ArcadeRuins.app** to your **Applications** folder. The plugin is only registered from there.
