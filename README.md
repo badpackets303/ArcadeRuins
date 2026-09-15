@@ -42,18 +42,25 @@ This is a personal project, shared for testing. It is not on the App Store.
 
 ## Download and install
 
-**One download holds both the standalone app and the plugin.** An AUv3 plugin lives inside its app;
-there is no separate `.component` to install.
+### [⬇ Download Arcade Ruins 0.3.0 for macOS](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.3.0-macOS.zip)
 
-> **The first build is with Apple for notarisation and will appear under
-> [Releases](https://github.com/badpackets303/ArcadeRuins/releases) shortly.** Until then, the source
-> here builds and runs — see [Building](#building).
+**That one download is both products** — the standalone app *and* the AUv3 plugin:
 
-1. Download `ArcadeRuins-<version>-macOS.zip` from the
-   [latest release](https://github.com/badpackets303/ArcadeRuins/releases/latest) and unzip it.
+| | | |
+|---|---|---|
+| **Standalone app** | `ArcadeRuins.app` | Opens on its own. Drag it to Applications. |
+| **AUv3 plugin** | `ArcadeRuins.app/Contents/PlugIns/ArcadeRuinsAU.appex` | **BadPackets: Arcade Ruins** in your DAW (`aumu` / `ruin` / `BP03`). |
+
+An AUv3 plugin lives inside its app — that is how macOS ships them — so there is no separate
+`.component` to install and nothing else to download. Installing the app installs the plugin.
+
+Signed with Developer ID and notarised by Apple. macOS 11 or later; universal, Apple silicon and
+Intel. Every version is on the [Releases](https://github.com/badpackets303/ArcadeRuins/releases) page.
+
+1. Download and unzip
+   [`ArcadeRuins-0.3.0-macOS.zip`](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.3.0-macOS.zip).
 2. Move **ArcadeRuins.app** to your **Applications** folder. The plugin is only registered from there.
-3. **Open it once.** That registers the plugin with macOS. The release is signed with a Developer ID
-   and notarised by Apple, so it opens without a warning.
+3. **Open it once.** That registers the plugin with macOS. It opens without a Gatekeeper warning.
 4. **Quit and reopen your DAW**, then look among its AU instruments for **BadPackets: Arcade Ruins**
    (in Logic Pro: AU Instruments → BadPackets → Arcade Ruins). A DAW that was already running does not
    see a newly installed plugin.
@@ -61,8 +68,8 @@ there is no separate `.component` to install.
 Presets, banks and favourites are shared between the app and the plugin, so a preset saved in one
 appears in the other.
 
-**Known limitations:** there is no app icon yet. The window needs a 1440×900 area, so it does not
-fit a 13-inch display at its default scaling. The plugin
+**Known limitations:** the desktop layout needs a 1440×900 area, so it does not fit a 13-inch
+display at its default scaling — the classic layout, which is the default, does not. The plugin
 has been tested in Logic Pro; other hosts are untested. Please report problems, with your macOS version and host, in
 [Issues](https://github.com/badpackets303/ArcadeRuins/issues).
 
