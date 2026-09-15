@@ -29,7 +29,7 @@ final class KeybedTests: XCTestCase {
 
     /// The real `Manager`, laid out at the design size.
     private func makeManager() throws -> Manager {
-        let container = try XCTUnwrap(SynthOneApp.makeRootViewController() as? S1ScalingContainer)
+        let container = try XCTUnwrap(SynthOneApp.makeRootViewController(layout: .classic) as? S1ScalingContainer)
         let manager = try XCTUnwrap(container.content as? Manager)
         manager.view.frame = CGRect(origin: .zero, size: S1ScalingContainer.designSize)
         manager.loadViewIfNeeded()

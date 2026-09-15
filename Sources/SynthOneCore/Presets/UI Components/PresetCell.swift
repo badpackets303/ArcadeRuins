@@ -32,6 +32,32 @@ class PresetCell: UITableViewCell {
 
     // MARK: - Lifecycle
 
+    /// PORT (P6-7): the desktop sidebar's rows are 30 points, not the storyboard's 44, and
+    /// the label and buttons are placed by frame for 44 (the label at y 13), so they sat low in
+    /// the highlighted row. Set by the desktop layout; the classic panel is unaffected.
+    static var centresContentVertically = false
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard Self.centresContentVertically else { return }
+        let midY = contentView.bounds.midY
+        for view in contentView.subviews { view.center.y = midY }
+        // PORT FIX (P8-0): the storyboard put the four buttons at x 324…487 of a 499-point cell
+        // with a flexible right margin, so in the desktop browser's narrower rows only the star
+        // was on screen and the rename, duplicate and share buttons — and with them the preset
+        // editor — were off the right edge (owner, 2026-09-13: "Where did the preset editor
+        // go?"). Keep their order, from the trailing edge; the name takes what is left.
+        var x = contentView.bounds.width - 8
+        for button in [shareButton, duplicateButton, renameButton, favoriteButton] as [UIButton] {
+            x -= button.bounds.width
+            button.frame.origin.x = x
+            x -= 4
+        }
+        let visible = ([shareButton, duplicateButton, renameButton, favoriteButton] as [UIButton]).filter { !$0.isHidden }
+        let limit = (visible.map { $0.frame.minX }.min() ?? contentView.bounds.width) - 6
+        presetNameLabel.frame.size.width = max(40, limit - presetNameLabel.frame.minX)
+    }
+
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
@@ -45,6 +71,7 @@ class PresetCell: UITableViewCell {
     override func setSelected(_ selected: Bool, animated: Bool) {
         let color = duplicateButton.backgroundColor
         super.setSelected(selected, animated: animated)
+        if Self.centresContentVertically { setNeedsLayout() }   // PORT (P8-0): the buttons' room changes
 
         duplicateButton.backgroundColor = color
         renameButton.backgroundColor = color

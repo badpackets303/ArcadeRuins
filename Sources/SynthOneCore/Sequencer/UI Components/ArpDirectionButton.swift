@@ -39,9 +39,24 @@ class ArpDirectionButton: UIView, S1Control {
 
     var resetToDefaultCallback: () -> Void = {  }
 
+    // MARK: - Desktop layout (P6-3, ADR-045)
+
+    /// Drawn in the desktop dress. Set by the desktop layout when it takes the control.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
+    /// The width of one of the three cells. PORT FIX (P6-3): `width` is a constant 35, the
+    /// storyboard's 108 in thirds (nearly); at any other width the cells were wrong.
+    var cellWidth: CGFloat { drawsDesktopStyle ? bounds.width / 3 : width }
+
     // MARK: - Draw
 
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawDirection(in: bounds, selected: Int(value), accent: s1Accent)
+            return
+        }
         ArpDirectionStyleKit.drawArpDirectionButton(frame: CGRect(x: 0,
                                                                   y: 0,
                                                                   width: self.bounds.width,
@@ -54,10 +69,11 @@ class ArpDirectionButton: UIView, S1Control {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let touchPoint = touch.location(in: self)
+            let cell = cellWidth
             switch touchPoint.x {
-            case 0..<width:
+            case 0..<cell:
                 value = 0
-            case width...width * 2:
+            case cell...cell * 2:
                 value = 1
             default:
                 value = 2

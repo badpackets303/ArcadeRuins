@@ -39,7 +39,10 @@ public final class SynthOneAudioUnitViewController: AUViewController, AUAudioUni
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        preferredContentSize = S1ScalingContainer.designSize
+        // P6 (ADR-045): the desktop layout wants its own size; the classic one its 1024×768.
+        preferredContentSize = S1Layout.current == .desktop
+            ? SynthOneApp.desktopWindowSize
+            : S1ScalingContainer.designSize
         view.backgroundColor = .black
         installInterfaceIfPossible()
     }
@@ -55,6 +58,8 @@ public final class SynthOneAudioUnitViewController: AUViewController, AUAudioUni
         SynthOneApp.startHosted(audioUnit: audioUnit)
 
         let interface = SynthOneApp.makeRootViewController()
+        // P6-5: the desktop layout is dark by design; the host's window may not be.
+        if S1Layout.current == .desktop { view.overrideUserInterfaceStyle = .dark }
         addChild(interface)
         interface.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(interface.view)

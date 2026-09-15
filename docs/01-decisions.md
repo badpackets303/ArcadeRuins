@@ -2761,3 +2761,439 @@ copy-to-pasteboard excluded.
   written by the previous build, before the install.
 - **Confirmed by the owner in Logic, 2026-09-11:** Share works in the plugin. The Save dialog does
   present from the extension, so the unknown above is settled.
+
+## ADR-045 — The desktop layout re-homes the classic controls; the classic layout stays a launch option
+
+**Date:** 2026-09-12 · **Status:** Accepted (owner's choice) · **Phase 6, P6-0 and P6-1**
+
+**Context.** The interface was upstream's 1024×768 iPad layout, scaled to the window (ADR-019): two
+panel slots cycled by arrow rails, a fixed keyboard strip, popovers for the rest. The owner asked what a
+desktop-native interface would look like, chose a single-screen layout from a design canvas
+(<https://claude.ai/code/artifact/4623edc1-39b7-4667-a58d-eb810d176f41>, page 1), refined it four times
+in one afternoon (tabs tried and rejected; texture added; effects given a full row; the virtual
+keyboard dropped so the sequencer's faders could be tall), and asked for it to be built **as a new
+version that keeps the old one recoverable.**
+
+This relaxes hard requirement 1 ("preserve the user interface") for the first time, at the owner's
+explicit request. Requirement 2, preserve functionality, still binds in full. Upstream's README
+warning about App Store rule 4.1 also stops applying to a redesigned interface.
+
+**Decision.**
+
+1. **The old interface is kept two ways.** Git tag `v0.1.0-classic-ui` marks the last classic commit,
+   and `S1Layout` keeps the classic layout in the build behind a user default
+   (`defaults write com.badpackets303.ArcadeRuins S1ClassicLayout -bool YES`, or View ▸ Classic
+   Layout, applied at the next launch). Version 0.2.0 (build 2) on branch `desktop-ui`.
+2. **The desktop layout re-homes the classic controls rather than replacing them.** `Manager` and the
+   twelve storyboards load exactly as before, so every knob, switch, picker, slider and pad exists, is
+   bound to its parameter by the same `Conductor.bind`, answers MIDI learn and VoiceOver, and drives
+   the same 150 parameters. `S1DesktopLayout` then builds the Mac window over `Manager`'s view — a
+   toolbar under the traffic lights, a preset sidebar, four rows of titled sections, a play bar and a
+   status bar — hides the classic hierarchy, and **moves the control views** into the sections. Nothing
+   is rebound. The alternative, new views bound afresh to 150 parameters, was rejected: it duplicates
+   every range, taper, callback and `updateUI` special case in the panel controllers, and every one is
+   a chance to drift from the sound.
+3. **Two dresses on one control.** `Knob.drawsDesktopStyle` and `ToggleButton.drawsAsSwitch` switch
+   the drawing to `S1DesktopStyle` — a value arc round a brushed cap, a pill switch — while the classic
+   PaintCode kits still draw in the classic layout. `Knob.valueDidChange` feeds a readout under every
+   knob (`S1ControlCell`), so a value the user sees is always the value that sounds.
+4. **What stays whole.** The preset browser and the Tunings panel are shown as sheets
+   (`S1PanelSheet`), which adopt the panel as their child while up so its own popovers present
+   correctly. The sidebar proper is P6-6. The classic keyboard, wheels and their settings stay loaded
+   and hidden: `Manager`'s callbacks and the computer keyboard still route through them.
+5. **Window.** No scaling container. `SceneDelegate` opens the desktop layout at 1440×900 (pinned for
+   the first second, as ADR-042 does, because macOS restores the classic 1024×800 frame otherwise) and
+   frees it above 1280×820. The plugin's `preferredContentSize` follows the layout.
+
+**Consequences.**
+- The storyboards are still the source of the controls; layout code moves them. A future session that
+  deletes a storyboard control deletes it from both layouts.
+- `Manager.appendMIDIControls` asks the layout where a panel's controls went; the classic path is
+  unchanged.
+- `VerticalSlider` re-measures its bar in `layoutSubviews`; it measured once, in `awakeFromNib`, because
+  the storyboard fixed it at 160 points.
+- Unsatisfiable-constraint noise: the hidden classic hierarchy's autoresizing constraints still exist.
+  The root view's own 1024×768 constraints are deactivated; the rest breaks harmlessly and logs.
+- The test bundle registers the classic default, so the 285 existing tests keep the scaling container
+  they were written against; `DesktopLayoutTests` builds the desktop layout explicitly.
+
+**Amended 2026-09-12 (owner).** Master (Volume, Anti-alias, Widen, Arp/Seq) sits at the end of the effects row, not in row one, so the Mix section has room for its seven knobs. Row one is OSC 1 · OSC 2 · Mix · Filter · Voice.
+
+**Verification.** `DesktopLayoutTests`: every bound control is inside the desktop root (or is one of
+the six classic controls deliberately kept back), the fifteen sections lay out at the design size, a
+knob's readout follows its value, MIDI learn finds the moved knobs, and the sliders follow their new
+height. The running app was rendered with `Scripts/debug/desktop_render.py` at 1440×900 on
+2026-09-12 with the preset "Synthwave 1974" loaded; the render is the acceptance picture for P6-1.
+
+## ADR-046 — Skins: a palette and decoration over the desktop layout, never a layout of their own
+
+**Date:** 2026-09-13 · **Status:** Accepted (owner's choice) · **Phase 7, P7-0 to P7-3**
+
+**Context.** With 0.2.0 ready, the owner showed a synthwave "Arcade Ruins" mock-up of the desktop
+layout — neon orange and cyan on near-black, glowing knob arcs, grunge over the panels, a sunset over
+a perspective grid in the header, an arcade cabinet down the sidebar, the preset list on a CRT — and
+asked for it as a skin. Decided: finish P6-8 first, then build the skin **fully procedural**, with
+no supplied artwork.
+
+**Decision.**
+
+1. **A skin is a palette plus decoration, and nothing else.** `S1Skin` (`Sources/SynthOneCore/Desktop/S1Skin.swift`)
+   carries an `S1Palette` of every colour the layout and `S1DesktopStyle` use, a `glow` factor that
+   scales every accent glow, and five hooks the layout consults while it builds: a texture for the
+   sections, a glow colour for their border, a frame accent for the sidebar's lists and the XY pads,
+   and factories for a wordmark, toolbar art and sidebar art. **Metrics, sections, rows, bindings and
+   hit zones are not the skin's to touch.** `SkinTests.testBothSkinsLayOutEverySectionInTheSamePlace`
+   holds every section to the same frame under both skins, so the layout tests that run under Studio
+   cover Arcade's geometry.
+2. **The theme keeps its names.** `S1DesktopTheme.orange`, `.text`, `.sectionBorder` … became computed
+   properties reading `S1Skins.current.palette`; its 130 call sites did not change. `S1DesktopStyle`'s
+   32 inline colours became palette entries named for their role (`wellTop`, `litBorder`,
+   `faderCapTop` …), and Studio's entries are the exact values it shipped with: a Studio render after
+   P7 differs from the 0.2.0 screenshot only in run state (the delay-time readout follows tempo, the
+   sequencer's step moves).
+3. **Arcade is drawn, not painted.** `S1ArcadeArt` draws the sun, mountains, grid, starfield, grunge
+   and scanlines with Core Graphics from seeded pseudo-random sequences, so a render is the same twice
+   and crisp at any scale. The header art is 48 points tall like the toolbar; the sun sits in the gap
+   between the wordmark and the preset display, the one stretch with nothing over it at the design
+   width. The mock-up's "Open Presets…" CRT panel is not adopted: the sidebar keeps its lists, each
+   framed as a screen (`S1CRTFrame`: glowing border, scanline overlay, no inset).
+4. **Chosen like the layout.** `S1SkinChoice` is a user default (`S1Skin`: `studio` | `arcade`), read
+   once at launch; View ▸ Skin ▸ Studio | Arcade writes it and says the change applies next time.
+   `-S1Skin arcade` as a launch argument works too (`desktop_render.py`'s `RENDER_ARGS`), so a skin can
+   be rendered without touching the owner's defaults. The plugin has its own container and default.
+   Studio is the default: the owner asked for an *option*.
+5. **Version 0.3.0** (build 3), on `desktop-ui` after 0.2.0's release prep.
+
+**Consequences.**
+- A new colour in the layout is a new palette entry with a value for each skin; the compiler enforces
+  it (the palette is a memberwise struct).
+- `S1Skins.current` is read when views are built. A skin cannot change while the window is up; the
+  choice applies at the next launch, like the layout.
+- The classic layout has no skins: its colours are the storyboards'.
+- `drawHierarchy(in:afterScreenUpdates:)` needs the app's window server and throws in the test host;
+  `layer.render(in:)` draws the same `draw(_:)`, which is what the art tests use.
+
+**Verification.** `SkinTests` (6): the default and its round trip; Studio's palette is the shipped one
+and hangs no art; Arcade hangs its art, glows every section orange, frames the two lists and the two
+pads, reads its values in cyan; both skins lay every section out in the same place; the art draws.
+`DesktopLayoutTests` 22/22 and `DesktopPluginTests` 4/4 unchanged. Rendered on 2026-09-13 at 1440×900
+and at 1180×900 with the sidebar hidden (`docs/screenshots/arcade-skin.png`).
+
+## ADR-047 — The preset browser drops down from the toolbar; the sidebar is gone
+
+**Date:** 2026-09-13 · **Status:** Accepted (owner's choice) · **Phase 8, P8-0** · Amends ADR-045 (P6-6) and ADR-046
+
+**Context.** The owner changed their mind about the preset sidebar after living with it: "Let's have
+it as a drop-down when a user clicks on the preset name at the top of the window. Get rid of the side
+panel. That will give us more wiggle room to readjust some of the panel sections that still need
+work."
+
+**Decision.**
+
+1. **The browser column is unchanged; where it lives changed.** The same re-homed classic tables,
+   cells, buttons and notes field (P6-6) now sit in `S1DesktopLayout.presetPanel`, a 380×720 card
+   that hangs 4 points below the toolbar, centred under the preset name, over the rows. A short
+   window shortens it (the height constraint yields to the play bar). It is a subview of the
+   layout's root, not a presented controller, so the browser's own presentations — the editors,
+   Search, the share sheet — still present from `PresetsViewController` exactly as before, and the
+   plugin gets the same panel with no window of its own to worry about (ADR-044).
+2. **Three ways in, three ways out.** The preset name in the toolbar carries a chevron and a clear
+   button over the whole field (`presetFieldButton`, accessibility label "Presets"); View ▸ Preset
+   Browser is ⌥⌘P. A click anywhere else — a clear backdrop over the window catches it — Escape, or
+   the same shortcut puts it away; so does any card presentation (`dressPresented` closes it first),
+   since the Search and editor cards would otherwise sit under it. The toolbar's Presets button is
+   gone: the name is the button.
+3. **The rows have the whole width, and use it.** Row one's fixed sections grew (OSC 1 184, OSC 2
+   204 with wider selectors, Filter 236 with a 60-point cutoff, Voice 156; 44-point knobs
+   throughout, Mix keeps about 560 points); the LFO section is wider (×1.12) with 70-point mod
+   chips and 30-point rate/amount knobs, which stops its readouts overlapping; the XY pads are 400
+   wide. Rows one and two are 158 and 220 tall to fit, so the fourth row has 247 at 900 tall —
+   about 84 points of fader travel, down from 100. The minimum window stays 1440×900: the width is
+   now the rows', not a sidebar's, and there is no narrower mode.
+4. **Skins follow.** `S1Skin.makePanelArt()` (was `makeSidebarArt`) draws behind the card; the CRT
+   frames stay on the two lists and the two pads. The palette's `panelBackground` is the card.
+5. **The Find menu is removed.** Search Presets has been ⌘F since P6-6 and the system Find item
+   logged a shortcut conflict at every launch; a synth has nothing to find.
+
+**Consequences.**
+- `SynthOneApp.desktopSidebarDidChange` and `desktopMinimumWindowSize(sidebarVisible:)` are gone,
+  and with them `SceneDelegate`'s observer; the window's minimum is one number again.
+- `Manager.desktopTogglePresets(_:)` / `desktopClosePresets(_:)` replace `desktopToggleSidebar(_:)`.
+- The render driver presses by accessibility label as well as title (`RENDER_PRESS=Presets` opens
+  the browser).
+- The README's sidebar and sidebar-hidden screenshots are replaced by one of the drop-down open.
+
+**Verification.** `DesktopLayoutTests`: the browser's views are in the panel, the panel is 380×720
+and hidden until asked, opens under the name 4 points below the toolbar inside the window and over
+the rows, closes on the backdrop, Escape, ⌥⌘P and the menu selectors; the editor is as wide as the
+root. `SkinTests` follow the rename. Rendered both skins closed and open on 2026-09-13.
+
+## ADR-048 — Neon Ruins: a skin with one accent per section, and the drawing choices a skin can make
+
+**Date:** 2026-09-14 · **Status:** Accepted (owner's choice) · **Phase 7, P7-4** · Extends ADR-046
+
+**Context.** With the Arcade skin in, the owner said the interface still looked "very generic … no
+character" and showed a second synthwave reference (ChatGPT's one-shot). Designed on a canvas
+first, over the P8-1 geometry, through four rounds of the owner's direction: "still lifeless and
+muted" (hotter glows, near-black panels, the real brand graphic); "the rust is too warm and seems
+more like a glow reflection rather than texture" (neutral worn metal); "the orange is making the UI
+too monotonous and overpowering — mix it up with other neon colors for different panels" (one neon
+per section); then "build this as the third skin … make the Mix panel match the green of the Delay
+panel." ADR-046's skin had one accent for the whole layout and drew every control in it.
+
+**Decision.**
+
+1. **A section can have its own accent.** `S1Skin.sectionAccent(for:)` answers a colour by the
+   layout's section key ("Mix", "Filter Envelope", "Pads" …) or nil. `S1SectionView.accent` colours
+   the border, the glow, the title's glow and the header's rule. **Every drawn control takes an
+   `accent`** (`S1DesktopStyle.draw…(…, accent:)`), found through `UIView.s1Accent`: the nearest
+   `S1SectionView`'s accent, else the palette's. Studio and Arcade name no section accents, so
+   every control under them draws exactly as before; the eleven ported `draw(_:)` sites changed by
+   one argument.
+2. **The drawing choices a skin makes are a struct, `S1SkinDress`**, with defaults that are the
+   Studio and Arcade behaviour: border width, glow radius and opacity, a second bloom, the knob's
+   ring width and halo, a lit fader track, whether lit cells derive from the accent
+   (`litFromAccent`: mixes of the accent with white and black replace `litTop`/`plateTop`/
+   `chipActiveTop`/`faderCapTop`/`accentBorder` …), and the wordmark's frame. Metrics stay the
+   layout's; the wordmark frame is the one number a skin may ask for, and Neon Ruins asks for
+   220×24 because the owner's artwork is about 14:1 once its noise is trimmed (150×46, the canvas's
+   guess, would show 10-point letters).
+3. **Neon Ruins' accents** are a spectrum across each row — OSC 1/2 orange, Mix mint, Filter pink,
+   Voice violet; Filter Envelope pink, Amplitude Envelope gold, LFO & Mod Targets violet; Reverb
+   cyan, Delay mint, Phaser violet, Bitcrusher pink, Master orange; Sequencer orange, Pads cyan.
+   Pairings follow function (the filter and its envelope, the two modulation sections); Mix is
+   mint like Delay at the owner's request. Readouts stay cyan and off states are cyan-outlined
+   everywhere, which is what keeps fifteen panels in six colours reading as one instrument.
+4. **Its art is drawn like Arcade's** (`S1NeonRuinsArt`): a neutral grime tile (cracks with a pale
+   edge, brushed scratches, sparse specks, grain — the first canvas pass's orange rust read as
+   reflected light); a sunset header with the sun in the gap after the wordmark, a palm in the gap
+   before the buttons, dimmed only under controls; a starfield and lit floor behind the preset
+   browser; and a new hook, `makeBackdropArt()`, for nebulae and a magenta floor behind the whole
+   window — the play bar and status bar are translucent under this skin, so the floor shows through
+   them and in the gaps between rows. The wordmark is the owner's artwork in a new asset
+   (`s1_wordmark_neon`, generated by `Scripts/branding/generate.py`) with an orange glow.
+5. **Chosen like the others**: `S1Skin` = `neonRuins`, View ▸ Skin ▸ Neon Ruins, `-S1Skin
+   neonRuins`. Studio stays the default. Still 0.3.0, which has not shipped.
+
+**Consequences.**
+- Two palette entries were added for it: `chipText` (an inactive target's label — cyan here,
+  the label colour in the others) and `knobPointer` (white here; nil means the accent).
+- `S1SegmentedControl` and the step-number box (`SliderTransposeButton`) take their lit colours
+  from the accent too; both are dressed before they are placed, so they re-apply on
+  `didMoveToWindow`.
+- The canvas's marquee ("PLAY · CREATE · DESTROY · REPEAT") in the preset browser is not built:
+  it would be a new view in the browser's column, a layout change.
+- The joystick moved from `S1ArcadePanelArt.draw` into `S1ArcadeArt.drawJoystick`, unchanged, so
+  both browsers draw it.
+
+**Verification.** `SkinTests`: every section under Neon Ruins has its accent, its glow is that
+accent, Mix and Delay are mint, Filter and its envelope pink; a Mix knob's `s1Accent` is mint, a
+Voice switch's violet, the toolbar's the palette's orange; Studio and Arcade name no accent and
+keep the default dress; every skin lays every section out where Studio does; the three art views
+render; the wordmark is the asset. Rendered all three skins on 2026-09-14 (see STATE.md).
+
+## ADR-049 — The skin is chosen in Settings, in both products
+
+**Date:** 2026-09-14 · **Status:** Accepted (owner's choice) · **Phase 7, P7-5** · Extends ADR-046
+
+**Context.** The owner, after the Neon Ruins skin was installed: "Can we allow skin selection
+through the Settings menu within the app? Going through Terminal is not a feasible option."
+Since P7 the skin has been View ▸ Skin in the standalone and a `defaults write` everywhere else.
+**The plugin has no menu bar of its own**, so in Logic the terminal was the only way — and the
+plugin reads its own container's default, so it was a different command from the app's.
+
+**Decision.**
+
+1. **The picker goes in the Settings popover** (`S1SkinPicker`), the one screen both products
+   open from their own toolbar. The desktop layout adds it in `dressPresented` when the
+   `SegueToMIDI` popover is prepared, into the empty right column under the buffer-size note —
+   so no ported file changes, the scene keeps its 600×382, and the classic layout never sees it.
+   View ▸ Skin stays in the standalone; both write the same default.
+2. **It still applies at the next launch**, as the menu does, and says so under the picker — the
+   wording differs by product ("the next time Arcade Ruins opens" / "the next time the host loads
+   Arcade Ruins"), because a plugin's interface belongs to the host. Applying a skin live would
+   mean tearing down a layout that has moved the storyboard's controls into its sections and
+   rebuilding it, which is not worth the risk for a preference; ADR-046 chose next-launch for the
+   same reason.
+
+**Consequences.**
+- The plugin can be re-skinned from inside a host for the first time.
+- `S1SkinChoice.choose` is now called from `SynthOneCore` as well as the app target; it already
+  wrote `UserDefaults.standard`, which in the extension is the extension's container.
+
+**Verification.** `SkinTests`: the picker is installed for `SegueToMIDI`, opens on the chosen skin,
+writes the default when selected, is not stacked when the popover is dressed twice, and sits
+inside the scene's 600×382 in the right column. `DesktopPluginTests`: the hosted layout gets the
+same picker with the host wording. Rendered the popover under Neon Ruins on 2026-09-14
+(`RENDER_SEGUE=SynthOneCore.Manager:SegueToMIDI RENDER_PRESENTED=1`).
+
+**Superseded in part by ADR-050 the same day**: the picker installs from the Settings controller,
+not from the desktop layout, so the classic layout carries it too.
+
+## ADR-050 — The layout is chosen in Settings too, and the test bundle stops writing the owner's
+
+**Date:** 2026-09-14 · **Status:** Accepted (owner's choice) · **Phase 7, P7-6** · Extends ADR-045,
+ADR-049; amends ADR-036
+
+**Context.** The owner, looking at the classic interface: "I would still like to access the original
+iPad-based interface by changing the setting. Can we include that in the release?" The switch existed
+only as View ▸ Classic Layout in the standalone. **The plugin has no menu bar**, so a host could not
+reach the classic interface at all — and once in the classic layout, ADR-049's skin picker was not
+there either, because the desktop layout installed it. Classic was a one-way trip in a host.
+
+**Decision.**
+
+1. **Layout joins Skin in Settings** (`S1AppearanceSettings`: Desktop | Classic, Studio | Arcade |
+   Neon Ruins, a one-line note). Both are supported in the release.
+2. **The pickers install from `MIDISettingsViewController.viewDidLoad`**, one line in a ported file
+   with a PORT comment, instead of ADR-049's hook in the desktop layout's `dressPresented`. That is
+   what makes them appear under the **classic** layout, in both products, so the trip back always
+   exists. View ▸ Classic Layout and View ▸ Skin stay, and write the same defaults.
+3. **The skin picker dims under Classic**, and its title reads `SKIN · DESKTOP ONLY` — skins dress
+   the desktop layout only (ADR-046). The caveat rides in the title so the note stays one line: the
+   block sits in a fixed gap under the scene's buffer-size paragraph, and a second line runs into it.
+4. **The layout and skin defaults move behind `S1Preferences.store`** (`.standard` in both
+   products), which the test bundle points at a scratch suite. `xcodebuild test` runs the tests
+   *inside the app*, so `UserDefaults.standard` there is the owner's real domain: the tests written
+   for P7-5 chose a layout and a skin, which wrote the owner's settings, and tidied up afterwards,
+   which deleted them. ADR-036 isolated `Disk` for exactly this reason and did not cover preferences.
+
+**Consequences.**
+- A host can now switch Arcade Ruins between the desktop and classic interfaces, and back.
+- `TestStorageIsolation` registers the classic default on the scratch store, not on `.standard`.
+- `S1DesktopLayout.dressPresented` loses its settings branch and `skinPicker` property.
+
+
+
+
+## ADR-053 — Notarisation was never broken: the verdicts arrived, late
+
+**Date:** 2026-09-14 · **Status:** Accepted (a correction) · **Phase 5, P5-2** · Corrects the
+record around ADR-041
+
+**Context.** On 2026-09-11 and 12, three notarisation submissions sat *In Progress* with no verdict
+— the 0.1.0-era app twice and, as a control, a 12 KB `hello` binary signed the same way. The
+control's purpose was to separate our packaging from Apple's service, and it hung too, so the
+conclusion recorded in STATE.md was that notarisation "hangs on Apple's side", to be taken to
+developer support, and that the build should not be re-debugged.
+
+**What actually happened.** All three came back **Accepted**. `xcrun notarytool log` on the first
+app submission reads "Ready for distribution", with ticket contents for the app, the framework and
+both architectures. The service was slow — hours, not the minutes the `--wait` flag implies — and
+the submissions were abandoned before the verdicts landed.
+
+**Decision.** Treat notarisation as working. The release path (`Scripts/release.sh`) is unchanged;
+what changes is the expectation: **`notarytool submit --wait` can take hours, and abandoning it
+loses nothing** — the submission continues server-side and `notarytool history` and `log` retrieve
+the verdict afterwards, by id. Nothing about the packaging needs revisiting.
+
+**Consequences.**
+- The "notarisation is blocked, ask Apple" line in STATE.md and the project memory is wrong and is
+  removed. No developer-support ticket is needed.
+- A release run that appears to hang should be checked with `notarytool history` before anything is
+  changed or resubmitted.
+- **`Scripts/release.sh` no longer uses `--wait`** (amended the same day, after the 0.3.0 attempt).
+  One status poll timed out at the network layer (`NSURLErrorDomain -1001`) after an hour of
+  `In Progress`, and `--wait` treats that as fatal: the run ended with the submission still queued
+  and nothing stapled. The script now submits with `--no-wait`, writes the id to
+  `DerivedDataRelease/release/submission-id`, and polls `notarytool info` for up to four hours,
+  forgiving a failed poll. `RESUME_ID=<id> Scripts/release.sh` finishes a submission later without
+  rebuilding or re-uploading — the export on disk is what the ticket is for, so rebuilding it would
+  change the hashes.
+
+**Verification.** `xcrun notarytool history --keychain-profile ArcadeRuins` on 2026-09-14: three
+submissions, all Accepted. `xcrun notarytool log a44b54bd-0c20-415a-bd5e-fbdf77314468` returns
+status Accepted, statusSummary "Ready for distribution".
+
+## ADR-052 — Classic is the default layout, and the app has an icon (an Icon Composer bundle)
+
+**Date:** 2026-09-14 · **Status:** Accepted (owner's choice) · **Phase 7, P7-8** · Amends ADR-045,
+ADR-029
+
+**Context.** The owner: "Can we make the default layout the classic one. And then let's assign this
+icon to it for MacOS", with a synthwave keyboard icon. Two decisions in one.
+
+**Decision.**
+
+1. **A fresh install opens the classic layout.** `S1ClassicLayout` still means "classic", but
+   *absent* now means classic too, so `S1Layout.current` asks `object(forKey:)` rather than
+   `bool(forKey:)` — only the former tells an unanswered question from an explicit `NO`. A machine
+   that has already chosen keeps its choice, in either direction; Settings ▸ Layout (ADR-050) is
+   how it is changed.
+2. **The app's icon is the owner's artwork, as an `.icon` bundle** (`Sources/SynthOne/ArcadeRuins.icon`),
+   with `ASSETCATALOG_COMPILER_APPICON_NAME: ArcadeRuins`. The app shipped with **no icon of any
+   kind** before this: nothing named one in its plist, and ADR-029's generated icon went into
+   SynthOneCore's iOS set, which a Catalyst app never reads.
+3. **Icon Composer, not an icon set — measured, not assumed.** The first pass was a mac-idiom
+   `.appiconset`, which built and installed cleanly. Asking macOS what it actually draws
+   (`NSWorkspace.icon(forFile:)` on the installed app) showed the owner's rounded square
+   composited *inside* the system's shape on a light plate: a rounded square nested in another.
+   macOS 26 shapes every app icon, so the artwork must be the thing being shaped, not a picture
+   placed in it. With an `.icon` bundle whose one layer is the artwork's body full-bleed, it fills
+   the icon. `actool` still emits a legacy `ArcadeRuins.icns` beside it for older systems.
+4. **The glass lighting is turned off.** macOS 26 lights an icon's layers like glass, and the
+   owner saw what that does to dark artwork: "the icon appears to fade to white in the lower half".
+   Measured on the installed app, the keyboard's dark bezel climbed from 27 to 106 down the image.
+   `specular: false` and `translucency: {enabled: false}` on the group stop it; the icon keeps its
+   shadow and the system's shape. The sheen is right for the layered, light artwork Icon Composer
+   is built around and wrong for a finished illustration.
+5. **The art is generated, the manifest is written.** `Scripts/branding/generate.py` crops the
+   owner's `source/Arcade-Ruins-Icon.png` to its body and writes the bundle's `art.png`; the
+   glow outside the body goes, because that is where the system's own shadow now is.
+   `icon.json` is checked in by hand. SynthOneCore's unused iOS set is regenerated from the same
+   artwork rather than left showing the old code-drawn sunset, so nothing stale ships.
+
+**Consequences.**
+- CLAUDE.md's "the icon is code, not a hand-drawn PNG" (ADR-029) no longer holds: like the
+  wordmark, the icon is the owner's artwork now. `Scripts/branding/appicon.py` draws nothing that
+  ships.
+- The AUv3 extension has no icon of its own; hosts that show one fall back to the app's.
+- **A release build should be clean.** An incremental build left the previous pass's
+  `AppIcon.icns` in the bundle next to `ArcadeRuins.icns`; harmless, since the plist names the
+  latter, but it is the kind of thing that ships by accident.
+
+**Verification.** `AudioUnitPackagingTests.testTheAppCarriesItsIcon` pins both plist keys and the
+compiled `.icns` in the built app, and `testTheIconBundleAsksForNoGlassLighting` pins the two
+settings that keep the artwork flat. `SkinTests.testTheDefaultLayoutIsClassicAndAnExplicitNoChoosesDesktop`
+holds the new default and that an explicit `NO` still chooses desktop. 54 tests green. The icon was
+checked as macOS resolves it, at 512, 128, 32 and 16 points, not as the source PNG.
+
+## ADR-051 — The Arcade skin is dropped; its drawing kit stays
+
+**Date:** 2026-09-14 · **Status:** Accepted (owner's choice) · **Phase 7, P7-7** · Supersedes
+ADR-046's second skin
+
+**Context.** The owner, after Neon Ruins: "Remove the 'Arcade' skin as an option." Arcade (ADR-046)
+was the first pass at the synthwave look, and Neon Ruins (ADR-048) is the same idea done properly —
+one accent per section, near-black panels, the owner's own wordmark. Two skins of the same genre,
+one of them superseded, is a worse menu than one. **Nothing has been released with it**: 0.3.0 is
+still in preparation.
+
+**Decision.**
+
+1. **`S1SkinChoice` is `studio | neonRuins`.** `S1ArcadeSkin`, `S1ArcadeHeaderArt`,
+   `S1ArcadePanelArt`, the drawn `S1NeonWordmark` and the grunge tile are deleted. The View menu and
+   the Settings picker are built from `allCases`, so both follow.
+2. **The drawing kit stays, renamed.** `S1ArcadeArt` → `S1SynthwaveArt`: the seeded generator, the
+   sun, the mountain ranges, the perspective grid, the starfield, the joystick, the scanlines and
+   `S1CRTFrame`. Neon Ruins draws with all of it; it was never Arcade's alone in anything but name.
+3. **A stored `S1Skin = arcade` opens Studio**, which is what `S1SkinChoice.chosen` already did with
+   any unknown value. No migration, and a test holds that.
+
+**Consequences.**
+- The 0.3.0 release notes describe one new skin, not two; `docs/screenshots/arcade-skin.png` is gone
+  and the README shows Neon Ruins.
+- The code is in the history if the owner ever wants it back: `git show bf8a08a` (Phase 7's commit).
+
+**Verification.** `SkinTests`: the choices are exactly Studio and Neon Ruins, a stored "arcade"
+falls back to Studio, Studio still names no section accent and keeps the default dress, both skins
+lay every section out in the same place, and the shared kit still draws. 45 tests green; rendered
+Neon Ruins and Studio after the removal.
+
+**Verification.** `SkinTests`: the pickers are in the Settings scene with no desktop layout in
+sight, open on the layout and skin in use, write both defaults, install once, and sit inside the
+scene's 600×382 right column; under Classic the skin picker is disabled and titled
+`SKIN · DESKTOP ONLY`, and choosing Desktop lights it again without a relaunch.
+`DesktopPluginTests`: the hosted popover carries both, with the host wording, and can choose
+Classic. Rendered the popover in both layouts on 2026-09-14. The owner's real defaults were
+unchanged by a 58-test run (checked before and after).

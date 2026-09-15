@@ -12,12 +12,22 @@ instrument plugin** (`aumu` / `ruin` / `BP03`) for Logic, Live, GarageBand, Reap
 **The product is "Arcade Ruins"** (P5-4, ADR-029) — an unofficial port, MIT, not affiliated with
 AudioKit. Internal target and module names are deliberately still `SynthOne*`: they are a
 provenance signal (ADR-009) and invisible to users. Rebrand at the product-identity level only.
-**`Scripts/branding/generate.py` regenerates every branded asset.** The icon is code, not a
-hand-drawn PNG. Every wordmark — header, About and mailing-list — is the owner's artwork,
-`Scripts/branding/source/Arcade-Ruins.png`, which the script fits to each frame (ADR-029).
+**`Scripts/branding/generate.py` regenerates every branded asset.** Both the wordmark and the
+icon are the owner's artwork — `Scripts/branding/source/Arcade-Ruins.png` fitted to each frame
+(ADR-029), and `Arcade-Ruins-Icon.png` cropped into `Sources/SynthOne/ArcadeRuins.icon`, the
+Icon Composer bundle the app ships (ADR-052; a legacy icon set is composited inside macOS 26's
+own shape, which nests one rounded square in another). `appicon.py`, the code-drawn icon, no
+longer ships anything.
 
 **Hard requirements from the owner:**
 1. **Preserve the user interface** — 12 storyboard panels, custom knobs, touch pads, keyboard.
+   **Relaxed 2026-09-12 (ADR-045, Phase 6):** the owner chose a desktop redesign. The classic
+   interface is kept — tag `v0.1.0-classic-ui`, and in the build behind `S1ClassicLayout` — and the
+   desktop layout re-homes the *same* storyboard controls, so the panels, knobs and bindings are
+   still the source of truth. See `Sources/SynthOneCore/Desktop/`. Since then: skins over that layout
+   (ADR-046, Phase 7 — a skin is a palette and decoration, never a layout; ADR-048 — a skin may
+   give each section its own accent, which every control inside draws in) and layout revisions the
+   owner asks for one at a time (ADR-047, Phase 8). The classic layout gets none of this.
 2. **Preserve functionality** — same DSP, same 150 parameters, same presets and tunings.
 3. Multi-session effort; every session must leave the project resumable.
 
@@ -40,6 +50,11 @@ xcodebuild -project SynthOne.xcodeproj -scheme SynthOne \
     -destination 'platform=macOS,variant=Mac Catalyst' -derivedDataPath /tmp/SynthOneTestDD \
     CODE_SIGNING_ALLOWED=NO test
 Scripts/validate-au.sh       # auval — a real check since P4-2. ~8s since P4-3; a hang is at 0% CPU
+# The desktop layout (Phases 6–8): render the DerivedData app in-process and look at the PNG.
+DRIVER_OUT=/tmp/arcade-ruins-debug RENDER_TAG=desktop RENDER_SELECT="Brice Beasley,0: " \
+    xcrun lldb -b -o "command script import Scripts/debug/desktop_render.py"
+# RENDER_ARGS="-S1Skin neonRuins" renders a skin; RENDER_PRESS=Presets opens the browser.
+# Its suites: -only-testing:SynthOneTests/DesktopLayoutTests, SkinTests, DesktopPluginTests.
 ```
 
 **Run the tests often.** Since P2-4 the suite includes golden renders of 20 shipped presets, so an
@@ -52,7 +67,7 @@ Then do the **Next action** named at the top of `STATE.md`.
 ```
 README.md      Public-facing: what it is, how to build it, attribution
 LICENSE        MIT (ours) · NOTICE.md — every upstream licence and the trademark position
-PORT_PLAN.md   Phases and task IDs (P0-1 … P5-6) with acceptance criteria
+PORT_PLAN.md   Phases and task IDs (P0-1 … P8-n) with acceptance criteria
 STATE.md       Live status + session log. THE resume point.
 docs/          01-decisions.md (ADRs) · 02-audiokit-api-surface.md · 03-parity-checklist.md
                04-build-and-test.md · reference/ (App Store screenshots)
@@ -60,6 +75,8 @@ upstream/      Pinned READ-ONLY copy of AudioKitSynthOne @ 6466a37
 .references/   Pinned AudioKit 4.9.2, gitignored — fetch with Scripts/fetch-references.sh
 project.yml    XcodeGen spec — the source of truth for targets and build settings
 Sources/       Soundpipe/ · S1Support/ · SynthOneCore/ · SynthOne/ · SynthOneAU/
+               SynthOneCore/Desktop/  The desktop layout, its drawing, skins and Arcade art (P6–P8)
+Scripts/debug/ lldb drivers; desktop_render.py renders the running layout to a PNG
 Scripts/branding/  Generates the wordmark and the 18 app icons
 Tests/ Scripts/
 ```
@@ -146,3 +163,10 @@ Each of these cost real time. See `docs/04-build-and-test.md` for the build-leve
 | **The standalone goes silent when the audio device changes, and the log blames the microphone** | AirPods taken out of an ear moved the default output. AVAudioEngine stopped itself ("iounit configuration changed > stopping the engine") and posted `AVAudioEngineConfigurationChange`, which nothing handled. In the same second tccd logged a refused microphone request under the hardened runtime: CoreAudio rebuilding its aggregate device, not the cause. `S1AudioEngine` now restarts an engine that should be running. **Read the app's own `avae` and `aqme` log lines before chasing TCC.** ADR-043 |
 | **Apple's share sheet cannot be presented from the plugin** | `UIActivityViewController` crashed the plugin from both Share buttons. The Mac bridge places the sheet relative to the presenting view's window, and a plugin's view lives in the host's, so `_sceneViewRectFromUIWindowRect` fails an assertion. It is thrown after `present` returns, from UIKit's commit pass, so it cannot be caught at the call. Anything bridged to a Mac panel from the plugin is suspect until tried in a real host. The export `UIDocumentPickerViewController` does present there: confirmed in Logic. ADR-044 |
 | **`pkill -f <app path>` also kills an lldb whose command line holds that path** | lldb died with its output unflushed, and the app was left stopped (state `T`) under a dead debugger. Kill the app with `pkill -x ArcadeRuins`, and never SIGTERM a debugged process: lldb stops it and waits. Regex breakpoints set before launch also slow startup past 12 seconds; attach to a running app instead. ADR-042 |
+| **`xcodegen generate` rewrites both `Info.plist`s** from `project.yml`'s `info.properties` | A hand edit to a plist lasts one generate; the version keys are `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)` in `project.yml`. P6-8/P7 |
+| **A custom-drawn control keeps a stretched bitmap after its bounds change** | UIKit's default `contentMode` scales the old drawing; a stepper rendered as a smear. Every desktop dress sets `contentMode = .redraw`. P6-8 |
+| **The render driver shows the owner's library** | Their banks replace factory BankA; public screenshots use `RENDER_SELECT="Brice Beasley,0: "`. `RENDER_ARGS="-S1Skin neonRuins"` picks a skin without touching their defaults (UserDefaults reads `-Key value` arguments). P6-8/P7 |
+| **`sendActions(for:)` is inert in the test host** | No `UIApplication` to dispatch through. Invoke an `S1ActionButton.action` closure, or call the layout API. P8-0 |
+| **`xcodebuild test` runs the tests inside the app, so `UserDefaults.standard` is the owner's** | P7-5's tests chose a layout and a skin and tidied up after themselves, which wrote and then deleted the owner's real settings — ADR-036's hazard, preferences edition. The layout and skin defaults go through `S1Preferences.store` now, which `TestStorageIsolation` points at a scratch suite. **Any new preference a test can reach must go the same way.** And a render never needs the owner's defaults: pass `RENDER_ARGS="-S1Skin neonRuins -S1ClassicLayout NO"`. ADR-050 |
+| **macOS 26 shapes and lights every app icon** | A legacy `.icns` or `.appiconset` is composited *inside* the system's rounded shape on a light plate — the owner's rounded square came out nested in a white one. An Icon Composer `.icon` bundle is the artwork the system shapes, so it fills the icon. It is also **lit like glass** unless the group says `specular: false` and `translucency: {enabled: false}`, which on dark artwork reads as the lower half fading to white. **Check what macOS draws, not what you shipped**: `NSWorkspace.icon(forFile:)` on the *installed* app, a dozen lines of Swift, settled both in one run each. ADR-052 |
+| **Storyboard cells keep their autoresized frames** | `PresetCell`'s buttons sat at x 324…487 of a 499-point cell; narrower desktop rows clipped three of them for two versions. Lay out in `layoutSubviews` under the desktop flag. P8-0 |

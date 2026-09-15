@@ -82,7 +82,7 @@ final class LaunchPromptTests: XCTestCase {
         settings.firstRun = false
         try Disk.save(settings, to: .settings, as: "settings.json")
 
-        let container = try XCTUnwrap(SynthOneApp.makeRootViewController() as? S1ScalingContainer)
+        let container = try XCTUnwrap(SynthOneApp.makeRootViewController(layout: .classic) as? S1ScalingContainer)
         let manager = try XCTUnwrap(container.content as? Manager)
         manager.view.frame = CGRect(origin: .zero, size: S1ScalingContainer.designSize)
         manager.loadViewIfNeeded()

@@ -98,7 +98,14 @@ public class AKTouchPadView: UIView {
         resetToPosition(0.5, 0.5)
     }
 
-    func resetToPosition(_ newPercentX: Double, _ newPercentY: Double) {
+    func resetToPosition(_ x: Double, _ y: Double) {
+        // PORT FIX (P6-5): a hosted synth whose render resources are not allocated yet hands
+        // the Touch Pad panel a dependent parameter that is not a number, and Core Animation
+        // throws on a NaN layer position — which would take the plugin down with it in a host
+        // that builds the view before allocating (the AU view controller notes hosts differ).
+        // The centre is the honest stand-in until a real value arrives.
+        let newPercentX = x.isFinite ? x : 0.5
+        let newPercentY = y.isFinite ? y : 0.5
         let centerPointX = self.bounds.size.width * CGFloat(newPercentX)
         let centerPointY = self.bounds.size.height * CGFloat(1 - newPercentY)
         UIView.animate(
@@ -118,7 +125,9 @@ public class AKTouchPadView: UIView {
             })
     }
 
-    func updateTouchPoint(_ newX: Double, _ newY: Double) {
+    func updateTouchPoint(_ rawX: Double, _ rawY: Double) {
+        let newX = rawX.isFinite ? rawX : 0.5   // PORT FIX (P6-5): see resetToPosition
+        let newY = rawY.isFinite ? rawY : 0.5
         let centerPointX = self.bounds.size.width * CGFloat(newX)
         let centerPointY = self.bounds.size.height * CGFloat(1 - newY)
         x = CGFloat(newX)

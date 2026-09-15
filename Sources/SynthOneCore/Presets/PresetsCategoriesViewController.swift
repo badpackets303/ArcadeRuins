@@ -55,6 +55,9 @@ class PresetsCategoriesViewController: UIViewController {
     @IBOutlet weak var categoryTableView: UITableView!
     weak var categoryDelegate: CategoryDelegate?
 
+    /// PORT (P6-6): 44 in the classic panel; the desktop sidebar sets a shorter one.
+    var rowHeight: CGFloat = 44
+
     var choices: [Int: String] = [:] {
         didSet {
             categoryTableView.reloadData()
@@ -111,7 +114,7 @@ extension PresetsCategoriesViewController: UITableViewDataSource {
 
     @objc(tableView:heightForRowAtIndexPath:) func tableView(_ tableView: UITableView,
                                                              heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 44
+        return rowHeight   // PORT (P6-6): see PresetsViewController.rowHeight
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {

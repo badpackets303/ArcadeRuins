@@ -38,13 +38,19 @@ public enum SynthOneApp {
         return unit
     }
 
+    /// The desktop layout's design and minimum window sizes (P6, ADR-045), for the
+    /// window and for the plugin's `preferredContentSize`.
+    public static var desktopWindowSize: CGSize { S1DesktopLayout.designWindowSize }
+    public static var desktopMinimumWindowSize: CGSize { S1DesktopLayout.minimumWindowSize }
+
+
     /// The root view controller, loaded from `Main.storyboard`.
     ///
     /// Note the bundle. The storyboards ship inside `SynthOneCore.framework`, not
     /// the app, so `UIMainStoryboardFile` in the app's Info.plist could not find
     /// them — the app instantiates the storyboard itself. That is also what lets
     /// the AUv3 extension load the same UI at P4-6.
-    public static func makeRootViewController() -> UIViewController {
+    public static func makeRootViewController(layout: S1Layout = S1Layout.current) -> UIViewController {
         let bundle = Bundle(for: Manager.self)
         let storyboard = UIStoryboard(name: "Main", bundle: bundle)
         // PORT: upstream picks between the initial view controller and
@@ -56,6 +62,13 @@ public enum SynthOneApp {
         // Nothing here changed, but `Conductor.device` had to — see the note there.
         guard let root = storyboard.instantiateInitialViewController() else {
             fatalError("Main.storyboard has no initial view controller")
+        }
+        // P6 (ADR-045): the desktop layout is built over the same `Manager`, from the
+        // same storyboards. It lays itself out with Auto Layout, so it needs no
+        // scaling container and the window is free to be any size.
+        if layout == .desktop, let manager = root as? Manager {
+            S1DesktopLayout.install(into: manager)
+            return manager
         }
         // P3-6b: wrap it so the window can be resized. The interface keeps its exact
         // 1024×768 geometry and is scaled to fit — see `S1ScalingContainer` for why

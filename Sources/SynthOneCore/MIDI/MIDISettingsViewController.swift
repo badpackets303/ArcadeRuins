@@ -87,6 +87,11 @@ class MIDISettingsViewController: UIViewController {
         channelStepper.value = Double(userChannelIn)
         updateChannelLabel()
 
+        // PORT (P7-6, ADR-050): the Layout and Skin pickers. Here rather than in the desktop
+        // layout's `dressPresented` (P7-5) because the classic layout has to carry them too —
+        // the plugin has no menu bar, so Classic would otherwise be a one-way trip.
+        S1AppearanceSettings.install(in: self)
+
         // Setup Callbacks
         setupCallbacks()
 

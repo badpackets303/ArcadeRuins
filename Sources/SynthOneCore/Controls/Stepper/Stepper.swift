@@ -71,11 +71,36 @@ public class Stepper: UIView, S1Control {
 
     var valuePressed: CGFloat = 0
 
+    // MARK: - Desktop layout (P6-3, ADR-045)
+
+    /// Drawn in the desktop dress. Set by the desktop layout when it takes the control.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
+    /// PORT FIX (P6-3): `minusPath` and `plusPath` are fixed for the storyboard's 108×35. In the
+    /// desktop dress the stepper is sized by Auto Layout, so the zones follow the bounds.
+    func hitZone(for point: CGPoint) -> CGFloat {
+        if drawsDesktopStyle {
+            let zones = S1DesktopStyle.stepperZones(in: bounds)
+            if zones.minus.contains(point) { return 1 }
+            if zones.plus.contains(point) { return 2 }
+            return 0
+        }
+        if minusPath.contains(point) { return 1 }
+        if plusPath.contains(point) { return 2 }
+        return 0
+    }
+
     open var text = "0"
 
     // MARK: - Draw
 
     override public func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawStepper(in: bounds, text: "\(Int(value))", pressed: valuePressed)
+            return
+        }
         StepperStyleKit.drawStepper(frame: CGRect(x: 0,
                                                   y: 0,
                                                   width: self.bounds.width,
@@ -88,13 +113,14 @@ public class Stepper: UIView, S1Control {
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
             let touchLocation = touch.location(in: self)
-            if minusPath.contains(touchLocation) {
+            let zone = hitZone(for: touchLocation)   // PORT FIX (P6-3)
+            if zone == 1 {
                 if value > minValue {
                     value -= 1
                     valuePressed = 1
                 }
             }
-            if plusPath.contains(touchLocation) {
+            if zone == 2 {
                 if value < maxValue {
                     value += 1
                     valuePressed = 2

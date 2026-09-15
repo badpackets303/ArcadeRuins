@@ -38,10 +38,15 @@ if [ "$NOTARISE" != 0 ] && ! xcrun notarytool history --keychain-profile "$PROFI
     exit 1
 fi
 
-rm -rf "$OUT"
-mkdir -p "$OUT"
+# RESUME_ID picks up a submission already at Apple: the export on disk is the thing it was made
+# from, so rebuilding it would change the hashes the ticket is for.
+if [ -z "${RESUME_ID:-}" ]; then
+    rm -rf "$OUT"
+    mkdir -p "$OUT"
+fi
 
 # --- Archive (Release) and export for Developer ID.
+if [ -z "${RESUME_ID:-}" ]; then
 xcodegen generate
 xcodebuild -project SynthOne.xcodeproj -scheme SynthOne -configuration Release \
     -destination 'generic/platform=macOS,variant=Mac Catalyst' \
@@ -62,6 +67,7 @@ PLIST
 
 xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$EXPORT" \
     -exportOptionsPlist "$OUT/ExportOptions.plist" -allowProvisioningUpdates
+fi
 
 APP="$EXPORT/ArcadeRuins.app"
 PLUGIN="$APP/Contents/PlugIns/ArcadeRuinsAU.appex"
@@ -85,8 +91,50 @@ if [ "$NOTARISE" = 0 ]; then
 fi
 
 # --- Notarise, staple, and confirm Gatekeeper accepts it.
-ditto -c -k --keepParent "$APP" "$OUT/notarise.zip"
-xcrun notarytool submit "$OUT/notarise.zip" --keychain-profile "$PROFILE" --wait
+#
+# **Not `--wait`.** Apple's notary service takes hours, not the minutes `--wait` implies (ADR-053),
+# and on 2026-09-14 a single status poll timed out at the network layer after an hour — `--wait`
+# treats that as fatal, so the run was abandoned with the submission still queued and nothing
+# stapled. The submission is server-side and outlives this script, so: take the id, write it down,
+# and poll it here, forgiving a failed poll. `RESUME_ID=<id>` picks a submission up later without
+# building or uploading anything again.
+SUBMISSION_FILE="$OUT/submission-id"
+if [ -n "${RESUME_ID:-}" ]; then
+    SUBMISSION="$RESUME_ID"
+    echo "Resuming submission $SUBMISSION"
+else
+    ditto -c -k --keepParent "$APP" "$OUT/notarise.zip"
+    SUBMISSION=$(xcrun notarytool submit "$OUT/notarise.zip" --keychain-profile "$PROFILE" \
+        --no-wait --output-format json | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+    echo "$SUBMISSION" > "$SUBMISSION_FILE"
+    echo "Submitted: $SUBMISSION (also in $SUBMISSION_FILE)"
+fi
+
+# Poll for up to four hours. A failed poll is a network blip, not a verdict.
+DEADLINE=$(( $(date +%s) + 4 * 60 * 60 ))
+STATUS=""
+while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+    INFO=$(xcrun notarytool info "$SUBMISSION" --keychain-profile "$PROFILE" --output-format json 2>/dev/null || true)
+    STATUS=$(/usr/bin/python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("status", ""))
+except Exception: print("")' <<<"$INFO")
+    case "$STATUS" in
+        Accepted) break ;;
+        Invalid|Rejected)
+            echo "✋ Notarisation returned $STATUS. The log:" >&2
+            xcrun notarytool log "$SUBMISSION" --keychain-profile "$PROFILE" >&2 || true
+            exit 1 ;;
+    esac
+    sleep 60
+done
+if [ "$STATUS" != Accepted ]; then
+    echo "✋ Still $([ -n "$STATUS" ] && echo "$STATUS" || echo unknown) after four hours. Nothing is lost:" >&2
+    echo "   the submission continues at Apple. Check it with" >&2
+    echo "     xcrun notarytool info $SUBMISSION --keychain-profile $PROFILE" >&2
+    echo "   and finish with  RESUME_ID=$SUBMISSION Scripts/release.sh" >&2
+    exit 1
+fi
+
 xcrun stapler staple "$APP"
 xcrun stapler validate "$APP"
 spctl -a -vvv -t exec "$APP"

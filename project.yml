@@ -17,8 +17,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"                 # R-6: pin the language mode; modernise deliberately, later
     IPHONEOS_DEPLOYMENT_TARGET: "14.0"   # -> macOS 11 under Catalyst
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.3.0"
+    CURRENT_PROJECT_VERSION: "3"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     CLANG_ENABLE_MODULES: YES
     # gnu11, not c11: TAAE uses GNU extensions such as typeof().
@@ -185,6 +185,14 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.badpackets303.ArcadeRuins
         PRODUCT_NAME: ArcadeRuins
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # P7-8 (ADR-052): the app's icon, the owner's artwork. Until now the app shipped with
+        # **no icon at all** — ADR-029's generated one went into SynthOneCore's iOS set, which a
+        # Catalyst app never reads. `Sources/SynthOne/Assets.xcassets` is swept up by the
+        # target's source path; this is what makes actool compile it and name it in the plist.
+        # The set is the **mac** idiom: macOS draws an app icon as it is given, so the rounded
+        # square is the artwork's own, not a mask the system applies.
+        # Regenerate with `Scripts/branding/generate.py`.
+        ASSETCATALOG_COMPILER_APPICON_NAME: ArcadeRuins
         # P3-1b — **Optimize Interface for Mac** (ADR-007), the owner's decision.
         # Device family 6 is Mac. Including it is what Xcode's General tab writes for
         # "Optimize Interface for Mac"; the built Info.plist then carries
@@ -223,6 +231,9 @@ targets:
         CFBundleName: ArcadeRuins
         CFBundleDisplayName: Arcade Ruins
         CFBundlePackageType: APPL
+        # P6-8: XcodeGen rewrites this plist on every generate, with 1.0 / 1 unless told otherwise.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         LSApplicationCategoryType: public.app-category.music
         # No NSMicrophoneUsageDescription: nothing here opens an input device.
@@ -279,6 +290,8 @@ targets:
         CFBundleName: ArcadeRuinsAU
         CFBundleDisplayName: Arcade Ruins
         CFBundlePackageType: XPC!
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.AudioUnit-UI
           NSExtensionPrincipalClass: ArcadeRuinsAU.SynthOneAudioUnitViewController

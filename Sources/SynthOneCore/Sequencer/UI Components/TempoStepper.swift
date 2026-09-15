@@ -58,7 +58,25 @@ class TempoStepper: Stepper {
 
     // MARK: - Draw
 
+    /// PORT FIX (P6-3): the three paths are fixed for the storyboard's 85×74; in the desktop
+    /// dress they follow the bounds.
+    override func hitZone(for point: CGPoint) -> CGFloat {
+        guard drawsDesktopStyle else { return super.hitZone(for: point) }
+        let zones = S1DesktopStyle.tempoZones(in: bounds)
+        if zones.minus.contains(point) { return 1 }
+        if zones.plus.contains(point) { return 2 }
+        return 0
+    }
+
+    private var displayZone: CGRect {
+        drawsDesktopStyle ? S1DesktopStyle.tempoZones(in: bounds).display : tempoPath.bounds
+    }
+
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawTempoStepper(in: bounds, text: "\(Int(value)) bpm", pressed: valuePressed)
+            return
+        }
         TempoStyleKit.drawTempoStepper(frame: CGRect(x: 0,
                                                      y: 0,
                                                      width: self.bounds.width,
@@ -73,19 +91,20 @@ class TempoStepper: Stepper {
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
             let touchLocation = touch.location(in: self)
-            if minusPath.contains(touchLocation) {
+            let zone = hitZone(for: touchLocation)   // PORT FIX (P6-3)
+            if zone == 1 {
                 if self.value > Double(self.minValue) {
                     self.value -= 1
                     self.valuePressed = 1
                 }
             }
-            if self.plusPath.contains(touchLocation) {
+            if zone == 2 {
                 if value < Double(maxValue) {
                     self.value += 1
                     self.valuePressed = 2
                 }
             }
-            if tempoPath.contains(touchLocation) {
+            if displayZone.contains(touchLocation) {
                 let touchPoint = touch.location(in: self)
                 self.lastX = touchPoint.x
                 self.lastY = touchPoint.y

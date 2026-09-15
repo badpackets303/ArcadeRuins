@@ -58,9 +58,20 @@ class ArpButton: UIView, S1Control {
 
     var resetToDefaultCallback: () -> Void = { }
 
+    // MARK: - Desktop layout (P6-3, ADR-045)
+
+    /// Drawn in the desktop dress. Set by the desktop layout when it takes the control.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
     // MARK: - Draw
 
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawStepButton(in: bounds, isOn: value > 0, accent: s1Accent)
+            return
+        }
         ArpButtonStyleKit.drawArpButton(frame: CGRect(x: 0,
                                                       y: 0,
                                                       width: self.bounds.width,

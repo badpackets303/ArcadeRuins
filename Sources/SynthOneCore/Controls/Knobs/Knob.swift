@@ -115,6 +115,7 @@ public class Knob: UIView, UIGestureRecognizerDelegate, S1Control {
             accessibilityValue = onlyIntegers ?
                 String(format: "%.0f", _value) :
                 String(format: "%.2f", _value)
+            valueDidChange?(_value)   // PORT (P6, ADR-045)
         }
     }
 
@@ -122,9 +123,26 @@ public class Knob: UIView, UIGestureRecognizerDelegate, S1Control {
 
     var resetToDefaultCallback: () -> Void = { }
 
+    // MARK: - Desktop layout (P6, ADR-045)
+
+    /// Fires after `value` changes, however it changed — a drag, a scroll, MIDI, a
+    /// preset load, host automation. The desktop layout's value readouts hang off it.
+    var valueDidChange: ((Double) -> Void)?
+
+    /// Drawn with the desktop's arc-and-cap style rather than the PaintCode kit.
+    /// Set by `S1ControlCell` when the desktop layout takes the knob.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
     // MARK: - Draw
 
     public override func draw(_ rect: CGRect) {
+        // PORT (P6, ADR-045): the same knob, two dresses.
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawKnob(in: bounds, value: knobValue, accent: s1Accent)
+            return
+        }
         KnobStyleKit.drawKnobOne(frame: CGRect(x: 0,
                                                y: 0,
                                                width: self.bounds.width,

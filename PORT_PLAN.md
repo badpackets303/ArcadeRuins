@@ -278,6 +278,165 @@ Each task lists **Do** and **Done when**. A phase ends at a milestone that is ob
 - **P5-5** Localization pass across all 8 languages under Catalyst.
 - **P5-6** Accessibility pass (VoiceOver on knobs/pads — weak upstream, desktop raises expectations).
 
+### Phase 6 — The desktop layout  *(added 2026-09-12, ADR-045; branch `desktop-ui`, version 0.2.0)*
+
+The owner's chosen redesign: a single Mac window with a preset sidebar, every section visible in four
+rows, a textured finish, and no virtual keyboard. Design: the canvas at
+<https://claude.ai/code/artifact/4623edc1-39b7-4667-a58d-eb810d176f41>, page 1. The classic layout
+stays behind `S1ClassicLayout` and tag `v0.1.0-classic-ui`.
+
+- **P6-0** ✅ Baseline: tag, branch, version bump, `S1Layout` switch, View ▸ Classic Layout, window
+  sizing per layout, test bundle pinned to classic.
+- **P6-1** ✅ Shell and rows: toolbar (preset navigator, dice, Save, scope, Record, Panic, About,
+  Settings, Presets), four rows of sections re-homing the Generators, Envelopes, Effects, Sequencer
+  and Touch Pad controls, play bar (Hold, Mono, MIDI Learn, Transpose, Octave, Wheels), status bar
+  (tuning chip → sheet). Accepted on a render of the running app.
+- **P6-2** ✅ **Done 2026-09-12.** Readouts and formats: the four tempo-syncable rate knobs (LFO 1,
+  LFO 2, delay time, auto-pan) read the nearest musical rate when tempo sync is on and Hz/seconds
+  otherwise, following `.tempoSyncToArpRate`, `.arpRate` and the dependent parameters through
+  `Manager.updateUI` → `S1DesktopLayout.parameterDidChange`; the filter mode is a Low/Band/High picker
+  (`S1SegmentedControl`) that drives and follows the classic cycling button; LFO target chips and wave
+  pickers draw in the desktop style. Found and fixed on the way: `LFOToggle` split its hit-test at a
+  constant 100 points, so at any other width LFO 2 was nearly unclickable. Detune stays a plain
+  decimal — the DSP treats it as a generic ±4 (`S1DSPKernel.hpp`), and upstream never gave it a unit.
+- **P6-3** ✅ **Done 2026-09-12.** The sequencer in the desktop style: `VerticalSlider` (ticked
+  groove, 32×14 cap, longer travel), `ArpButton` (glowing note-on bar), `SliderTransposeButton`,
+  `ToggleSwitch` as an Arp | Seq two-way switch, `ArpDirectionButton` as three arrow cells,
+  `Stepper` as `[−] value [+]`, `TempoStepper` as a draggable display over − and +. Found and fixed
+  on the way: `Stepper`, `TempoStepper` and `ArpDirectionButton` hit-tested against rectangles fixed
+  for their storyboard sizes, so at the desktop sizes the plus button and the third direction cell
+  were partly or wholly unreachable; each now derives its zones from its bounds in the desktop dress
+  (`hitZone(for:)`, `cellWidth`), and the classic dress keeps the storyboard paths.
+- **P6-4** ✅ **Done 2026-09-12.** Window polish. Measured, not assumed: row one's fixed sections plus
+  the sidebar need 1,416 points and the fourth row starves below 900 tall, so the minimum window is
+  the design size, 1440×900, until the sidebar can collapse (P6-6; then ~1240 wide). Above it the
+  fourth row alone grows and the flexible sections spread; rendered at 1680×1100. The layout and the
+  window are pinned to Dark (`overrideUserInterfaceStyle`), so sheets and popovers match; ADR-034's
+  per-field Light pins are untouched. The unsatisfiable-constraint noise is gone: every explicit
+  constraint in the hidden classic hierarchy is deactivated at install, and OSC 2's own width was
+  one point short of its selector. `desktop_render.py` gained `RENDER_SIZE`, `RENDER_PRESS` and
+  `RENDER_PRESENTED`. `MorphSelector` keeps its classic drawing: the owner declined a change to its
+  highlight plate earlier and did not ask for one now.
+- **P6-5** ✅ **Done 2026-09-12 (owner to confirm in Logic).** The plugin gets the same desktop layout,
+  sidebar included (the owner wants the sidebar, 2026-09-12). `preferredContentSize` is 1440×900 and
+  `Scripts/debug/auhost.swift` gave the plugin a 1440×932 window (content plus title bar), so a host
+  honours it. In the plugin: no Record, the scope fed from the render thread's ring (ADR-028), the
+  "Following host transport" caption, the view pinned Dark, and the panel sheets presented as
+  overlays inside the plugin's view (`overCurrentContext`, as the classic panels' own modals are)
+  rather than as Mac sheets, which need a window the plugin does not own (ADR-044). Found and fixed:
+  `AKTouchPadView` set a NaN layer position when a hosted synth's dependent parameters were read
+  before render resources existed, which would have taken the plugin down in a host that builds the
+  view first. `DesktopPluginTests` covers the differences.
+- **P6-6** ✅ **Done 2026-09-12.** The preset sidebar: the classic browser re-homed as a 260-point
+  column — search (⌘F, the classic search screen), the category and bank list (28-point rows), the
+  presets of the selection taking the height (30-point rows, with the star, rename, duplicate and
+  share buttons on the selected row as before), the selected preset's category and editable notes,
+  and New · Import · Reorder · Import Bank · New Bank. Every table, cell and button is the
+  storyboard's with its data source, delegate and callbacks; the category list's delegate is wired
+  at install because the classic panel wired it in `viewDidAppear`. The toolbar's Presets button,
+  ⌥⌘S and View ▸ Show/Hide Sidebar collapse it, and the window's minimum width follows
+  (`SynthOneApp.desktopSidebarDidChange`): 1180 with the sidebar hidden. The Presets sheet is gone;
+  `S1PanelSheet` serves Tunings only.
+- **P6-7** ✅ **Done 2026-09-12.** The classic screens over the layout. Rendered each through its
+  segue: Settings and Wheels are popovers anchored to their buttons and were right already; About
+  (a 1024×768 scene) sat in the window's top-left corner, the preset and bank editors floated near
+  the top, and Search stretched to the whole window. Each of those four now presents as a centred
+  card over a dimmed backdrop at its own size (`S1DesktopLayout.dressPresented`, called from the two
+  `prepare(for:)`s; the controller's view becomes a backdrop holding its original view, so outlets
+  and delegates are untouched). Keys settings is retired with the keyboard. Also: the preset
+  sidebar's rows centre their label and buttons, which the storyboard placed for a 44-point row
+  (`PresetCell.centresContentVertically`) — the owner saw the highlight off-centre.
+- **P6-8** ✅ **Done 2026-09-13.** Release prep for 0.2.0. `docs/screenshots/` holds the final renders
+  (`standalone.png`, `presets-sidebar.png`, `standalone-compact.png` at 1180×900, `classic-layout.png`
+  being 0.1.0's capture; the P6 work renders are gone), made with `desktop_render.py`'s new
+  `RENDER_SELECT` so a factory bank shows rather than the owner's. README rewritten around the desktop
+  layout (status, screenshots, an "interface" section with the sidebar keys, window minimum and the
+  classic switch); `docs/release-notes.md` started with 0.2.0 and 0.1.0. Both `Info.plist`s carry
+  `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)` — they were literal 1.0 / 1. Found on the way:
+  after hiding the sidebar in an 1180-wide window the Steps stepper rendered as a horizontal smear —
+  the old bitmap stretched over new bounds — so every desktop dress sets `contentMode = .redraw`.
+  The Logic screenshot is still 0.1.0's; the owner takes the new one.
+
+---
+
+### Phase 7 — Skins  *(added 2026-09-13, ADR-046; branch `desktop-ui`, version 0.3.0)*
+
+The owner's synthwave mock-up of the desktop layout as a skin, built fully procedural (owner's
+decision, 2026-09-13: "finish P6-8 first, then do the skin fully procedural"). A skin is a palette and
+decoration; it never moves anything.
+
+- **P7-0** ✅ **Done 2026-09-13.** Plumbing: `S1Skin` / `S1Palette` / `S1SkinChoice` (`S1Skin` default,
+  View ▸ Skin ▸ Studio | Arcade, next launch), `S1DesktopTheme` reading the palette with its names kept,
+  `S1DesktopStyle`'s 32 inline colours as palette entries, Studio's values exact to 0.2.0.
+- **P7-1** ✅ **Done 2026-09-13.** Arcade's controls: neon orange and cyan palette, glow ×2.2 on knob arcs,
+  indicators, lit switches, fader caps, note-on bars and wave pickers; cyan readouts; orange section
+  borders with an outer glow; grunge texture over every section.
+- **P7-2** ✅ **Done 2026-09-13.** Arcade's art, in code: `S1ArcadeHeaderArt` (sky, stars, sun with
+  cuts, two mountain ranges, grid, horizon), `S1ArcadeSidebarArt` (starfield, mountains, floor grid,
+  joystick), `S1NeonWordmark`, `S1CRTFrame` round the sidebar's lists and the XY pads.
+- **P7-3** ✅ **Done 2026-09-13.** `SkinTests` (6), both skins rendered at 1440×900 and 1180×900,
+  `docs/screenshots/arcade-skin.png`, README and release notes for 0.3.0, installed and `auval` passed.
+  The plugin takes the same default from its own container (untested in Logic).
+- **P7-8** ✅ **Done 2026-09-14.** Owner: "Can we make the default layout the classic one. And then
+  let's assign this icon to it for MacOS." A fresh install opens **classic** (absent
+  `S1ClassicLayout` means classic now; Settings ▸ Layout changes it), and the app has **an icon at
+  last** — the owner's artwork as `Sources/SynthOne/ArcadeRuins.icon`, an Icon Composer bundle.
+  A mac-idiom icon set was tried first and macOS 26 drew the owner's rounded square nested inside
+  its own on a light plate; the `.icon` bundle is the artwork the system shapes. ADR-052. 54 green.
+- **P7-7** ✅ **Done 2026-09-14.** Owner: "Remove the 'Arcade' skin as an option." Neon Ruins is the
+  same idea done properly, and nothing had shipped with Arcade. `S1SkinChoice` is `studio |
+  neonRuins`; the skin, its header and browser art, its drawn wordmark and its grunge tile are
+  deleted; `S1ArcadeArt` becomes `S1SynthwaveArt`, the kit both skins always shared. A stored
+  `S1Skin = arcade` opens Studio. ADR-051. 45 tests green.
+- **P7-6** ✅ **Done 2026-09-14.** Owner: "I would still like to access the original iPad-based
+  interface by changing the setting. Can we include that in the release?" **Layout ▸ Desktop |
+  Classic** joins Skin in the Settings popover (`S1AppearanceSettings`), installed from
+  `MIDISettingsViewController` so the **classic** layout carries it too — otherwise Classic was a
+  one-way trip in a host, which has no menu bar. The skin picker dims and reads `SKIN · DESKTOP
+  ONLY` under Classic. Also: the layout and skin defaults go through `S1Preferences.store`, which
+  the test bundle points at a scratch suite — P7-5's tests had been writing and deleting the
+  owner's real settings (ADR-036's hazard, preferences edition). ADR-050. 58 tests green.
+- **P7-5** ✅ **Done 2026-09-14.** Owner: "Can we allow skin selection through the Settings menu
+  within the app? Going through Terminal is not a feasible option." `S1SkinPicker` in the Settings
+  popover's right column, added by the desktop layout when it dresses `SegueToMIDI` (no ported file
+  changes); Studio | Arcade | Neon Ruins, applied at the next launch, with wording that differs in
+  the plugin. **The plugin can be re-skinned from inside a host for the first time** (it has no menu
+  bar). ADR-049. `SkinTests` 11, `DesktopPluginTests` 5.
+- **P7-4** ✅ **Done 2026-09-14.** The **Neon Ruins** skin (ADR-048), from the owner's second
+  reference and four rounds on the design canvas: one neon per section (orange, mint, pink, violet,
+  gold, cyan — a spectrum across each row; Mix mint like Delay at the owner's word), 2-point neon
+  borders with a bloom over near-black worn-metal panels, halo'd knobs with a bright core and a white
+  pointer, lit fader tracks, cyan readouts and outlines, a sunset header with the owner's wordmark
+  lit, nebulae and a magenta floor under a translucent play bar. Plumbing: `S1Skin.sectionAccent(for:)`,
+  `S1SectionView.accent`, `UIView.s1Accent`, an `accent` argument on every `S1DesktopStyle` drawing,
+  `S1SkinDress`, `makeBackdropArt()`, the `s1_wordmark_neon` asset. Studio and Arcade unchanged.
+  `SkinTests` 10.
+
+---
+
+### Phase 8 — Layout revisions the owner asks for  *(added 2026-09-13; branch `desktop-ui`, version 0.3.0)*
+
+The desktop layout in use, adjusted at the owner's direction. Each task is one request.
+
+- **P8-0** ✅ **Done 2026-09-13.** "Let's have it as a drop-down when a user clicks on the preset name
+  at the top of the window. Get rid of the side panel." ADR-047: the browser column drops down from
+  the toolbar's preset name (chevron, ⌥⌘P, View ▸ Preset Browser; closes on a click outside, Escape,
+  or any card presentation); the sidebar region, its window notification and the toolbar's Presets
+  button are gone; the rows have the whole 1440 and were re-spaced (wider OSC/Filter/Voice sections,
+  44-point knobs, a wider LFO section whose readouts no longer overlap, 400-point pads; rows one and
+  two 158/220 tall). The Find menu is removed (⌘F conflict since P6-6). Found by the owner right
+  after ("Where did the preset editor go?"): the preset row's rename, duplicate and share buttons had
+  been off the right edge since the P6-6 sidebar — the storyboard fixed them at x 324…487 of a
+  499-point cell — so `PresetCell` lays them out from the trailing edge in the desktop dress.
+- **P8-1** ✅ **Done 2026-09-13.** Owner: "The LFO/Mod Target panel looks clunky and haphazard, with
+  the 4 tiny knobs scrunched up on the right. Most of the knobs in general could be bigger as there
+  is still plenty of wiggle room in the Effect panels, Filter Amplitude and Envelope panels. The OSC 2
+  knobs are scrunched together and need to be spaced apart equally." LFO & Mod Targets is two columns:
+  each LFO's name, wave picker, rate and amount (40-point knobs) on the left, the twelve targets as a
+  3 × 4 grid on the right; the section is ×1.25 of Filter Envelope. Knobs: effects 38→48, envelopes
+  36→46, cutoff 60→68 with 52s beside it, Mix and Glide 44→52. OSC 2's two knobs each take half the
+  section (`fillEqually`); its selector is centred on its own line. Row heights unchanged.
+
 ---
 
 ## 4. Risk register

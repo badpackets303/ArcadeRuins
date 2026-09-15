@@ -29,9 +29,49 @@ enum MenuBuilder {
         builder.remove(menu: .substitutions)
         builder.remove(menu: .transformations)
         builder.remove(menu: .speech)
+        // A synth has nothing to find; the item's ⌘F is Search Presets (P8-0, and the
+        // `_UIMenuBuilderError` logged at every launch since P6-6).
+        builder.remove(menu: .find)
 
         builder.insertSibling(panicMenu(), afterMenu: .standardEdit)
         builder.insertChild(keyboardMenu(), atStartOfMenu: .view)
+        builder.insertChild(layoutMenu(), atStartOfMenu: .view)
+        builder.insertChild(skinMenu(), atStartOfMenu: .view)
+        builder.insertChild(sidebarMenu(), atStartOfMenu: .view)
+    }
+
+    /// P6-6, P8-0: the preset browser. Both reach `Manager` through the responder chain; the
+    /// selectors are `Manager`'s own, named here because `Manager` is internal to the framework.
+    private static func sidebarMenu() -> UIMenu {
+        let toggle = UIKeyCommand(title: NSLocalizedString("Preset Browser", comment: "View menu"),
+                                  action: NSSelectorFromString("desktopTogglePresets:"),
+                                  input: "p", modifierFlags: [.command, .alternate])
+        let search = UIKeyCommand(title: NSLocalizedString("Search Presets…", comment: "View menu"),
+                                  action: NSSelectorFromString("desktopSearchPresets:"),
+                                  input: "f", modifierFlags: .command)
+        return UIMenu(title: "", identifier: UIMenu.Identifier("com.badpackets303.SynthOne.sidebar"),
+                      options: .displayInline, children: [toggle, search])
+    }
+
+    /// P7 (ADR-046): View ▸ Skin ▸ Studio | Arcade. The chosen one is checked by
+    /// `AppDelegate.validate(_:)`; the change applies at the next launch.
+    private static func skinMenu() -> UIMenu {
+        let items = S1SkinChoice.allCases.map { choice in
+            UICommand(title: choice.title, action: #selector(AppDelegate.chooseSkin(_:)), propertyList: choice.rawValue)
+        }
+        let skin = UIMenu(title: NSLocalizedString("Skin", comment: "View menu"),
+                          identifier: UIMenu.Identifier("com.badpackets303.SynthOne.skin.choices"), children: items)
+        return UIMenu(title: "", identifier: UIMenu.Identifier("com.badpackets303.SynthOne.skin"),
+                      options: .displayInline, children: [skin])
+    }
+
+    /// P6 (ADR-045): the classic iPad layout stays available. The item's check mark is
+    /// kept current by `AppDelegate.validate(_:)`; the change applies at the next launch.
+    private static func layoutMenu() -> UIMenu {
+        let classic = UICommand(title: NSLocalizedString("Classic Layout", comment: "View menu"),
+                                action: #selector(AppDelegate.toggleClassicLayout(_:)))
+        return UIMenu(title: "", identifier: UIMenu.Identifier("com.badpackets303.SynthOne.layout"),
+                      options: .displayInline, children: [classic])
     }
 
     /// Panic is the one command a synth genuinely needs at the menu level: notes

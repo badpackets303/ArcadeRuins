@@ -82,6 +82,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate, S1LaunchURLProviding {
     /// anyone opens the menu.
     @objc func showMusicalTypingHelp(_ sender: Any?) {}
 
+    /// P6 (ADR-045): View ▸ Classic Layout. Remembered for the next launch.
+    @objc func toggleClassicLayout(_ sender: Any?) {
+        let classic = S1Layout.current == .classic
+        S1Layout.setCurrent(classic ? .desktop : .classic)
+        let alert = UIAlertController(
+            title: NSLocalizedString("Layout changes at the next launch", comment: "Alert title"),
+            message: classic
+                ? NSLocalizedString("Arcade Ruins will open with the desktop layout next time.", comment: "Alert")
+                : NSLocalizedString("Arcade Ruins will open with the classic layout next time.", comment: "Alert"),
+            preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK"), style: .default))
+        // `keyWindow` needs Catalyst 15; our floor is 14 (CLAUDE.md), and there is one window.
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
+            .first?.present(alert, animated: true)
+    }
+
+    /// P7 (ADR-046): View ▸ Skin. Remembered for the next launch, like the layout.
+    @objc func chooseSkin(_ sender: Any?) {
+        guard let raw = (sender as? UICommand)?.propertyList as? String, let choice = S1SkinChoice(rawValue: raw) else { return }
+        S1SkinChoice.choose(choice)
+        let alert = UIAlertController(
+            title: NSLocalizedString("Skin changes at the next launch", comment: "Alert title"),
+            message: String(format: NSLocalizedString("Arcade Ruins will open with the %@ skin next time.", comment: "Alert"), choice.title),
+            preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK"), style: .default))
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
+            .first?.present(alert, animated: true)
+    }
+
+    override func validate(_ command: UICommand) {
+        super.validate(command)
+        if command.action == #selector(toggleClassicLayout(_:)) {
+            command.state = S1Layout.current == .classic ? .on : .off
+        }
+        if command.action == #selector(chooseSkin(_:)) {
+            command.state = (command.propertyList as? String) == S1SkinChoice.chosen.rawValue ? .on : .off
+        }
+    }
+
     // MARK: - Scenes
 
     func application(_ application: UIApplication,

@@ -75,6 +75,44 @@ final class AudioUnitPackagingTests: XCTestCase {
 
     /// **The plugin's identity.** A host stores these three codes in the session
     /// file; changing any of them orphans every project that used it.
+    /// P7-8 (ADR-052): the app has an icon, and it is the `.icon` bundle, not a legacy set.
+    ///
+    /// The app shipped with **no icon at all** until now: nothing named one in the built plist,
+    /// and ADR-029's generated set sat in SynthOneCore, which a Catalyst app never reads. macOS
+    /// 26 also composites a legacy `.icns` or `.appiconset` inside its own shape on a light
+    /// plate, which nested the owner's rounded square in a white one. Both keys and the compiled
+    /// `.icns` next to them are what say the `.icon` bundle was built.
+    func testTheAppCarriesItsIcon() throws {
+        let plist = try builtInfoPlist("ArcadeRuins.app/Contents/Info.plist")
+        XCTAssertEqual(plist["CFBundleIconName"] as? String, "ArcadeRuins")
+        XCTAssertEqual(plist["CFBundleIconFile"] as? String, "ArcadeRuins")
+        let products = Bundle(for: type(of: self)).bundleURL.deletingLastPathComponent()
+        let resources = products.appendingPathComponent("ArcadeRuins.app/Contents/Resources")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: resources.appendingPathComponent("ArcadeRuins.icns").path),
+                      "actool compiles a legacy icns from the .icon bundle, for systems before macOS 26")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: resources.appendingPathComponent("Assets.car").path))
+    }
+
+    /// P7-8, second pass: the icon is drawn flat, not lit.
+    ///
+    /// macOS 26 lights an icon's layers like glass unless told not to, and the owner saw the
+    /// result: "the icon appears to fade to white in the lower half". Measured on the installed
+    /// app, the artwork's dark bezel climbed from 27 to 106 down the image. `specular` and
+    /// `translucency` off in `icon.json` is what stops it; nothing else in the bundle does, so
+    /// this pins those two rather than the rendered pixels, which only the system can produce.
+    func testTheIconBundleAsksForNoGlassLighting() throws {
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/SynthOne/ArcadeRuins.icon/icon.json")
+        let manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: source)) as? [String: Any])
+        let group = try XCTUnwrap((manifest["groups"] as? [[String: Any]])?.first)
+        XCTAssertEqual(group["specular"] as? Bool, false, "the glass sheen is what faded the lower half")
+        XCTAssertEqual((group["translucency"] as? [String: Any])?["enabled"] as? Bool, false)
+        let layer = try XCTUnwrap((group["layers"] as? [[String: Any]])?.first)
+        XCTAssertEqual(layer["image-name"] as? String, "art.png")
+        XCTAssertEqual(manifest["supported-platforms"] as? [String: [String]], ["circles": [], "squares": ["macOS"]])
+    }
+
     func testComponentIdentityIsStable() throws {
         let component = try audioComponent
         XCTAssertEqual(component["type"] as? String, "aumu", "music device — an instrument")

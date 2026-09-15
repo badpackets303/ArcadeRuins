@@ -69,6 +69,16 @@ public class Manager: UpdatableViewController, AudioRecorderFileDelegate {
 
     weak var embeddedViewsDelegate: EmbeddedViewsDelegate?
 
+    /// PORT (P6, ADR-045): set when the desktop layout has been built over this view.
+    /// Nil in the classic layout and in the test bundle's storyboard walks.
+    var desktopLayout: S1DesktopLayout?
+
+    /// PORT (P6-6, P8-0): View ▸ Preset Browser (⌥⌘P), Escape and Search Presets (⌘F) reach these through the
+    /// responder chain; the desktop layout adds them as key commands too.
+    @objc func desktopTogglePresets(_ sender: Any?) { desktopLayout?.togglePresetPanel() }
+    @objc func desktopClosePresets(_ sender: Any?) { desktopLayout?.setPresetPanelVisible(false) }
+    @objc func desktopSearchPresets(_ sender: Any?) { desktopLayout?.searchPresets() }
+
     var topChildPanel: ChildPanel?
 
     var bottomChildPanel: ChildPanel?
@@ -458,7 +468,10 @@ public class Manager: UpdatableViewController, AudioRecorderFileDelegate {
     }
 
     private func appendMIDIControls(fromViewController controller: UIViewController) {
-        for view in controller.view.subviews {
+        // PORT (P6, ADR-045): in the desktop layout the panel's controls have moved out
+        // of the panel's view into the desktop sections; the layout knows where.
+        let views = desktopLayout?.controlViews(of: controller) ?? controller.view.subviews
+        for view in views {
             guard let midiControl = view as? MIDILearnable else { continue }
             midiControl.addHotspot()
             midiControls.append(midiControl)
@@ -483,6 +496,10 @@ public class Manager: UpdatableViewController, AudioRecorderFileDelegate {
             AKLog("ParentViewController can't update global UI because synth is not instantiated")
             return
         }
+
+        // PORT (P6-2, ADR-045): readouts that depend on other parameters (tempo sync, tempo,
+        // the dependent rates) and the filter-type picker follow the parameter, not a knob.
+        desktopLayout?.parameterDidChange(parameter, value: value)
 
         let isMono = s.getSynthParameter(.isMono)
         if isMono != monoButton.value {
@@ -513,6 +530,7 @@ public class Manager: UpdatableViewController, AudioRecorderFileDelegate {
     }
 
     func dependentParameterDidChange(_ dependentParameter: DependentParameter) {
+        desktopLayout?.dependentParameterDidChange(dependentParameter.parameter)   // PORT (P6-2)
         switch dependentParameter.parameter {
 
         case .lfo1Rate:

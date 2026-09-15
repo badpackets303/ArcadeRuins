@@ -33,9 +33,10 @@ In a plugin, the arpeggiator and sequencer follow the host's tempo and transport
 
 ## Status
 
-Phase 4 of 5. The plugin loads, validates, renders, saves its state into a host session and
-responds to automation; the standalone runs. See [STATE.md](STATE.md) for live status and
-[PORT_PLAN.md](PORT_PLAN.md) for the task board.
+Version 0.3.0. The plugin loads, validates, renders, saves its state into a host session and
+responds to automation; the standalone runs; both have a layout designed for a Mac window rather
+than an iPad screen. See [STATE.md](STATE.md) for live status, [PORT_PLAN.md](PORT_PLAN.md) for the
+task board and [docs/release-notes.md](docs/release-notes.md) for what changed in each version.
 
 This is a personal project, shared for testing. It is not on the App Store.
 
@@ -60,23 +61,79 @@ there is no separate `.component` to install.
 Presets, banks and favourites are shared between the app and the plugin, so a preset saved in one
 appears in the other.
 
-**Known limitations:** there is no app icon yet. The plugin has been tested in Logic Pro; other hosts
-are untested. Please report problems, with your macOS version and host, in
+**Known limitations:** there is no app icon yet. The window needs a 1440×900 area, so it does not
+fit a 13-inch display at its default scaling. The plugin
+has been tested in Logic Pro; other hosts are untested. Please report problems, with your macOS version and host, in
 [Issues](https://github.com/badpackets303/ArcadeRuins/issues).
 
 ## Screenshots
 
-The standalone app:
+**The classic interface**, Synth One's own iPad layout, is what a fresh install opens with. Settings
+▸ Layout switches to the desktop one, and back.
 
-![Arcade Ruins, standalone](docs/screenshots/standalone.png)
+![The classic layout](docs/screenshots/classic-layout.png)
 
-The preset browser: 695 factory presets in 13 banks, plus your own.
+**The desktop layout.** One screen, no tabs, every section visible at once.
 
-![The preset browser](docs/screenshots/presets.png)
+![Arcade Ruins, the desktop layout](docs/screenshots/standalone.png)
 
-The plugin in Logic Pro:
+**The Neon Ruins skin**, over the same layout: one neon colour per section, drawn entirely in code.
+
+![The Neon Ruins skin](docs/screenshots/neon-ruins-skin.png)
+
+**The preset browser** drops down from the preset name — 695 factory presets in 13 banks plus your
+own, with search (⌘F), favourites, categories, notes and reordering. In Studio:
+
+![The preset browser](docs/screenshots/presets-dropdown.png)
+
+and in Neon Ruins, where the lists and the XY pads are framed as screens:
+
+![The preset browser under Neon Ruins](docs/screenshots/neon-ruins-presets.png)
+
+**Settings** picks the interface and the skin, in the app and in the plugin.
+
+![Layout and skin in Settings](docs/screenshots/settings-pickers.png)
+
+The plugin in Logic Pro (this capture is from 0.1.0 and shows the classic layout):
 
 ![Arcade Ruins as an AUv3 instrument in Logic Pro](docs/screenshots/logic-plugin.png)
+
+## The interface
+
+**Desktop layout** (Settings ▸ Layout ▸ Desktop). One screen, no tabs: oscillators, mix, filter and voice
+across the top; the two envelopes and the LFOs; the effects and master; the arpeggiator/sequencer
+with its sixteen steps at a usable height, and the XY pads. Every knob shows its value in real units
+(Hz, ms, semitones, bars). Drag a knob or scroll over it; hold ⌥ for fine control; double-click
+resets. The on-screen keyboard is gone — play from a MIDI controller or the computer keyboard
+(A–K play, Z/X change octave, C/V change velocity; the play bar has hold, mono, MIDI learn,
+transpose, octave and the wheels).
+
+- **Preset browser.** Click the preset name in the toolbar, or ⌥⌘P, or View ▸ Preset Browser. It
+  drops down over the panels; click anywhere else or press Escape to put it away. ⌘F searches.
+- **Window.** Minimum 1440×900. Above that the sequencer row grows and the flexible sections
+  spread.
+- **Plugin.** The same layout, at 1440×900 in the host's plugin window. Editors and the tunings
+  panel open as overlays inside it.
+
+**Skins.** Settings (in the toolbar) ▸ Skin, or View ▸ Skin ▸ Studio | Neon Ruins, applied at the
+next launch. Settings is also how the **plugin** chooses its layout and skin, since it has no menu
+of its own. Studio is the dark-grey default; Neon Ruins is synthwave — one neon colour per section
+(orange, mint, pink, violet, gold, cyan), hot borders over worn near-black panels, glowing
+controls, a sunset and grid in the header, the preset lists on a CRT, and the wordmark lit. A skin changes only how things look: every control, size and shortcut is the same
+under each. From a terminal:
+
+```bash
+defaults write com.badpackets303.ArcadeRuins S1Skin neonRuins
+```
+
+**Classic layout.** Settings ▸ Layout ▸ Classic, or View ▸ Classic Layout, switches back to Synth One's iPad interface, scaled to the
+window, at the next launch. The same switch from a terminal, for the app and the plugin:
+
+```bash
+defaults write com.badpackets303.ArcadeRuins S1ClassicLayout -bool YES
+```
+
+The two layouts share every control, binding and preset: nothing is lost by switching.
 
 ## Building
 
@@ -138,8 +195,10 @@ there as a numbered ADR, including the ones that were wrong first.
 - **No AudioKit dependency and no CocoaPods.** Everything is vendored source.
 - **No Ableton Link, no Audiobus, no Inter-App Audio, no analytics, no push notifications, no
   mailing list.** The iOS service integrations are gone; nothing in this build phones home.
-- **Rebranded.** All AudioKit wordmarks and logo artwork have been replaced. The *layout* of the
-  interface is deliberately preserved — that is the point of the port.
+- **Rebranded.** All AudioKit wordmarks and logo artwork have been replaced.
+- **A desktop layout.** 0.1.0 preserved the iPad layout exactly. 0.2.0 re-homes the same controls
+  into a layout for a Mac window — everything visible, a preset browser that drops down from the
+  toolbar, no on-screen keyboard — and keeps the classic layout behind a switch. 0.3.0 adds skins.
 
 ## Licence
 

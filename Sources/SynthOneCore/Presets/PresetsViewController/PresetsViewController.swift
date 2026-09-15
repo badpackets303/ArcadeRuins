@@ -31,6 +31,10 @@ class PresetsViewController: UIViewController {
     @IBOutlet weak var doneEditingButton: UIButton!
     @IBOutlet weak var searchtoolButton: PresetUIButton!
     
+    /// PORT (P6-6): the height of a preset row. 44 in the classic panel; the desktop sidebar,
+    /// which shows the list in a column, sets a shorter one.
+    var rowHeight: CGFloat = 44
+
     var presets = [Preset]() {
         didSet {
             randomizePresets()
@@ -105,6 +109,8 @@ class PresetsViewController: UIViewController {
     // MARK: - Segue
 
     override public func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // PORT (P6-7): under the desktop layout the editors and Search present as centred cards.
+        enclosingDesktopLayout?.dressPresented(segue.destination, segue: segue.identifier)
         if segue.identifier == "SegueToEdit" {
             guard let popOverController = segue.destination as? PresetEditorViewController else { return }
             popOverController.delegate = self

@@ -169,3 +169,29 @@ Three things to know before touching it:
   `Scripts/write-goldens.sh` gets this right.
 
 Measured sensitivity: a 0.24% change to one internal LFO smoothing constant fails 17 of the 20.
+
+## The desktop layout (Phases 6–8)
+
+The layout is built over the classic `Manager` at launch (`S1DesktopLayout.install(into:)`, ADR-045),
+so nothing about the build changes. What changes is how a layout task is checked:
+
+1. **Render it.** `DRIVER_OUT=/tmp/arcade-ruins-debug RENDER_TAG=desktop RENDER_SELECT="Brice Beasley,0: "
+   xcrun lldb -b -o "command script import Scripts/debug/desktop_render.py"` writes
+   `/tmp/arcade-ruins-debug/desktop.png` from the `./DerivedData` app (2880×1800, Retina). Read the PNG;
+   read `desktop.stderr` for "Unable to simultaneously satisfy constraints" (there should be none).
+   `RENDER_ARGS="-S1Skin neonRuins"` renders a skin, `RENDER_PRESS=Presets` opens the preset
+   browser, `RENDER_SIZE=WxH` pins the window. `Scripts/debug/README.md` lists every variable.
+2. **Its suites.** `-only-testing:SynthOneTests/DesktopLayoutTests` (the layout: every bound control
+   on screen, sections at the design size, readouts, MIDI learn, the browser, the cards, hit zones),
+   `SkinTests` (every skin lays every section out in the same place; Neon Ruins hangs its art and its sections have their accents; the Settings pickers) and
+   `DesktopPluginTests` (the plugin's differences). Build them into `/tmp/SynthOneTestDD2` with
+   `CODE_SIGNING_ALLOWED=NO`, never into `./DerivedData` (ADR-038).
+3. **Install.** `Scripts/validate-au.sh` copies `./DerivedData`'s app to `/Applications` and runs
+   `auval`. The owner's running copy keeps the old build until relaunched; so does Logic.
+
+`Sources/SynthOneCore/Desktop/` is the whole layout: `S1DesktopLayout.swift` (shell, toolbar, preset
+browser, play and status bars, the cards), `S1DesktopLayout+Rows.swift` (the four rows and every
+control size — the file a layout request usually lands in), `S1DesktopStyle.swift` (Core Graphics for
+the knobs, switches, steppers, faders and chips), `S1DesktopTheme.swift` (metrics, and colours read
+from the skin), `S1Skin.swift` (the palette, the dress and the two skins), `S1SynthwaveArt.swift` and `S1NeonRuinsArt.swift` (the
+decoration), `S1SectionView`, `S1ControlCell`, `S1SegmentedControl`, `S1PanelSheet`.

@@ -33,9 +33,23 @@ class ToggleSwitch: UIView, S1Control {
 
     var resetToDefaultCallback: () -> Void = { }
 
+    // MARK: - Desktop layout (P6-3, ADR-045)
+
+    /// Drawn in the desktop dress. Set by the desktop layout when it takes the control.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
+    /// The words either side of the switch in the desktop dress. The one use is Arp / Seq.
+    var desktopLabels = ("Off", "On")
+
     // MARK: - Draw
 
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawTwoWaySwitch(in: bounds, isOn: value != 0, left: desktopLabels.0, right: desktopLabels.1, accent: s1Accent)
+            return
+        }
         ToggleSwitchStyleKit.drawToggleSwitch(isToggled: value == 0 ? false : true )
     }
 

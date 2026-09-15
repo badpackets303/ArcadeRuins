@@ -78,9 +78,20 @@ class LFOToggle: UIView, S1Control {
 
     @IBInspectable open var buttonText: String = "Hello"
 
+    // MARK: - Desktop layout (P6-2, ADR-045)
+
+    /// Drawn as a chip in the desktop dress. Set by the desktop layout when it takes the control.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
     // MARK: - Draw
 
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawLFOChip(in: bounds, text: buttonText, lfo1: lfo1Active, lfo2: lfo2Active, accent: s1Accent)
+            return
+        }
         LFOButtonStyleKit.drawLFOButton(frame: CGRect(x: 0,
                                                       y: 0,
                                                       width: self.bounds.width,
@@ -93,7 +104,9 @@ class LFOToggle: UIView, S1Control {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let touchPoint = touch.location(in: self)
-            if touchPoint.x < width / 2 {
+            // PORT FIX (P6-2): `width` is a constant 100, the storyboard's size. At any other
+            // width the right half is the wrong size — at 58 points LFO 2 was 8 points wide.
+            if touchPoint.x < bounds.width / 2 {
                 lfo1Active = !lfo1Active
             } else {
                 lfo2Active = !lfo2Active

@@ -12,6 +12,11 @@ import UIKit
 class FlatToggleButton: ToggleButton {
 
     override func draw(_ rect: CGRect) {
+        // PORT (P6, ADR-045): the desktop layout draws every toggle as a switch.
+        if drawsAsSwitch {
+            S1DesktopStyle.drawSwitch(in: bounds, isOn: isOn, accent: s1Accent)
+            return
+        }
         FlatToggleButtonStyleKit.drawRoundButton(frame: CGRect(x: 0,
                                                                y: 0,
                                                                width: self.bounds.width,

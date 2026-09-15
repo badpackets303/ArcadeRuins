@@ -1,4 +1,4 @@
-//  Keeps the test bundle out of the owner's real files (ADR-036).
+//  Keeps the test bundle out of the owner's real files and settings (ADR-036, ADR-050).
 //
 //  `Disk` resolves `~/Library/Application Support/SynthOne/` against the real home
 //  directory (P3-3, ADR-018), and the test bundle is not sandboxed. So any test that
@@ -25,8 +25,20 @@ final class TestStorageIsolation: NSObject, XCTestObservation {
     static let settingsURL = root.appendingPathComponent("Settings", isDirectory: true)
     static let cachesURL = root.appendingPathComponent("Caches", isDirectory: true)
 
+    /// P7-6 (ADR-050): the layout and skin choices are written through `S1Preferences.store`.
+    /// `UserDefaults.standard` in the test host is the owner's real domain, so a test that chose
+    /// a layout or a skin changed their settings — and one that cleaned up deleted them.
+    static let preferencesSuite = "SynthOneTests-\(UUID().uuidString)"
+
     override init() {
         super.init()
+        if let scratch = UserDefaults(suiteName: Self.preferencesSuite) {
+            S1Preferences.store = scratch
+        }
+        // P6 (ADR-045): the suite was written against the classic layout, and most of it
+        // asks `makeRootViewController()` for the scaling container that layout returns.
+        // Registered, not set, so a test that reads it before choosing still sees classic.
+        S1Preferences.store.register(defaults: [S1Layout.classicDefaultsKey: true])
         Disk.sharedSupportURL = Self.supportURL
         Disk.settingsURL = Self.settingsURL
         Disk.cachesURL = Self.cachesURL
@@ -35,5 +47,6 @@ final class TestStorageIsolation: NSObject, XCTestObservation {
 
     func testBundleDidFinish(_ testBundle: Bundle) {
         try? FileManager.default.removeItem(at: Self.root)
+        UserDefaults.standard.removePersistentDomain(forName: Self.preferencesSuite)
     }
 }

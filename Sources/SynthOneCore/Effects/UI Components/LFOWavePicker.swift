@@ -52,9 +52,20 @@ class LFOWavePicker: UIView, S1Control {
 
     var resetToDefaultCallback: () -> Void = { }
 
+    // MARK: - Desktop layout (P6-2, ADR-045)
+
+    /// Drawn as four wave cells in the desktop dress. Set by the desktop layout.
+    var drawsDesktopStyle = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
     // MARK: - Draw
 
     override func draw(_ rect: CGRect) {
+        if drawsDesktopStyle {
+            S1DesktopStyle.drawWavePicker(in: bounds, selected: Int(value), accent: s1Accent)
+            return
+        }
         LFOPickerStyleKit.drawLFOWaveformPicker(frame: CGRect(x: 0,
                                                               y: 0,
                                                               width: self.bounds.width,

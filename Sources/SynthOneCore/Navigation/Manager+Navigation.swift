@@ -14,6 +14,9 @@ import UIKit
 extension Manager {
     
     override public func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // PORT (P6-7): under the desktop layout the classic full-window screens present as
+        // centred cards. The delegate wiring below is unchanged.
+        enclosingDesktopLayout?.dressPresented(segue.destination, segue: segue.identifier)
 
         if segue.identifier == "SegueToKeyboardSettings" {
             guard let popOverController = segue.destination as? KeyboardSettingsViewController else { return }

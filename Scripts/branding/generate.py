@@ -52,6 +52,65 @@ def header_bar():
 
 
 SOURCE_WORDMARK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "Arcade-Ruins.png")
+SOURCE_ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "Arcade-Ruins-Icon.png")
+
+# The app's icon (P7-8, ADR-052). The app had no icon of any kind before this: ADR-029's
+# generated one went into SynthOneCore's iOS set, which a Catalyst app never reads.
+#
+# **Icon Composer, not an icon set.** macOS 26 draws every app icon in the system's rounded
+# shape, and a legacy `.icns` or `.appiconset` is composited *inside* it on a light plate —
+# measured, not assumed: the first pass shipped a mac-idiom icon set and the owner's rounded
+# square came out nested in a white one. An `.icon` bundle is the artwork the system shapes
+# itself, so it fills the icon. `actool` still emits a legacy `.icns` from it for older systems.
+ICON_BUNDLE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                           "Sources", "SynthOne", "ArcadeRuins.icon", "Assets")
+
+# Apple's macOS icon grid, for the iOS set: the body fills 824 of a 1024 canvas, centred, and
+# whatever glow the artwork carries lives in the margin.
+MAC_ICON_BODY = 824 / 1024
+
+
+def source_icon():
+    """The owner's icon artwork, and the bounds of its body.
+
+    The body is the opaque rounded square; the neon glow around it is semi-transparent and
+    reaches the edge of the canvas, so thresholding the alpha is what separates them.
+    """
+    icon = Image.open(SOURCE_ICON).convert("RGBA")
+    body = icon.split()[3].point(lambda v: 255 if v > 220 else 0).getbbox()
+    return icon, body
+
+
+def mac_icon_image(pixels):
+    """The artwork at `pixels` square, its body on Apple's grid and centred."""
+    icon, body = source_icon()
+    scale = (pixels * MAC_ICON_BODY) / max(body[2] - body[0], body[3] - body[1])
+    size = (round(icon.width * scale), round(icon.height * scale))
+    # Premultiplied, as the wordmark is: a straight-alpha filter pulls the black behind the
+    # transparent pixels into every edge at this reduction.
+    scaled = icon.convert("RGBa").resize(size, Image.LANCZOS).convert("RGBA")
+    centre = ((body[0] + body[2]) / 2 * scale, (body[1] + body[3]) / 2 * scale)
+    out = Image.new("RGBA", (pixels, pixels), (0, 0, 0, 0))
+    out.alpha_composite(scaled, (round(pixels / 2 - centre[0]), round(pixels / 2 - centre[1])))
+    return out
+
+
+def icon_bundle_art(pixels=1024):
+    """The layer inside `ArcadeRuins.icon`: the artwork's body, full bleed.
+
+    The system supplies the shape and the margin, so the body is cropped out of its canvas and
+    fills the square. The glow around it goes: it lives outside the body, where the system's
+    own shadow now is. `icon.json` beside this is hand-written and is not generated.
+    """
+    icon, body = source_icon()
+    cropped = icon.crop(body)
+    side = max(cropped.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.alpha_composite(cropped, ((side - cropped.width) // 2, (side - cropped.height) // 2))
+    os.makedirs(ICON_BUNDLE, exist_ok=True)
+    path = os.path.join(ICON_BUNDLE, "art.png")
+    square.convert("RGBa").resize((pixels, pixels), Image.LANCZOS).convert("RGBA").save(path)
+    return path, pixels
 
 
 def source_wordmark():
@@ -95,8 +154,13 @@ def fitted_logo(imageset, filename, size):
 
 
 def app_icon():
-    """All 18 sizes, downsampled from one 1024 master."""
-    master = appicon.render()
+    """SynthOneCore's iOS icon set: all 18 sizes, from the owner's artwork.
+
+    A Catalyst app never reads this set — the app target's own (`mac_app_icon`) is what ships —
+    but it is in the framework, so it is kept in step rather than left showing ADR-029's
+    code-drawn sunset. P7-8 (ADR-052).
+    """
+    master = mac_icon_image(1024)
     directory = os.path.join(ASSETS, "AppIcon.appiconset")
     manifest = json.load(open(os.path.join(directory, "Contents.json")))
     written = []
@@ -121,5 +185,9 @@ if __name__ == "__main__":
     print("%-52s %s" % header_bar())
     print("%-52s %s" % fitted_logo("ak1-logo.imageset", "ak1-logo2@2x.png", (376, 28)))
     print("%-52s %s" % fitted_logo("s1_logo.imageset", "s1_logo.png", (196, 28)))
+    # P7-4 (ADR-048): the Neon Ruins skin's wordmark, a 220×24-point frame (@2x)
+    print("%-52s %s" % fitted_logo("s1_wordmark_neon.imageset", "s1_wordmark_neon@2x.png", (440, 48)))
     for filename, pixels in app_icon():
-        print(f"  AppIcon.appiconset/{filename:22} {pixels}x{pixels}")
+        print(f"  SynthOneCore AppIcon.appiconset/{filename:22} {pixels}x{pixels}")
+    path, pixels = icon_bundle_art()
+    print("%-52s %s" % (path, f"{pixels}x{pixels}"))

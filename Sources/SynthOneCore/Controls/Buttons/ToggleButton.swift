@@ -33,9 +33,22 @@ class ToggleButton: UIView, S1Control {
     
     var resetToDefaultCallback: () -> Void = { }
 
+    // MARK: - Desktop layout (P6, ADR-045)
+
+    /// Drawn as a pill switch, the desktop's dress for a toggle. Set by the desktop
+    /// layout when it takes the control; subclasses that draw themselves honour it too.
+    var drawsAsSwitch = false {
+        didSet { contentMode = .redraw; setNeedsDisplay() }   // P6-8: redraw on a bounds change, never stretch the old bitmap
+    }
+
     // MARK: - Draw
-    
+
     override func draw(_ rect: CGRect) {
+        // PORT (P6, ADR-045): the same toggle, two dresses.
+        if drawsAsSwitch {
+            S1DesktopStyle.drawSwitch(in: bounds, isOn: isOn, accent: s1Accent)
+            return
+        }
         ToggleButtonStyleKit.drawRoundButton(frame: CGRect(x: 0,
                                                            y: 0,
                                                            width: self.bounds.width,

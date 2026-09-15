@@ -17,7 +17,7 @@ extension PresetsViewController: UITableViewDataSource {
 
     @objc(tableView:heightForRowAtIndexPath:) func tableView(_ tableView: UITableView,
                                                              heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 44
+        return rowHeight   // PORT (P6-6): 44 in the classic panel; the desktop sidebar sets its own
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
