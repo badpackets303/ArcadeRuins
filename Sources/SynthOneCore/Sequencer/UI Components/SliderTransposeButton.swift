@@ -103,6 +103,13 @@ class SliderTransposeButton: UILabel, S1Control {
         return box.face
     }
 
+    /// PORT (P7-12, ADR-062): the box may have been switched while its zone was dark.
+    func powerDidReturn() {
+        guard drawsDesktopStyle else { return }
+        // The face only: the border is the sequencer's, which rings the step that is playing
+        backgroundColor = S1DesktopStyle.numberBox(on: _value > 0, accent: s1Accent).face
+    }
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         guard drawsDesktopStyle, window != nil else { return }
@@ -136,3 +143,5 @@ class SliderTransposeButton: UILabel, S1Control {
         }
     }
 }
+
+extension SliderTransposeButton: S1PowerAware {}

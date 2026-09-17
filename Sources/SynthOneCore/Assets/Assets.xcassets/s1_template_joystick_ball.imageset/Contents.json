@@ -1,0 +1,13 @@
+{
+  "images": [
+    {
+      "filename": "s1_template_joystick_ball@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

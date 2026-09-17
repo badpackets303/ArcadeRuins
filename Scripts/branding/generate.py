@@ -185,12 +185,114 @@ def clean_template(im):
     return im
 
 
+# The cabinet's joystick (P7-11, ADR-061), in the painting's pixels: the ball, the stick down to
+# its socket, and the box the sprite is cut from. `S1CabinetSkin.template.joystick` has the same box.
+JOYSTICK_BOX = (86, 832, 128, 898)
+JOYSTICK_BALL = (107, 853, 15)
+JOYSTICK_STICK = [(99, 864), (110, 864), (108, 895), (98, 895)]
+
+
+def joystick_mask(scale=1, grow=0):
+    """White where the painted joystick is, in the box's own coordinates."""
+    x0, y0, x1, y1 = JOYSTICK_BOX
+    mask = Image.new("L", ((x1 - x0) * scale, (y1 - y0) * scale), 0)
+    draw = ImageDraw.Draw(mask)
+    cx, cy, r = JOYSTICK_BALL
+    r += grow
+    draw.ellipse([(cx - r - x0) * scale, (cy - r - y0) * scale, (cx + r - x0) * scale, (cy + r - y0) * scale], fill=255)
+    draw.polygon([((x - x0 + (grow if i in (1, 2) else -grow)) * scale, (y - y0) * scale)
+                  for i, (x, y) in enumerate(JOYSTICK_STICK)], fill=255)
+    return mask.filter(ImageFilter.GaussianBlur(0.8 * scale))
+
+
+def lift_joystick(im):
+    """Takes the joystick off the painting — the live one is drawn over the hole. Each row of
+    the hole is blended across from the pixels at its two ends: the console behind the stick is
+    horizontal bands (the screen's sill, the panel's edge), and this carries them through. A
+    patch copied from beside it brought the cabinet's orange edge or the ball's own rim along;
+    a diffusion fill smeared the bands away."""
+    x0, y0, x1, y1 = JOYSTICK_BOX
+    hole = joystick_mask(grow=3).point(lambda v: 255 if v > 40 else 0)
+    inside = hole.load()
+    pixels = im.load()
+    for y in range(y1 - y0):
+        columns = [x for x in range(x1 - x0) if inside[x, y]]
+        if not columns:
+            continue
+        left, right = x0 + columns[0] - 1, x0 + columns[-1] + 1
+        def ends(x):   # a short average, so one odd pixel does not streak the row
+            return [sum(pixels[x + d, y0 + y][c] for d in (-1, 0, 1)) / 3 for c in range(3)]
+        a, b = ends(left - 1), ends(right + 1)
+        for x in range(left, right + 1):
+            t = (x - left) / max(1, right - left)
+            pixels[x, y0 + y] = tuple(int(a[c] + (b[c] - a[c]) * t) for c in range(3))
+    # soften the rows into each other a touch, only inside the hole
+    box = (x0 - 2, y0 - 2, x1 + 2, y1 + 2)
+    soft = im.crop(box).filter(ImageFilter.GaussianBlur(1.2))
+    mask = Image.new("L", soft.size, 0)
+    mask.paste(hole, (2, 2))
+    im.paste(soft, box[:2], mask)
+    return im
+
+
+JOYSTICK_BALL_BOX = (88, 834, 126, 872)
+JOYSTICK_ROD_BOX = (94, 846, 114, 898)
+
+
+def _sprite(image, name):
+    folder = os.path.join(ASSETS, name + ".imageset")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, name + "@2x.png")
+    image.save(path)
+    with open(os.path.join(folder, "Contents.json"), "w") as contents:
+        json.dump({"images": [{"filename": name + "@2x.png", "idiom": "universal", "scale": "2x"}],
+                   "info": {"author": "xcode", "version": 1}}, contents, indent=2)
+    return path, image.size
+
+
+def cabinet_joystick(source):
+    """The joystick as two sprites at the template's 2x: the ball, and the rod. Nothing is ever
+    stretched (owner, 2026-09-17): the ball slides along the rod, up to show more of it and down
+    to cover it, so the rod is painted on up behind the ball from its own top row."""
+    cx, cy, r = JOYSTICK_BALL
+    x0, y0, x1, y1 = JOYSTICK_BALL_BOX
+    ball = source.crop(JOYSTICK_BALL_BOX).resize(((x1 - x0) * 2, (y1 - y0) * 2), Image.LANCZOS).convert("RGBA")
+    mask = Image.new("L", ball.size, 0)
+    ImageDraw.Draw(mask).ellipse([(cx - r - x0) * 2, (cy - r - y0) * 2, (cx + r - x0) * 2, (cy + r - y0) * 2], fill=255)
+    ball.putalpha(mask.filter(ImageFilter.GaussianBlur(1.6)))
+
+    x0, y0, x1, y1 = JOYSTICK_ROD_BOX
+    rod = source.crop(JOYSTICK_ROD_BOX)
+    top = cy + r + 2                                    # the first row of rod clear of the ball
+    row = rod.crop((0, top - y0, x1 - x0, top - y0 + 1))
+    for y in range(0, top - y0):
+        rod.paste(row, (0, y))
+    rod = rod.resize(((x1 - x0) * 2, (y1 - y0) * 2), Image.LANCZOS).convert("RGBA")
+    mask = Image.new("L", rod.size, 0)
+    left, right = JOYSTICK_STICK[0][0], JOYSTICK_STICK[1][0]
+    shape = [(left, y0 + 2), (right, y0 + 2)] + JOYSTICK_STICK[2:]
+    ImageDraw.Draw(mask).polygon([((x - x0) * 2, (y - y0) * 2) for x, y in shape], fill=255)
+    rod.putalpha(mask.filter(ImageFilter.GaussianBlur(1.2)))
+    _sprite(ball, "s1_template_joystick_ball")
+    return _sprite(rod, "s1_template_joystick_rod")
+
+
 def cabinet_template():
     """The Cabinet skin's window, at twice the painting's size so a 1440-point window is not
     drawn from fewer pixels than it has."""
     source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "ar-template.png")
-    image = clean_template(Image.open(source).convert("RGB"))
+    original = Image.open(source).convert("RGB")
+    print("%-52s %s" % cabinet_joystick(original))
+    image = lift_joystick(clean_template(original.copy()))
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
+    # P7-12 (ADR-062): the same window with the power out — grey, and dimmer
+    dark = ImageOps.grayscale(image).point(lambda v: int(v * 0.62))
+    folder = os.path.join(ASSETS, "s1_template_cabinet_dark.imageset")
+    os.makedirs(folder, exist_ok=True)
+    dark.save(os.path.join(folder, "s1_template_cabinet_dark@2x.jpg"), quality=88)
+    with open(os.path.join(folder, "Contents.json"), "w") as contents:
+        json.dump({"images": [{"filename": "s1_template_cabinet_dark@2x.jpg", "idiom": "universal", "scale": "2x"}],
+                   "info": {"author": "xcode", "version": 1}}, contents, indent=2)
     folder = os.path.join(ASSETS, "s1_template_cabinet.imageset")
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, "s1_template_cabinet@2x.jpg")
@@ -234,7 +336,6 @@ if __name__ == "__main__":
     print("%-52s %s" % fitted_logo("ak1-logo.imageset", "ak1-logo2@2x.png", (376, 28)))
     print("%-52s %s" % fitted_logo("s1_logo.imageset", "s1_logo.png", (196, 28)))
     # P7-4 (ADR-048): the Neon Ruins skin's wordmark, a 220×24-point frame (@2x)
-    print("%-52s %s" % fitted_logo("s1_wordmark_neon.imageset", "s1_wordmark_neon@2x.png", (440, 48)))
     print("%-52s %s" % cabinet_template())
     for filename, pixels in app_icon():
         print(f"  SynthOneCore AppIcon.appiconset/{filename:22} {pixels}x{pixels}")

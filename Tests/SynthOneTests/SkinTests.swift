@@ -2,7 +2,7 @@
 //  anything sits (ADR-046).
 //
 //  Every skin is built over the real `Manager` at the design size. What is checked is the
-//  contract: Studio is the 0.2.0 palette and hangs no art; Neon Ruins (P7-4, ADR-048) hangs its
+//  contract: Studio is the 0.2.0 palette and hangs no art; Cabinet (P7-4, ADR-048; P7-9) hangs its
 //  art, gives each section its own accent, which every control inside it draws in, and frames
 //  its screens; and every section has the same frame under each skin, so a skin can never break
 //  the layout tests that run under Studio. The Arcade skin was dropped at P7-7 (ADR-051).
@@ -53,9 +53,9 @@ final class SkinTests: XCTestCase {
 
     func testStudioIsTheDefaultAndTheChoiceRoundTrips() {
         XCTAssertEqual(S1SkinChoice.chosen, .studio)
-        S1SkinChoice.choose(.neonRuins)
-        XCTAssertEqual(S1SkinChoice.chosen, .neonRuins)
-        XCTAssertEqual(S1SkinChoice.neonRuins.makeSkin().choice, .neonRuins)
+        S1SkinChoice.choose(.cabinet)
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
+        XCTAssertEqual(S1SkinChoice.cabinet.makeSkin().choice, .cabinet)
         // A default naming a skin that no longer exists — "arcade" on an owner's machine — opens Studio
         S1Preferences.store.set("arcade", forKey: S1SkinChoice.defaultsKey)
         XCTAssertEqual(S1SkinChoice.chosen, .studio, "a dropped skin falls back, it does not crash")
@@ -87,53 +87,48 @@ final class SkinTests: XCTestCase {
         XCTAssertEqual(section.layer.shadowColor.map { UIColor(cgColor: $0) }, UIColor.black)
     }
 
-    // MARK: - Neon Ruins (P7-4, ADR-048)
+    // MARK: - One neon per section (P7-4, ADR-048; Cabinet's since P7-10)
 
-    func testNeonRuinsGivesEverySectionItsOwnAccentAndTheControlsFollow() throws {
-        let (manager, layout) = try makeDesktop(skin: S1NeonRuinsSkin())
-        XCTAssertEqual(layout.skin.choice, .neonRuins)
-        XCTAssertTrue(layout.toolbarArt is S1NeonRuinsHeaderArt)
-        XCTAssertTrue(layout.panelArt is S1NeonRuinsPanelArt)
-        XCTAssertTrue(layout.backdropArt is S1NeonRuinsBackdropArt)
-        XCTAssertTrue(layout.wordmark is S1NeonRuinsWordmark)
-        XCTAssertEqual(layout.backdropArt?.bounds.size, layout.root.bounds.size, "the backdrop covers the window")
-        XCTAssertEqual(layout.root.subviews.first, layout.backdropArt, "and sits under everything")
-        XCTAssertEqual(layout.wordmark?.bounds.size, S1NeonRuinsSkin().dress.wordmarkSize)
+    func testCabinetGivesEverySectionItsOwnAccentAndTheControlsFollow() throws {
+        let (manager, layout) = try makeDesktop(skin: S1CabinetSkin())
+        XCTAssertEqual(layout.skin.choice, .cabinet)
+        XCTAssertNil(layout.toolbarArt, "the header is the painting's")
+        XCTAssertTrue(layout.panelArt is S1CabinetPanelArt)
+        XCTAssertNil(layout.backdropArt)
+        XCTAssertEqual(layout.root.subviews.first, layout.templateCanvas, "the painting sits under everything")
         XCTAssertEqual(views(of: S1CRTFrame.self, under: manager.view).count, 4)
 
-        // Every section has an accent; the border and the glow are that accent
-        XCTAssertEqual(layout.sections.count, S1NeonRuinsSkin.accents.count)
+        // Every section has an accent, which its controls take; the frame itself is painted
+        XCTAssertEqual(layout.sections.count, S1CabinetSkin.accents.count)
         for (name, section) in layout.sections {
             let accent = try XCTUnwrap(section.accent, "\(name) has an accent")
-            XCTAssertEqual(accent, S1NeonRuinsSkin.accents[name], name)
-            XCTAssertEqual(section.layer.shadowColor.map { UIColor(cgColor: $0) }, accent, "\(name) glows in its accent")
-            XCTAssertEqual(section.layer.shadowOffset, .zero, name)
+            XCTAssertEqual(accent, S1CabinetSkin.accents[name], name)
+            XCTAssertEqual(section.layer.shadowOpacity, 0, "\(name): the frame and its glow are the painting's")
         }
         // The owner's pairings: Mix is mint like Delay; the filter and its envelope share pink
-        XCTAssertEqual(layout.sections["Mix"]?.accent, S1NeonRuinsSkin.mint)
-        XCTAssertEqual(layout.sections["Delay"]?.accent, S1NeonRuinsSkin.mint)
-        XCTAssertEqual(layout.sections["Filter"]?.accent, S1NeonRuinsSkin.pink)
-        XCTAssertEqual(layout.sections["Filter Envelope"]?.accent, S1NeonRuinsSkin.pink)
-        XCTAssertEqual(layout.sections["Sequencer"]?.accent, S1NeonRuinsSkin.orange)
-        XCTAssertEqual(layout.sections["Pads"]?.accent, S1NeonRuinsSkin.cyan)
-        XCTAssertNotEqual(Set(S1NeonRuinsSkin.accents.values).count, 1, "more than one colour")
+        XCTAssertEqual(layout.sections["Mix"]?.accent, S1CabinetSkin.mint)
+        XCTAssertEqual(layout.sections["Delay"]?.accent, S1CabinetSkin.mint)
+        XCTAssertEqual(layout.sections["Filter"]?.accent, S1CabinetSkin.pink)
+        XCTAssertEqual(layout.sections["Filter Envelope"]?.accent, S1CabinetSkin.pink)
+        XCTAssertEqual(layout.sections["Sequencer"]?.accent, S1CabinetSkin.orange)
+        XCTAssertEqual(layout.sections["Pads"]?.accent, S1CabinetSkin.cyan)
+        XCTAssertNotEqual(Set(S1CabinetSkin.accents.values).count, 1, "more than one colour")
 
         // A control finds its section's accent through the view tree; one outside keeps the palette's
         let mixKnob = try XCTUnwrap(views(of: Knob.self, under: try XCTUnwrap(layout.sections["Mix"])).first)
-        XCTAssertEqual(mixKnob.s1Accent, S1NeonRuinsSkin.mint)
+        XCTAssertEqual(mixKnob.s1Accent, S1CabinetSkin.mint)
         let padsKnobs = views(of: Knob.self, under: try XCTUnwrap(layout.sections["Pads"]))
         XCTAssertTrue(padsKnobs.isEmpty)
         let voiceSwitch = try XCTUnwrap(views(of: ToggleButton.self, under: try XCTUnwrap(layout.sections["Voice"])).first)
-        XCTAssertEqual(voiceSwitch.s1Accent, S1NeonRuinsSkin.violet)
+        XCTAssertEqual(voiceSwitch.s1Accent, S1CabinetSkin.violet)
         XCTAssertEqual(layout.toolbar.s1Accent, S1DesktopTheme.orange, "the toolbar is not in a section")
-        XCTAssertEqual(layout.wordmark?.s1Accent, S1NeonRuinsSkin.orange)
 
         // The dress
-        let dress = S1NeonRuinsSkin().dress
-        XCTAssertEqual(dress.sectionBorderWidth, 2)
+        let dress = S1CabinetSkin().dress
+        XCTAssertTrue(dress.bareSections, "the frames are the painting's")
         XCTAssertTrue(dress.litFromAccent)
         XCTAssertTrue(dress.knobHalo)
-        XCTAssertGreaterThan(S1NeonRuinsSkin().glow, S1StudioSkin().glow)
+        XCTAssertGreaterThan(S1CabinetSkin().glow, S1StudioSkin().glow)
         XCTAssertEqual(S1DesktopTheme.label, .white)
     }
 
@@ -196,8 +191,8 @@ final class SkinTests: XCTestCase {
         // Choosing writes the defaults the next launch reads
         pickers.select(S1Layout.classic)
         XCTAssertEqual(S1Layout.current, .classic)
-        pickers.select(S1SkinChoice.neonRuins)   // still settable through the API; the control dims
-        XCTAssertEqual(S1SkinChoice.chosen, .neonRuins)
+        pickers.select(S1SkinChoice.cabinet)   // still settable through the API; the control dims
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
         pickers.select(S1Layout.desktop)
         XCTAssertEqual(S1Layout.current, .desktop)
 
@@ -252,31 +247,22 @@ final class SkinTests: XCTestCase {
 
     // MARK: - The art draws
 
-    func testTheNeonRuinsArtDrawsAndTheWordmarkIsTheOwnersArtwork() throws {
-        for (view, size) in [(S1NeonRuinsHeaderArt(frame: .zero), CGSize(width: 1_440, height: 48)),
-                             (S1NeonRuinsPanelArt(frame: .zero), CGSize(width: 380, height: 720)),
-                             (S1NeonRuinsBackdropArt(frame: .zero), CGSize(width: 1_440, height: 900))] as [(UIView, CGSize)] {
-            view.frame = CGRect(origin: .zero, size: size)
-            let image = UIGraphicsImageRenderer(bounds: view.bounds).image { view.layer.render(in: $0.cgContext) }
-            XCTAssertEqual(image.size, size)
-            XCTAssertNotNil(image.cgImage)
-        }
-        XCTAssertEqual(S1NeonRuinsArt.grime.size, CGSize(width: 256, height: 256))
+    func testTheCabinetPanelArtDraws() throws {
+        let view = S1CabinetPanelArt(frame: CGRect(x: 0, y: 0, width: 380, height: 720))
+        let image = UIGraphicsImageRenderer(bounds: view.bounds).image { view.layer.render(in: $0.cgContext) }
+        XCTAssertEqual(image.size, view.bounds.size)
+        XCTAssertNotNil(image.cgImage)
         XCTAssertEqual(S1SynthwaveArt.scanlines.size.height, 3, "the shared kit outlived the Arcade skin")
-        XCTAssertNotNil(UIImage.synthOne(S1NeonRuinsWordmark.imageName), "the lit wordmark is an asset, generated from the owner's artwork")
-        let mark = S1NeonRuinsWordmark(frame: CGRect(origin: .zero, size: S1NeonRuinsSkin().dress.wordmarkSize))
-        mark.layoutIfNeeded()
-        XCTAssertEqual(mark.accessibilityLabel, "Arcade Ruins")
-        XCTAssertEqual(mark.subviews.compactMap { $0 as? UIImageView }.count, 2, "the mark over its bloom")
-        XCTAssertTrue(mark.subviews.compactMap { ($0 as? UIImageView)?.image }.allSatisfy { $0.size.width > $0.size.height * 8 })
     }
 
-    func testTheChoiceListsNeonRuinsAndRoundTripsIt() {
-        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .neonRuins, .cabinet], "Arcade was dropped at P7-7; Cabinet came at P7-9")
-        S1SkinChoice.choose(.neonRuins)
-        XCTAssertEqual(S1SkinChoice.chosen, .neonRuins)
-        XCTAssertEqual(S1SkinChoice.neonRuins.makeSkin().choice, .neonRuins)
-        XCTAssertEqual(S1SkinChoice.neonRuins.rawValue, "neonRuins", "the launch argument and the default's value")
+    func testTheChoiceListsCabinetAndAStoredNeonRuinsOpensIt() {
+        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .cabinet], "Arcade went at P7-7; Cabinet replaced Neon Ruins at P7-10")
+        S1SkinChoice.choose(.cabinet)
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
+        XCTAssertEqual(S1SkinChoice.cabinet.rawValue, "cabinet", "the launch argument and the default's value")
+        // Whoever chose Neon Ruins under 0.3.0 or 0.4.0 gets its successor, not Studio
+        S1Preferences.store.set("neonRuins", forKey: S1SkinChoice.defaultsKey)
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
     }
 
     // MARK: - Cabinet: the owner's painted window (P7-9, ADR-059)
@@ -323,5 +309,162 @@ final class SkinTests: XCTestCase {
         XCTAssertFalse(layout.isPresetPanelVisible)
         presets.action?()
         XCTAssertTrue(layout.isPresetPanelVisible)
+    }
+
+    // MARK: - The joystick (P7-11, ADR-061)
+
+    func testTheCabinetJoystickIsTheModWheelAndThePitchWheelAndSpringsBack() throws {
+        let (manager, layout) = try makeDesktop(skin: S1CabinetSkin())
+        let stick = try XCTUnwrap(layout.joystick)
+        let canvas = try XCTUnwrap(layout.templateCanvas)
+        XCTAssertTrue(stick.isDescendant(of: canvas))
+        XCTAssertNotNil(UIImage.synthOne("s1_template_joystick_ball"), "the sprites are cut from the owner's painting")
+        XCTAssertNotNil(UIImage.synthOne("s1_template_joystick_rod"))
+        XCTAssertEqual(stick.accessibilityLabel, "Joystick")
+
+        // Pushed all the way up: the mod wheel at the top, the pitch untouched inside the dead zone
+        manager.modWheelPad.setVerticalValue01(0.25)
+        manager.pitchBend.setVerticalValue01(0.5)   // where the wheel rests once it has appeared
+        stick.onGrab()
+        stick.drag(by: CGPoint(x: 3, y: -S1CabinetJoystick.travel))
+        XCTAssertEqual(manager.modWheelPad.verticalValue, 1, accuracy: 0.001)
+        XCTAssertEqual(manager.pitchBend.verticalValue, 0.5, accuracy: 0.001)
+        // Nothing stretches (owner, 2026-09-17): the ball slides up the rod, and the rod only leans
+        XCTAssertLessThan(stick.ballTransform.ty, 0, "pushed away, the ball rides up")
+        XCTAssertEqual(stick.ballTransform.a, 1); XCTAssertEqual(stick.ballTransform.d, 1)
+
+        // Halfway up is halfway from where the wheel rested to the top
+        stick.drag(by: CGPoint(x: 0, y: -S1CabinetJoystick.travel / 2))
+        XCTAssertEqual(manager.modWheelPad.verticalValue, 0.625, accuracy: 0.001)
+
+        // Leaned right bends up, left bends down; pulled down is not a push
+        stick.drag(by: CGPoint(x: S1CabinetJoystick.travel, y: 20))
+        XCTAssertGreaterThan(stick.ballTransform.ty, 0, "pulled forward, the ball comes down over the rod")
+        let lean = stick.stickTransform
+        XCTAssertEqual(lean.a * lean.d - lean.b * lean.c, 1, accuracy: 0.000_1, "a rotation: no scale in it")
+        XCTAssertEqual(manager.pitchBend.verticalValue, 1, accuracy: 0.001)
+        XCTAssertEqual(manager.modWheelPad.verticalValue, 0.25, accuracy: 0.001)
+        stick.drag(by: CGPoint(x: -S1CabinetJoystick.travel, y: 0))
+        XCTAssertEqual(manager.pitchBend.verticalValue, 0, accuracy: 0.001)
+
+        // Let go: the bend centres and the mod wheel is back where the preset had it
+        stick.release()
+        XCTAssertEqual(manager.pitchBend.verticalValue, 0.5, accuracy: 0.001)
+        XCTAssertEqual(manager.modWheelPad.verticalValue, 0.25, accuracy: 0.001)
+        XCTAssertEqual(stick.push, 0)
+    }
+
+    func testOnlyATemplateWithAJoystickHasOne() throws {
+        let (_, studio) = try makeDesktop(skin: S1StudioSkin())
+        XCTAssertNil(studio.joystick)
+    }
+
+    // MARK: - Power (P7-12, ADR-062)
+
+    private struct Seeded: RandomNumberGenerator {
+        var state: UInt64
+        mutating func next() -> UInt64 {
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return state
+        }
+    }
+
+    private func isGrey(_ colour: UIColor) -> Bool {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard colour.getRed(&r, green: &g, blue: &b, alpha: &a) else { return false }
+        return abs(r - g) < 0.002 && abs(g - b) < 0.002
+    }
+
+    func testTheLeftRedButtonFlickersEveryZoneDarkInEightSecondsAndTheRightBringsThemBack() throws {
+        let (manager, layout) = try makeDesktop(skin: S1CabinetSkin())
+        let power = try XCTUnwrap(layout.power)
+        let canvas = try XCTUnwrap(layout.templateCanvas)
+        XCTAssertEqual(power.zones.count, layout.sections.count + 4, "every section, and the display, buttons, screen and bar")
+        let labels = Set(views(of: S1ActionButton.self, under: canvas).compactMap(\.accessibilityLabel))
+        XCTAssertTrue(labels.isSuperset(of: ["Cut the power", "Restore the power"]))
+
+        var scheduled: [(time: TimeInterval, block: () -> Void)] = []
+        power.after = { scheduled.append(($0, $1)) }
+        func fire() { scheduled.sorted { $0.time < $1.time }.forEach { $0.block() }; scheduled = [] }
+
+        let mix = try XCTUnwrap(layout.sections["Mix"])
+        let knob = try XCTUnwrap(views(of: Knob.self, under: mix).first)
+        let readout = try XCTUnwrap(views(of: S1ControlCell.self, under: mix).first).valueLabel
+        let litColour = try XCTUnwrap(readout.textColor)
+        XCTAssertFalse(isGrey(litColour), "the readout is the palette's cyan while lit")
+
+        var random = Seeded(state: 7)
+        power.run(powered: false, using: &random)
+        XCTAssertEqual(try XCTUnwrap(scheduled.map(\.time).max()), S1CabinetPower.cycle, accuracy: 0.001, "the last zone settles at eight seconds")
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(scheduled.map(\.time).min()), 0)
+        XCTAssertGreaterThan(scheduled.count, power.zones.count * 4, "each zone flickers before it settles")
+        XCTAssertTrue(power.isPowered, "nothing changes until the clock runs")
+        fire()
+        XCTAssertTrue(power.isDark)
+        XCTAssertEqual(knob.s1Accent, S1Power.deadAccent)
+        XCTAssertTrue(S1DesktopStyle.unpowered, "and the style draws from the grey palette")
+        XCTAssertTrue(isGrey(try XCTUnwrap(readout.textColor)))
+        XCTAssertTrue(power.zones.allSatisfy { $0.cover?.isHidden == false }, "the grey painting is over every zone")
+        XCTAssertEqual(manager.conductor.audioPlotter?.alpha, 0, "the scope's trace is gone")
+
+        // Still a synth in the dark: a control moves and its readout follows; and a choice made
+        // in the dark is the one lit when the power comes back
+        let picker = try XCTUnwrap(layout.filterPicker)
+        picker.selectedIndex = 2
+        knob.value = knob.range.upperBound
+        knob.valueDidChange?(knob.value)
+
+        power.run(powered: true, using: &random)
+        XCTAssertEqual(try XCTUnwrap(scheduled.map(\.time).max()), S1CabinetPower.cycle, accuracy: 0.001)
+        fire()
+        XCTAssertTrue(power.isPowered)
+        XCTAssertEqual(knob.s1Accent, S1CabinetSkin.mint)
+        XCTAssertFalse(S1DesktopStyle.unpowered)
+        XCTAssertEqual(readout.textColor, litColour, "every held colour comes back exactly")
+        let faces = views(of: UIButton.self, under: picker).sorted { $0.tag < $1.tag }.map { $0.backgroundColor ?? .clear }
+        XCTAssertEqual(faces[0].cgColor.alpha, 0, "Low was lit when the power went; it is not now")
+        XCTAssertFalse(isGrey(faces[2]), "High, chosen in the dark, is")
+        XCTAssertTrue(power.zones.allSatisfy { $0.cover?.isHidden == true })
+        XCTAssertEqual(manager.conductor.audioPlotter?.alpha, 1)
+        XCTAssertEqual(S1Power.dark.count, 0)
+    }
+
+    func testTheOtherButtonMidCycleAbandonsWhatWasStillToCome() throws {
+        let (_, layout) = try makeDesktop(skin: S1CabinetSkin())
+        let power = try XCTUnwrap(layout.power)
+        var scheduled: [(time: TimeInterval, block: () -> Void)] = []
+        power.after = { scheduled.append(($0, $1)) }
+        var random = Seeded(state: 11)
+        power.run(powered: false, using: &random)
+        let ordered = scheduled.sorted { $0.time < $1.time }
+        ordered.prefix(ordered.count / 2).forEach { $0.block() }
+        XCTAssertFalse(power.isPowered); XCTAssertFalse(power.isDark)
+        let stale = Array(ordered.suffix(from: ordered.count / 2))
+        scheduled = []
+        power.run(powered: true, using: &random)
+        (stale + scheduled).sorted { $0.time < $1.time }.forEach { $0.block() }
+        XCTAssertTrue(power.isPowered, "the abandoned cycle's blocks do nothing")
+    }
+
+    func testTheGreyPaletteCoversEveryColour() {
+        let palette = S1CabinetSkin().palette
+        var colours = 0
+        for child in Mirror(reflecting: palette.greyed()).children {
+            let all: [UIColor]
+            switch child.value {
+            case let colour as UIColor: all = [colour]
+            case let list as [UIColor]: all = list
+            case let maybe as UIColor?: all = maybe.map { [$0] } ?? []
+            default: XCTFail("\(child.label ?? "?") is not a colour; teach greyed() about it"); continue
+            }
+            colours += 1
+            XCTAssertTrue(all.allSatisfy(isGrey), child.label ?? "?")
+        }
+        XCTAssertEqual(colours, S1Palette.colourFieldCount, "a field added to S1Palette must be added to greyed()")
+    }
+
+    func testStudioHasNoPowerButtons() throws {
+        let (_, studio) = try makeDesktop(skin: S1StudioSkin())
+        XCTAssertNil(studio.power)
     }
 }

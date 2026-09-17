@@ -14,9 +14,9 @@ import UIKit
 
 enum S1SynthwaveArt {
 
-    static let orange = S1NeonRuinsSkin.orange
-    static let cyan = S1NeonRuinsSkin.cyan
-    static let magenta = S1NeonRuinsSkin.pink
+    static let orange = S1CabinetSkin.orange
+    static let cyan = S1CabinetSkin.cyan
+    static let magenta = S1CabinetSkin.pink
     static let sunTop = UIColor(hex: 0xffd66b)
     static let sunBottom = UIColor(hex: 0xff3d81)
     static let skyTop = UIColor(hex: 0x1c1038)

@@ -51,6 +51,7 @@ extension S1DesktopLayout {
         }
 
         placeToolbar(template)
+        if let joystick = template.joystick { placeJoystick(joystick, of: template) }
 
         // The play bar and the status bar share the painting's bottom strip
         NSLayoutConstraint.deactivate(root.constraints.filter { constraint in
@@ -62,6 +63,7 @@ extension S1DesktopLayout {
         statusBar.backgroundColor = .clear
         pin(playBar, to: template.playBar, of: template)
         pin(statusBar, to: template.statusBar, of: template)
+        if let power = template.power { placePower(power, of: template) }
     }
 
     // MARK: - The painted header
@@ -85,16 +87,16 @@ extension S1DesktopLayout {
         field.layer.borderWidth = 0
         if let display = header.displayLabel {
             display.font = UIFont.monospacedSystemFont(ofSize: 19, weight: .semibold)
-            display.textColor = S1NeonRuinsSkin.cyan
+            display.textColor = S1CabinetSkin.cyan
             display.adjustsFontSizeToFitWidth = true
             display.minimumScaleFactor = 0.6
-            display.layer.shadowColor = S1NeonRuinsSkin.cyan.cgColor
+            display.layer.shadowColor = S1CabinetSkin.cyan.cgColor
             display.layer.shadowOpacity = 0.9
             display.layer.shadowRadius = 5
             display.layer.shadowOffset = .zero
         }
         for case let chevron as UILabel in field.subviews where chevron.text == "▾" {
-            chevron.textColor = S1NeonRuinsSkin.cyan
+            chevron.textColor = S1CabinetSkin.cyan
         }
         pin(field, to: template.presetField, of: template)
 
@@ -166,6 +168,90 @@ extension S1DesktopLayout {
             pin(plot, to: template.scope, of: template)
         }
         _ = canvas
+    }
+
+    // MARK: - The joystick (P7-11, ADR-061)
+
+    /// The wheels are the classic ones, hidden with the keyboard; the stick moves them exactly as
+    /// a touch on them does — set the pad, then run its callback — so the preset's mod-wheel
+    /// routing and the bend range apply. Letting go puts the mod wheel back where it was, since
+    /// a preset may rest it anywhere, and centres the bend as the pitch wheel's own release does.
+    private func placeJoystick(_ joystick: S1TemplateJoystick, of template: S1SkinTemplate) {
+        let stick = S1CabinetJoystick(parts: joystick)
+        var modAtGrab = 0.0
+        stick.onGrab = { [weak manager] in modAtGrab = manager?.modWheelPad.verticalValue ?? 0 }
+        stick.onPush = { [weak manager] push in
+            guard let wheel = manager?.modWheelPad else { return }
+            let value = modAtGrab + (1 - modAtGrab) * push
+            wheel.setVerticalValue01(value)
+            wheel.callback(value)
+        }
+        stick.onLean = { [weak manager] lean in
+            guard let wheel = manager?.pitchBend else { return }
+            wheel.setVerticalValue01(lean)
+            wheel.callback(lean)
+        }
+        stick.onRelease = { [weak manager] in
+            guard let manager else { return }
+            manager.modWheelPad.setVerticalValue01(modAtGrab)
+            manager.modWheelPad.callback(modAtGrab)
+            manager.pitchBend.setVerticalValue01(0.5)
+            manager.pitchBend.callback(0.5)
+        }
+        pin(stick, to: joystick.reach, of: template)
+        self.joystick = stick
+    }
+
+    // MARK: - Power (P7-12, ADR-062)
+
+    /// A zone for every section and for the pieces of the header, each with a grey crop of the
+    /// painting over its rectangle, and the two red buttons that run them.
+    private func placePower(_ power: S1TemplatePower, of template: S1SkinTemplate) {
+        guard let canvas = templateCanvas, let dark = UIImage.synthOne(power.darkImageName)?.cgImage else { return }
+        var zones: [S1PowerZone] = []
+        var above: UIView? = canvas.subviews.first   // the painting; the covers go straight over it
+
+        func cover(_ rect: CGRect) -> UIView {
+            let bounds = CGRect(origin: .zero, size: template.size)
+            let rect = rect.intersection(bounds)
+            let view = UIView()
+            view.isUserInteractionEnabled = false
+            view.layer.contents = dark
+            view.layer.contentsRect = CGRect(x: rect.minX / bounds.width, y: rect.minY / bounds.height,
+                                             width: rect.width / bounds.width, height: rect.height / bounds.height)
+            view.translatesAutoresizingMaskIntoConstraints = false
+            if let below = above { canvas.insertSubview(view, aboveSubview: below) } else { canvas.addSubview(view) }
+            above = view
+            pin(view, to: rect, of: template)
+            return view
+        }
+
+        for (key, rect) in template.sections.sorted(by: { $0.key < $1.key }) {
+            guard let section = sections[key] else { continue }
+            zones.append(S1PowerZone(name: key, views: [section],
+                                     cover: cover(rect.insetBy(dx: -power.frameReach, dy: -power.frameReach))))
+        }
+        let header: [String: (views: [UIView], hidden: [UIView])] = [
+            "display": ([presetField, header?.diceButton].compactMap { $0 }, []),
+            "buttons": (canvas.subviews.filter { $0 is UIStackView || ($0 is UILabel) }, []),
+            "screen": ([], [manager.conductor.audioPlotter].compactMap { $0 }),
+            "bar": ([playBar, statusBar], [])
+        ]
+        for (key, rect) in power.zones.sorted(by: { $0.key < $1.key }) {
+            guard let parts = header[key] else { continue }
+            zones.append(S1PowerZone(name: key, views: parts.views, cover: cover(rect), hiddenWhenDark: parts.hidden))
+        }
+
+        let cabinet = S1CabinetPower(zones: zones)
+        self.power = cabinet
+        let off = clearButton(NSLocalizedString("Cut the power", comment: "The Cabinet skin's left red button")) { [weak cabinet] in
+            cabinet?.run(powered: false)
+        }
+        let on = clearButton(NSLocalizedString("Restore the power", comment: "The Cabinet skin's right red button")) { [weak cabinet] in
+            cabinet?.run(powered: true)
+        }
+        pin(off, to: power.off, of: template)
+        pin(on, to: power.on, of: template)
     }
 
     private func clearButton(_ label: String, action: @escaping () -> Void) -> S1ActionButton {

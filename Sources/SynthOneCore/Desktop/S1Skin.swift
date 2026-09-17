@@ -7,20 +7,21 @@
 //  tests are shared by every skin, so a control looks different under each and behaves the
 //  same.
 //
-//  Two skins ship: **Studio**, the 0.2.0 look (dark greys, one orange), and **Neon Ruins**
-//  (P7-4, ADR-048) — one neon colour per section, near-black worn panels, glowing controls, a
-//  sunset and grid in the header and the owner's wordmark lit, drawn entirely in code. A
-//  section's accent is the skin's word (`sectionAccent`); every drawn control finds it through
-//  `UIView.s1Accent`, so Studio, which names none, draws exactly as it did.
+//  Two skins ship: **Studio**, the 0.2.0 look (dark greys, one orange), and **Cabinet** (P7-9,
+//  ADR-059) — the owner's painted arcade cabinet as the window, with one neon colour per section
+//  (P7-4, ADR-048) and glowing controls. A section's accent is the skin's word (`sectionAccent`);
+//  every drawn control finds it through `UIView.s1Accent`, so Studio, which names none, draws
+//  exactly as it did. Cabinet is also the one skin that says where sections sit (`template`).
 //
-//  A third, **Arcade**, shipped between them and was dropped at the owner's word on 2026-09-14
-//  (P7-7, ADR-051). Nothing was released with it. `git show bf8a08a` has it.
+//  Two others came and went at the owner's word, neither lost: **Arcade** (dropped 2026-09-14,
+//  P7-7, ADR-051; `git show bf8a08a`) and **Neon Ruins** (released in 0.3.0 and 0.4.0, replaced by
+//  Cabinet on 2026-09-17, P7-10, ADR-060; tag `v0.4.0`). A stored `neonRuins` opens Cabinet.
 //
 //  The choice is a user default, read once at launch (like `S1Layout`):
 //
-//      defaults write com.badpackets303.ArcadeRuins S1Skin neonRuins
+//      defaults write com.badpackets303.ArcadeRuins S1Skin cabinet
 //
-//  or `-S1Skin neonRuins` as a launch argument. The plugin keeps its own container and
+//  or `-S1Skin cabinet` as a launch argument. The plugin keeps its own container and
 //  therefore its own default.
 
 import UIKit
@@ -28,14 +29,16 @@ import UIKit
 public enum S1SkinChoice: String, CaseIterable {
 
     case studio
-    case neonRuins
     case cabinet
 
     public static let defaultsKey = "S1Skin"
 
     /// The skin the products open with. Absent or unknown means Studio.
     public static var chosen: S1SkinChoice {
-        S1SkinChoice(rawValue: S1Preferences.store.string(forKey: defaultsKey) ?? "") ?? .studio
+        let stored = S1Preferences.store.string(forKey: defaultsKey) ?? ""
+        // P7-10 (ADR-060): Cabinet replaced Neon Ruins, so whoever chose that gets its successor
+        if stored == "neonRuins" { return .cabinet }
+        return S1SkinChoice(rawValue: stored) ?? .studio
     }
 
     /// Remembered for the next launch; the running interface does not change.
@@ -46,7 +49,6 @@ public enum S1SkinChoice: String, CaseIterable {
     public var title: String {
         switch self {
         case .studio: return NSLocalizedString("Studio", comment: "Skin name")
-        case .neonRuins: return NSLocalizedString("Neon Ruins", comment: "Skin name")
         case .cabinet: return NSLocalizedString("Cabinet", comment: "Skin name")
         }
     }
@@ -54,7 +56,6 @@ public enum S1SkinChoice: String, CaseIterable {
     func makeSkin() -> S1Skin {
         switch self {
         case .studio: return S1StudioSkin()
-        case .neonRuins: return S1NeonRuinsSkin()
         case .cabinet: return S1CabinetSkin()
         }
     }
@@ -142,6 +143,81 @@ struct S1Palette {
     var thumbOff: UIColor
     var thumbOn: UIColor
     var plotBorder: UIColor        // the ADSR plots and the XY pads
+}
+
+extension S1Palette {
+    /// P7-12 (ADR-062): the same palette with the light taken out, for a control drawn in a
+    /// zone that has lost power. Every field, so a new one cannot be forgotten: the list is
+    /// checked against the struct by `testTheGreyPaletteCoversEveryColour`.
+    func greyed() -> S1Palette {
+        var grey = self
+        grey.accent = S1Power.grey(accent)
+        grey.accentLight = S1Power.grey(accentLight)
+        grey.accentBorder = S1Power.grey(accentBorder)
+        grey.accentOnTop = S1Power.grey(accentOnTop)
+        grey.secondAccent = S1Power.grey(secondAccent)
+        grey.windowBackground = S1Power.grey(windowBackground)
+        grey.panelBackground = S1Power.grey(panelBackground)
+        grey.toolbarTop = S1Power.grey(toolbarTop)
+        grey.toolbarBottom = S1Power.grey(toolbarBottom)
+        grey.playBarTop = S1Power.grey(playBarTop)
+        grey.playBarBottom = S1Power.grey(playBarBottom)
+        grey.statusBarBackground = S1Power.grey(statusBarBackground)
+        grey.sectionTop = S1Power.grey(sectionTop)
+        grey.sectionBottom = S1Power.grey(sectionBottom)
+        grey.sectionBorder = S1Power.grey(sectionBorder)
+        grey.sectionHeaderTop = S1Power.grey(sectionHeaderTop)
+        grey.sectionHeaderBottom = S1Power.grey(sectionHeaderBottom)
+        grey.hairline = S1Power.grey(hairline)
+        grey.text = S1Power.grey(text)
+        grey.label = S1Power.grey(label)
+        grey.value = S1Power.grey(value)
+        grey.dim = S1Power.grey(dim)
+        grey.fieldBackground = S1Power.grey(fieldBackground)
+        grey.controlFace = S1Power.grey(controlFace)
+        grey.controlBorder = S1Power.grey(controlBorder)
+        grey.knobTrack = S1Power.grey(knobTrack)
+        grey.knobCapFill = S1Power.grey(knobCapFill)
+        grey.knobCap = knobCap.map(S1Power.grey)
+        grey.knobCapBorder = S1Power.grey(knobCapBorder)
+        grey.glyph = S1Power.grey(glyph)
+        grey.chipText = S1Power.grey(chipText)
+        grey.knobPointer = knobPointer.map(S1Power.grey)
+        grey.wellTop = S1Power.grey(wellTop)
+        grey.wellBottom = S1Power.grey(wellBottom)
+        grey.wellBorder = S1Power.grey(wellBorder)
+        grey.buttonTop = S1Power.grey(buttonTop)
+        grey.buttonBottom = S1Power.grey(buttonBottom)
+        grey.buttonPressedTop = S1Power.grey(buttonPressedTop)
+        grey.buttonBorder = S1Power.grey(buttonBorder)
+        grey.litTop = S1Power.grey(litTop)
+        grey.litBottom = S1Power.grey(litBottom)
+        grey.litBorder = S1Power.grey(litBorder)
+        grey.plateTop = S1Power.grey(plateTop)
+        grey.plateBottom = S1Power.grey(plateBottom)
+        grey.chipTop = S1Power.grey(chipTop)
+        grey.chipBottom = S1Power.grey(chipBottom)
+        grey.chipBorder = S1Power.grey(chipBorder)
+        grey.chipActiveTop = S1Power.grey(chipActiveTop)
+        grey.chipActiveBottom = S1Power.grey(chipActiveBottom)
+        grey.faderTick = S1Power.grey(faderTick)
+        grey.grooveEdge = S1Power.grey(grooveEdge)
+        grey.grooveMid = S1Power.grey(grooveMid)
+        grey.faderCapTop = S1Power.grey(faderCapTop)
+        grey.faderCapBottom = S1Power.grey(faderCapBottom)
+        grey.faderCapBorder = S1Power.grey(faderCapBorder)
+        grey.stepOffTop = S1Power.grey(stepOffTop)
+        grey.stepOffBottom = S1Power.grey(stepOffBottom)
+        grey.stepOffBorder = S1Power.grey(stepOffBorder)
+        grey.switchOffTop = S1Power.grey(switchOffTop)
+        grey.switchOffBottom = S1Power.grey(switchOffBottom)
+        grey.thumbOff = S1Power.grey(thumbOff)
+        grey.thumbOn = S1Power.grey(thumbOn)
+        grey.plotBorder = S1Power.grey(plotBorder)
+        return grey
+    }
+
+    static let colourFieldCount = 63
 }
 
 /// P7-4 (ADR-048): the drawing choices a skin makes beyond its colours. Studio and Arcade keep
@@ -300,31 +376,30 @@ final class S1StudioSkin: S1Skin {
     )
 }
 
-// MARK: - Neon Ruins: one neon colour per section (P7-4, ADR-048)
+// MARK: - Cabinet: the owner's painted window, one neon colour per section (P7-9, ADR-059)
 
-final class S1NeonRuinsSkin: S1Skin {
+/// The painting carries the frames, titles, header and cabinet; the controls are the layout's,
+/// lit in one neon per section (P7-4, ADR-048). The colours and the drawing were Neon Ruins',
+/// the skin this replaced at the owner's word on 2026-09-17 (P7-10, ADR-060).
+final class S1CabinetSkin: S1Skin {
 
-    let choice = S1SkinChoice.neonRuins
+    let choice = S1SkinChoice.cabinet
     let glow: CGFloat = 3
-    var sectionTexture: UIImage? { S1NeonRuinsArt.grime }
-    var sectionGlow: UIColor? { palette.accent }
+    let sectionTexture: UIImage? = nil
+    let sectionGlow: UIColor? = nil
     var frameAccent: UIColor? { palette.secondAccent }
-    func makeWordmark() -> UIView? { S1NeonRuinsWordmark() }
-    func makeToolbarArt() -> UIView? { S1NeonRuinsHeaderArt() }
-    func makePanelArt() -> UIView? { S1NeonRuinsPanelArt() }
-    func makeBackdropArt() -> UIView? { S1NeonRuinsBackdropArt() }
+    func makeWordmark() -> UIView? { nil }
+    func makeToolbarArt() -> UIView? { nil }
+    func makePanelArt() -> UIView? { S1CabinetPanelArt() }
 
     let dress: S1SkinDress = {
         var dress = S1SkinDress()
-        dress.sectionBorderWidth = 2
-        dress.sectionGlowRadius = 9
-        dress.sectionGlowOpacity = 0.7
-        dress.sectionBloom = true
         dress.knobRingScale = 1.5
         dress.knobHalo = true
         dress.faderLitTrack = true
         dress.litFromAccent = true
-        dress.wordmarkSize = CGSize(width: 220, height: 24)   // the artwork is ~14:1 once trimmed
+        dress.bareSections = true
+        dress.sectionHeaderHeight = 30
         return dress
     }()
 
@@ -351,12 +426,12 @@ final class S1NeonRuinsSkin: S1Skin {
     func sectionAccent(for key: String) -> UIColor? { Self.accents[key] }
 
     let palette = S1Palette(
-        accent: S1NeonRuinsSkin.orange,
+        accent: S1CabinetSkin.orange,
         accentLight: UIColor(hex: 0xffb257),
         accentBorder: UIColor(hex: 0xffd9a8),
         accentOnTop: UIColor(hex: 0xffb257),
-        secondAccent: S1NeonRuinsSkin.cyan,
-        windowBackground: S1NeonRuinsSkin.night,
+        secondAccent: S1CabinetSkin.cyan,
+        windowBackground: S1CabinetSkin.night,
         panelBackground: UIColor(hex: 0x0a0812),
         toolbarTop: UIColor(hex: 0x1c0c40),
         toolbarBottom: UIColor(hex: 0x0c0916),
@@ -365,7 +440,7 @@ final class S1NeonRuinsSkin: S1Skin {
         statusBarBackground: UIColor(hex: 0x06050b, alpha: 0.6),
         sectionTop: UIColor(hex: 0x0f0c15),
         sectionBottom: UIColor(hex: 0x07060b),
-        sectionBorder: S1NeonRuinsSkin.orange,
+        sectionBorder: S1CabinetSkin.orange,
         sectionHeaderTop: UIColor(white: 1, alpha: 0.05),     // no band: a breath of light under the title
         sectionHeaderBottom: UIColor(white: 1, alpha: 0),
         hairline: UIColor(hex: 0xff7a1a, alpha: 0.5),
@@ -375,7 +450,7 @@ final class S1NeonRuinsSkin: S1Skin {
         dim: UIColor(hex: 0xc9bde0),
         fieldBackground: UIColor(hex: 0x04030a),
         controlFace: UIColor(hex: 0x160f26),
-        controlBorder: S1NeonRuinsSkin.orange,
+        controlBorder: S1CabinetSkin.orange,
         knobTrack: UIColor(hex: 0x2a1a30),
         knobCapFill: UIColor(hex: 0x0d0a10),
         knobCap: [UIColor(hex: 0x4a3f54), UIColor(hex: 0x241d2c), UIColor(hex: 0x0d0a10), .black],
@@ -389,7 +464,7 @@ final class S1NeonRuinsSkin: S1Skin {
         buttonTop: UIColor(hex: 0x1e1430),
         buttonBottom: UIColor(hex: 0x0e0a1c),
         buttonPressedTop: UIColor(hex: 0x0a0714),
-        buttonBorder: S1NeonRuinsSkin.orange,
+        buttonBorder: S1CabinetSkin.orange,
         litTop: UIColor(hex: 0xa34a12),          // the accent-derived colours replace these
         litBottom: UIColor(hex: 0x5a2a0a),
         litBorder: UIColor(hex: 0xffd9a8),
@@ -413,62 +488,8 @@ final class S1NeonRuinsSkin: S1Skin {
         switchOffBottom: UIColor(hex: 0x1a1226),
         thumbOff: UIColor(hex: 0x6a5a80),
         thumbOn: .white,
-        plotBorder: S1NeonRuinsSkin.cyan
+        plotBorder: S1CabinetSkin.cyan
     )
-}
-
-// MARK: - Cabinet: the owner's painted window (P7-9, ADR-059)
-
-/// Where a painted window keeps each thing, in the painting's own pixels. The layout pins its
-/// sections and toolbar controls to these, as fractions of the canvas, so the window stays fluid.
-struct S1SkinTemplate {
-    let imageName: String
-    let size: CGSize
-    /// By the section keys `S1DesktopLayout.sections` uses.
-    let sections: [String: CGRect]
-    let presetField: CGRect
-    let previous: CGRect
-    let next: CGRect
-    let dice: CGPoint
-    let wordmark: CGRect
-    let scope: CGRect
-    let save: CGRect
-    let record: CGRect
-    let panic: CGRect
-    let settings: CGRect
-    let presets: CGRect
-    let playBar: CGRect
-    let statusBar: CGRect
-}
-
-private func rect(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
-    CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
-}
-
-/// Neon Ruins' colours and drawing over the owner's artwork (2026-09-17): the frames, titles,
-/// header and cabinet are the painting's; the controls are the layout's.
-final class S1CabinetSkin: S1Skin {
-
-    private let neon = S1NeonRuinsSkin()
-
-    let choice = S1SkinChoice.cabinet
-    let glow: CGFloat = 3
-    let sectionTexture: UIImage? = nil
-    var sectionGlow: UIColor? { nil }
-    var frameAccent: UIColor? { neon.frameAccent }
-    func makeWordmark() -> UIView? { nil }
-    func makeToolbarArt() -> UIView? { nil }
-    func makePanelArt() -> UIView? { S1NeonRuinsPanelArt() }
-    func sectionAccent(for key: String) -> UIColor? { neon.sectionAccent(for: key) }
-    var palette: S1Palette { neon.palette }
-
-    let dress: S1SkinDress = {
-        var dress = S1NeonRuinsSkin().dress
-        dress.sectionBloom = false
-        dress.bareSections = true
-        dress.sectionHeaderHeight = 30
-        return dress
-    }()
 
     /// Measured on `Scripts/branding/source/ar-template.png`: each frame's inner edge.
     let template: S1SkinTemplate? = S1SkinTemplate(
@@ -503,6 +524,70 @@ final class S1CabinetSkin: S1Skin {
         settings: rect(1_397, 64, 1_474, 100),
         presets: rect(1_478, 64, 1_558, 100),
         playBar: rect(6, 950, 990, 992),
-        statusBar: rect(1_000, 950, 1_578, 992)
+        statusBar: rect(1_000, 950, 1_578, 992),
+        // `JOYSTICK_BALL_BOX` and `JOYSTICK_ROD_BOX` in generate.py; the pivot is the socket
+        joystick: S1TemplateJoystick(ballImageName: "s1_template_joystick_ball", ballBox: rect(88, 834, 126, 872),
+                                     rodImageName: "s1_template_joystick_rod", rodBox: rect(94, 846, 114, 898),
+                                     pivot: CGPoint(x: 103, y: 893), reach: rect(60, 800, 126, 912)),
+        // The console's two big red buttons, left and right
+        power: S1TemplatePower(darkImageName: "s1_template_cabinet_dark", off: rect(128, 879, 158, 911), on: rect(159, 874, 190, 906),
+                               zones: ["display": rect(500, 4, 968, 88), "buttons": rect(1_136, 54, 1_568, 106),
+                                       "screen": rect(14, 92, 232, 296), "bar": rect(0, 944, 1_585, 992)],
+                               frameReach: 11)
     )
 }
+
+// MARK: - A painted window (P7-9, ADR-059)
+
+/// Where a painted window keeps each thing, in the painting's own pixels. The layout pins its
+/// sections and toolbar controls to these, as fractions of the canvas, so the window stays fluid.
+struct S1SkinTemplate {
+    let imageName: String
+    let size: CGSize
+    /// By the section keys `S1DesktopLayout.sections` uses.
+    let sections: [String: CGRect]
+    let presetField: CGRect
+    let previous: CGRect
+    let next: CGRect
+    let dice: CGPoint
+    let wordmark: CGRect
+    let scope: CGRect
+    let save: CGRect
+    let record: CGRect
+    let panic: CGRect
+    let settings: CGRect
+    let presets: CGRect
+    let playBar: CGRect
+    let statusBar: CGRect
+    /// P7-11 (ADR-061): a live joystick over the painted one, or nil.
+    let joystick: S1TemplateJoystick?
+    /// P7-12 (ADR-062): the painted buttons that cut and restore the power, the grey painting,
+    /// and the pieces of the header that go dark with the sections. Nil for no such thing.
+    let power: S1TemplatePower?
+}
+
+struct S1TemplatePower {
+    let darkImageName: String
+    let off: CGRect
+    let on: CGRect
+    /// By name: "display", "buttons", "screen", "bar".
+    let zones: [String: CGRect]
+    /// How far a section's frame and its glow reach beyond its inner edge.
+    let frameReach: CGFloat
+}
+
+/// The two sprites, the boxes they were cut from, where the rod hinges, and the rectangle the
+/// stick can be grabbed in. All in the painting's pixels; the boxes are `generate.py`'s.
+struct S1TemplateJoystick {
+    let ballImageName: String
+    let ballBox: CGRect
+    let rodImageName: String
+    let rodBox: CGRect
+    let pivot: CGPoint
+    let reach: CGRect
+}
+
+private func rect(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
+    CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
+}
+

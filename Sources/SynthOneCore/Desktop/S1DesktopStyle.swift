@@ -14,8 +14,20 @@ import UIKit
 
 enum S1DesktopStyle {
 
-    private static var p: S1Palette { S1Skins.current.palette }
-    private static var glow: CGFloat { S1Skins.current.glow }
+    /// P7-12 (ADR-062): set by `UIView.s1Accent` as each control fetches its accent on the way
+    /// into a draw, so a control in a zone without power draws from the palette's grey twin and
+    /// with no glow. Every drawing here takes `accent: s1Accent`, which is what makes this sound.
+    static var unpowered = false
+    private static var greyPalette: (of: S1SkinChoice, palette: S1Palette)?
+    private static var p: S1Palette {
+        let skin = S1Skins.current
+        guard unpowered else { return skin.palette }
+        if let cached = greyPalette, cached.of == skin.choice { return cached.palette }
+        let grey = skin.palette.greyed()
+        greyPalette = (skin.choice, grey)
+        return grey
+    }
+    private static var glow: CGFloat { unpowered ? 0 : S1Skins.current.glow }
     private static var dress: S1SkinDress { S1Skins.current.dress }
 
     // MARK: - Colours from an accent (P7-4)

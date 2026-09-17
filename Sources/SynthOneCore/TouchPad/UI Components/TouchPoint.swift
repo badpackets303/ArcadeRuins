@@ -16,7 +16,8 @@ class TouchPoint: UIView {
     var width = 63.0
 
     override func draw(_ rect: CGRect) {
-         TouchPointStyleKit.drawTouchPoint(frame: CGRect(x: x, y: y, width: width, height: width) )
+        // PORT (P7-12, ADR-062): grey in a Cabinet zone that has lost power
+        S1Power.draw(in: self) { TouchPointStyleKit.drawTouchPoint(frame: CGRect(x: x, y: y, width: width, height: width)) }
     }
 
 }

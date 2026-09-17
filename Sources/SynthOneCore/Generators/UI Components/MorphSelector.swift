@@ -74,9 +74,12 @@ class MorphSelector: UIView, S1Control {
     // MARK: - Draw
 
     override open func draw(_ rect: CGRect) {
-        MorphSelectorStyleKit.drawMorphSelector(value: CGFloat(value),
-                                                width: self.bounds.width,
-                                                height: self.bounds.height)
+        // PORT (P7-12, ADR-062): grey in a Cabinet zone that has lost power
+        S1Power.draw(in: self) {
+            MorphSelectorStyleKit.drawMorphSelector(value: CGFloat(value),
+                                                    width: self.bounds.width,
+                                                    height: self.bounds.height)
+        }
     }
 
     // MARK: - Touches

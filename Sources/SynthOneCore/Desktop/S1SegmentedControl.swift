@@ -63,7 +63,7 @@ final class S1SegmentedControl: UIView {
         onSelect?(sender.tag)
     }
 
-    private func updateSelection() {
+    fileprivate func updateSelection() {
         // P7-4: the selected face and the frame follow the section's accent under a skin that
         // names one; the accent is known once the picker is in its section's header.
         let face = S1DesktopStyle.segmentFace(accent: s1Accent)
@@ -79,4 +79,9 @@ final class S1SegmentedControl: UIView {
         super.didMoveToWindow()
         if window != nil { updateSelection() }
     }
+}
+
+extension S1SegmentedControl: S1PowerAware {
+    /// P7-12 (ADR-062): the selection may have moved while the zone was dark.
+    func powerDidReturn() { updateSelection() }
 }

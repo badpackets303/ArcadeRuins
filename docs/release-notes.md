@@ -2,6 +2,18 @@
 
 Versions are `MARKETING_VERSION` in `project.yml`; both products carry the same number.
 
+## 0.5.0 — the cabinet comes alive (2026-09-17)
+
+The DSP, the 150 parameters and the presets are unchanged.
+
+- **Cabinet replaces Neon Ruins** (ADR-060). Settings ▸ Skin is now Studio | Cabinet. Cabinet keeps
+  Neon Ruins' colours and glowing controls; a saved Neon Ruins choice opens Cabinet.
+- **The cabinet's joystick works** (ADR-061). Drag it up for the mod wheel, lean it sideways to bend
+  the pitch; let go and it springs back.
+- **And so do its two red buttons** (ADR-062). The left one cuts the power: the panels flicker out at
+  random, over about eight seconds, until the synth is dark and grey. The right one brings them back.
+  It still plays in the dark.
+
 ## 0.4.0 — the Cabinet skin (2026-09-17)
 
 One addition to the desktop layout (ADR-059). The DSP, the 150 parameters and the presets are

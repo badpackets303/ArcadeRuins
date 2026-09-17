@@ -108,6 +108,18 @@ extension UIView {
     /// a control moved between sections follows, and one outside any section — the toolbar,
     /// the play bar — keeps the palette's accent.
     var s1Accent: UIColor {
+        // P7-12 (ADR-062): a zone without power answers first, and tells the style to draw grey
+        if S1Power.dark.count > 0 {
+            var view: UIView? = self
+            while let current = view {
+                if S1Power.dark.contains(current) {
+                    S1DesktopStyle.unpowered = true
+                    return S1Power.deadAccent
+                }
+                view = current.superview
+            }
+        }
+        S1DesktopStyle.unpowered = false
         var view: UIView? = self
         while let current = view {
             if let section = current as? S1SectionView, let accent = section.accent { return accent }

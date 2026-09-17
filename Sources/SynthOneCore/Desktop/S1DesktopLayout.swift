@@ -38,6 +38,8 @@ final class S1DesktopLayout: NSObject {
     let statusDivider = UIView()
     /// P7-9 (ADR-059): the painted window and the canvas the template's rectangles are fractions of.
     var templateCanvas: UIView?
+    var joystick: S1CabinetJoystick?
+    var power: S1CabinetPower?
 
     /// The controls moved out of each panel, so MIDI learn can still find them.
     private var movedControls: [ObjectIdentifier: [UIView]] = [:]

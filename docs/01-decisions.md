@@ -3448,3 +3448,101 @@ are untouched, and `testEverySkinLaysOutEverySectionInTheSamePlace` still holds 
 painting (the test asserts the two key sets are equal). The window above 1440×900 stretches the
 art rather than adding room for art. Neon Ruins' palette and accents are reused, not copied.
 
+---
+
+## ADR-060 — Cabinet replaces Neon Ruins
+
+**Date:** 2026-09-17 · **Status:** accepted · **Amends:** ADR-048, ADR-059
+
+**Context.** Hours after 0.4.0 shipped three skins, the owner, having used Cabinet in Logic:
+"let's get rid of the neon arcade skin and replace it with the cabinet skin." Cabinet was built on
+Neon Ruins — it borrowed its palette, its per-section accents and its dress through a private
+instance — so the two were one look with two windows.
+
+**Decision.** `S1SkinChoice` is `studio | cabinet`. `S1NeonRuinsSkin` became `S1CabinetSkin`: the
+six neons, the accents map (ADR-048) and the palette are Cabinet's own now. What only Neon Ruins
+drew is deleted — the header sunset, the backdrop, the grime texture, the palm, the lit wordmark
+and its generated asset `s1_wordmark_neon` — and `S1NeonRuinsArt.swift` is `S1CabinetArt.swift`,
+holding the preset card's art. **A stored `neonRuins` opens Cabinet**, not Studio: 0.3.0 and 0.4.0
+offered it, so someone has chosen it, and its successor is the honest answer (`arcade`, never
+released, still falls to Studio). Tag `v0.4.0` has everything removed.
+
+**Consequences.** One synthwave skin to keep. The "every skin lays out every section in the same
+place" test now has no skin to compare with Studio; it stays for the next one.
+
+---
+
+## ADR-061 — The cabinet's joystick is live: the mod wheel and the pitch wheel
+
+**Date:** 2026-09-17 · **Status:** accepted
+
+**Context.** The owner, of the Cabinet painting's arcade machine: "a fun easter egg type feature
+… make that joystick interactive so that it moves and has the mod wheel effect when dragged."
+
+**Decision.** `S1TemplateJoystick` in the template; `S1CabinetJoystick` over the painted one.
+`generate.py` cuts the ball and stick out of the painting as a sprite with its own alpha
+(`s1_template_joystick_ball`, `s1_template_joystick_rod`) and fills the hole from the console surface beside it, so at rest the
+window is pixel-for-pixel the painting and in motion there is no second joystick behind. The
+stick hinges where the rod meets its socket: a drag sideways leans it. **Nothing stretches**
+(owner, the same day, of the first cut, which scaled the sprite for a push: "don't stretch it for
+maximum realism … have the ball obscure the rod a bit as the user drags it down"). So it is two
+sprites, a ball on a rod: the ball slides up the rod 7 of the painting's pixels for a push away,
+showing rod that `generate.py` paints on up behind the ball from the rod's own top row, and down
+8 for a pull forward, covering it. The hole in the painting is filled row by row from its ends,
+which carries the console's horizontal bands through; a copied patch and a diffusion fill were
+both tried and looked worse. **Up is the mod wheel; sideways is pitch bend** — what
+a synth's joystick does, and the owner asked only for the first, so the lean has a 15% dead zone
+to keep a push from bending the pitch. It drives `Manager.modWheelPad` and `Manager.pitchBend`
+with the two calls a touch on them makes (`setVerticalValue01`, then `callback`), so the preset's
+mod-wheel routing, the bend range and the Wheels sheet all follow, and it owns no parameter.
+**Letting go springs it back**: the bend centres, as the pitch wheel's own release does, and the mod
+wheel returns to where it was when grabbed — not to zero, since under the cutoff routing zero is
+a fully open filter and a preset may rest the wheel anywhere.
+
+**Consequences.** Not MIDI-learnable, not automatable, not in the classic layout or Studio: an
+easter egg. 36 points of travel on a 12-point ball; the grab area is 85 × 100 points around it.
+
+---
+
+## ADR-062 — The cabinet's red buttons cut and restore the power
+
+**Date:** 2026-09-17 · **Status:** accepted
+
+**Context.** The owner, of the Cabinet painting's console: the left red button should "randomly
+flicker off the panels until it seems like the synth has slowly shut down from losing power (no
+highlight colors) and the synth UI is in grayscale", the right one bring them back the same way,
+"each cycle … about 8 seconds."
+
+**Decision.** A look and nothing else: every control works and sounds in the dark.
+
+- **Zones.** `S1PowerZone`: each of the fifteen sections, and four pieces of the header — the
+  preset display, the painted toolbar buttons, the cabinet's screen (the scope), the bottom bar.
+- **Dark is three things at once.** (1) A grey, dimmed copy of the painting
+  (`s1_template_cabinet_dark`, from `generate.py`) laid over the zone's rectangle as a
+  `contentsRect` crop — a section's reaches 11 pixels past its inner edge, to take the frame and
+  its glow. (2) Every colour the zone's views **hold** — backgrounds, borders, label colours,
+  the ADSR plots' fills, images; glows are switched off — swapped for its luminance × 0.72, each
+  with a closure that puts the original back. (3) Every colour its controls **draw** with:
+  `UIView.s1Accent` answers `S1Power.deadAccent` inside a dark zone and sets
+  `S1DesktopStyle.unpowered`, which makes the style's palette `palette.greyed()` and its glow
+  zero. That flag is sound only because every drawing in `S1DesktopStyle` is called with
+  `accent: s1Accent`, so the flag is set immediately before each draw. Two PaintCode-drawn
+  controls (the oscillator wave selector, the XY pads' pucks) go through `S1Power.draw(in:)`,
+  which renders them to an image and greys it — one PORT line each.
+- **`CALayer.compositingFilter` was not used**, though a saturation blend over each zone would
+  have been ten lines: `renderInContext`, which the render driver uses, ignores it, so it could
+  not have been verified here.
+- **What changes in the dark comes back right.** `S1PowerAware.powerDidReturn()` has a control
+  recolour itself from its state after the saved colours are restored (the segmented pickers, the
+  step number boxes' faces). Two things are deliberately left alone: a button's attributed title
+  (the Tuning button's two greys would flatten) and `UIButton.titleColor` (not always what the
+  label shows). **Check:** a render after off-then-on is pixel-identical to one never darkened.
+- **The cycle.** `S1CabinetPower.run(powered:)`: zones still to change, shuffled; the first
+  settles one second in and the last at eight; each blinks two to four times in the 0.35–0.9 s
+  before it settles. The other button mid-cycle bumps a generation counter and the abandoned
+  cycle's pending blocks do nothing. Randomness and the clock are injectable for the tests.
+
+**Consequences.** Not saved: the synth opens lit. A new `S1Palette` colour must be added to
+`greyed()` (a test counts the fields). A control that sets a held colour from state should adopt
+`S1PowerAware`.
+

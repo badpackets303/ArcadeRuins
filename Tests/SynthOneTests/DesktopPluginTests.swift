@@ -68,8 +68,8 @@ final class DesktopPluginTests: XCTestCase {
         XCTAssertEqual(pickers.noteString, S1AppearanceSettings.noteText(isHosted: true))
         XCTAssertTrue(try XCTUnwrap(pickers.noteString).contains("host"))
         // The plugin writes its own container's defaults, which its next load reads
-        pickers.select(S1SkinChoice.neonRuins)
-        XCTAssertEqual(S1SkinChoice.chosen, .neonRuins)
+        pickers.select(S1SkinChoice.cabinet)
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
         pickers.select(S1Layout.classic)
         XCTAssertEqual(S1Layout.current, .classic, "a host can reach the classic interface too")
         S1Preferences.store.removeObject(forKey: S1Layout.classicDefaultsKey)
