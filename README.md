@@ -90,12 +90,6 @@ controls, and the scope running in the cabinet's screen.
 
 ![The Cabinet skin](docs/screenshots/cabinet-skin.png)
 
-The cabinet's console is live: the joystick is the mod wheel (up) and pitch bend (sideways), and the
-two red buttons cut and restore the power — the panels flicker out to grey over eight seconds, and
-back. It plays either way.
-
-![The Cabinet skin with the power out](docs/screenshots/cabinet-power-out.png)
-
 **The preset browser** drops down from the preset name — 695 factory presets in 13 banks plus your
 own, with search (⌘F), favourites, categories, notes and reordering. In Studio:
 
@@ -132,7 +126,7 @@ transpose, octave and the wheels).
 
 **Skins.** Settings (in the toolbar) ▸ Skin, or View ▸ Skin ▸ Studio | Cabinet, applied at the
 next launch. Settings is also how the **plugin** chooses its layout and skin, since it has no menu
-of its own. Studio is the dark-grey default. Cabinet is synthwave: the whole window is a painted
+of its own. Cabinet is the default, and synthwave: the whole window is a painted
 arcade cabinet, each section's controls lit in their own neon (orange, mint, pink, violet, gold,
 cyan), the preset lists on a CRT. It is the one skin that places the sections — in the painting's
 frames — and draws four of them a size smaller to fit; every control and shortcut is the same
@@ -215,7 +209,7 @@ there as a numbered ADR, including the ones that were wrong first.
 - **Rebranded.** All AudioKit wordmarks and logo artwork have been replaced.
 - **A desktop layout.** 0.1.0 preserved the iPad layout exactly. 0.2.0 re-homes the same controls
   into a layout for a Mac window — everything visible, a preset browser that drops down from the
-  toolbar, no on-screen keyboard — and keeps the classic layout behind a switch. 0.3.0 adds skins; 0.4.0 the Cabinet skin; 0.5.0 makes its console live.
+  toolbar, no on-screen keyboard — and keeps the classic layout behind a switch. 0.3.0 adds skins; 0.4.0 the Cabinet skin; 0.5.0 makes it the synthwave skin.
 
 ## Licence
 

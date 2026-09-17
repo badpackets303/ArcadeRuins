@@ -26,7 +26,7 @@ final class SkinTests: XCTestCase {
     override func tearDown() {
         S1Skins.current = S1StudioSkin()
         // ADR-050: a scratch suite in the test bundle, never the owner's domain
-        S1Preferences.store.removeObject(forKey: S1SkinChoice.defaultsKey)
+        S1SkinChoice.choose(.studio)   // ADR-064: the suite's skin, not the product's default
         S1Preferences.store.removeObject(forKey: S1Layout.classicDefaultsKey)
         super.tearDown()
     }
@@ -51,16 +51,27 @@ final class SkinTests: XCTestCase {
 
     // MARK: - The choice
 
-    func testStudioIsTheDefaultAndTheChoiceRoundTrips() {
-        XCTAssertEqual(S1SkinChoice.chosen, .studio)
+    func testCabinetIsTheDefaultAndTheChoiceRoundTrips() throws {
+        // A suite with nothing in it and nothing registered: what a fresh install has
+        let shared = S1Preferences.store
+        let name = "SkinTests-default-\(UUID().uuidString)"
+        S1Preferences.store = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer {
+            S1Preferences.store.removePersistentDomain(forName: name)
+            S1Preferences.store = shared
+        }
+        XCTAssertEqual(S1SkinChoice.default, .cabinet, "the owner's word, 2026-09-17 (ADR-064)")
+        XCTAssertEqual(S1SkinChoice.chosen, .cabinet, "nothing chosen opens Cabinet")
+        S1SkinChoice.choose(.studio)
+        XCTAssertEqual(S1SkinChoice.chosen, .studio, "whoever chose Studio keeps it")
         S1SkinChoice.choose(.cabinet)
         XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
         XCTAssertEqual(S1SkinChoice.cabinet.makeSkin().choice, .cabinet)
-        // A default naming a skin that no longer exists — "arcade" on an owner's machine — opens Studio
-        S1Preferences.store.set("arcade", forKey: S1SkinChoice.defaultsKey)
-        XCTAssertEqual(S1SkinChoice.chosen, .studio, "a dropped skin falls back, it does not crash")
-        S1Preferences.store.set("no such skin", forKey: S1SkinChoice.defaultsKey)
-        XCTAssertEqual(S1SkinChoice.chosen, .studio, "an unknown value means Studio")
+        // A default naming a skin that no longer exists opens the default; it does not crash
+        for stale in ["arcade", "no such skin"] {
+            S1Preferences.store.set(stale, forKey: S1SkinChoice.defaultsKey)
+            XCTAssertEqual(S1SkinChoice.chosen, .cabinet, stale)
+        }
     }
 
     func testStudioIsTheShippedPalette() {

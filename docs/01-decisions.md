@@ -3472,77 +3472,68 @@ place" test now has no skin to compare with Studio; it stays for the next one.
 
 ---
 
-## ADR-061 — The cabinet's joystick is live: the mod wheel and the pitch wheel
+## ADR-061, ADR-062 — Cabinet extras
 
 **Date:** 2026-09-17 · **Status:** accepted
 
-**Context.** The owner, of the Cabinet painting's arcade machine: "a fun easter egg type feature
-… make that joystick interactive so that it moves and has the mod wheel effect when dragged."
-
-**Decision.** `S1TemplateJoystick` in the template; `S1CabinetJoystick` over the painted one.
-`generate.py` cuts the ball and stick out of the painting as a sprite with its own alpha
-(`s1_template_joystick_ball`, `s1_template_joystick_rod`) and fills the hole from the console surface beside it, so at rest the
-window is pixel-for-pixel the painting and in motion there is no second joystick behind. The
-stick hinges where the rod meets its socket: a drag sideways leans it. **Nothing stretches**
-(owner, the same day, of the first cut, which scaled the sprite for a push: "don't stretch it for
-maximum realism … have the ball obscure the rod a bit as the user drags it down"). So it is two
-sprites, a ball on a rod: the ball slides up the rod 7 of the painting's pixels for a push away,
-showing rod that `generate.py` paints on up behind the ball from the rod's own top row, and down
-8 for a pull forward, covering it. The hole in the painting is filled row by row from its ends,
-which carries the console's horizontal bands through; a copied patch and a diffusion fill were
-both tried and looked worse. **Up is the mod wheel; sideways is pitch bend** — what
-a synth's joystick does, and the owner asked only for the first, so the lean has a 15% dead zone
-to keep a push from bending the pitch. It drives `Manager.modWheelPad` and `Manager.pitchBend`
-with the two calls a touch on them makes (`setVerticalValue01`, then `callback`), so the preset's
-mod-wheel routing, the bend range and the Wheels sheet all follow, and it owns no parameter.
-**Letting go springs it back**: the bend centres, as the pitch wheel's own release does, and the mod
-wheel returns to where it was when grabbed — not to zero, since under the cutoff routing zero is
-a fully open filter and a preset may rest the wheel anywhere.
-
-**Consequences.** Not MIDI-learnable, not automatable, not in the classic layout or Studio: an
-easter egg. 36 points of travel on a 12-point ball; the grab area is 85 × 100 points around it.
+Two decisions about the Cabinet skin that are kept out of the published tree at the owner's word
+(2026-09-17). They are in `docs/private/cabinet-extras.md` in the working repository, which
+`Scripts/publish-public.sh` leaves out. Neither touches the DSP, a parameter, a preset or a binding.
 
 ---
 
-## ADR-062 — The cabinet's red buttons cut and restore the power
+## ADR-063 — In the plugin, a read sees the interface's own write while it is on its way
 
-**Date:** 2026-09-17 · **Status:** accepted
+**Date:** 2026-09-17 · **Status:** accepted · **Builds on:** ADR-022, ADR-030, ADR-031
 
-**Context.** The owner, of the Cabinet painting's console: the left red button should "randomly
-flicker off the panels until it seems like the synth has slowly shut down from losing power (no
-highlight colors) and the synth UI is in grayscale", the right one bring them back the same way,
-"each cycle … about 8 seconds."
+**Context.** `HostMIDIInterfaceTests.testAHostModWheelMovesTheWheel` had been failing on `main`
+since some point after 0.1.0 (the full suite went unrun through Phases 6–8): a host's CC 1 = 127
+left the wheel at 0.0316, not 1. The owner's physical wheel worked in Logic, so it was put down
+to the test. It was half that.
 
-**Decision.** A look and nothing else: every control works and sounds in the dark.
+**What happens.** The wheel's callback writes the cutoff (360 Hz at the top, under the cutoff
+routing). In the plugin a write goes through the parameter tree (so the host can record it) and,
+once render resources are allocated, reaches the kernel **at the next render**. Until then the
+kernel holds the old value — here the init preset's 20 kHz. Upstream's interface reads the kernel
+straight back in several places, as it could when it wrote the kernel directly: the wheel tells the
+Cutoff knob `getSynthParameter(.cutoff)`; the XY pads, settling into place 0.2 s after the panel
+loads, ask where the cutoff is and report it with no control. A 20 kHz report with no control puts
+the wheel at 20 kHz's position — 0.0316 (ADR-030's inverse) — and the knob at 20 kHz. **Nothing
+then corrects them**: `reconcileWhenQuiet` reports only a kernel value that differs from what was
+written, and by then the kernel holds 360 exactly.
 
-- **Zones.** `S1PowerZone`: each of the fifteen sections, and four pieces of the header — the
-  preset display, the painted toolbar buttons, the cabinet's screen (the scope), the bottom bar.
-- **Dark is three things at once.** (1) A grey, dimmed copy of the painting
-  (`s1_template_cabinet_dark`, from `generate.py`) laid over the zone's rectangle as a
-  `contentsRect` crop — a section's reaches 11 pixels past its inner edge, to take the frame and
-  its glow. (2) Every colour the zone's views **hold** — backgrounds, borders, label colours,
-  the ADSR plots' fills, images; glows are switched off — swapped for its luminance × 0.72, each
-  with a closure that puts the original back. (3) Every colour its controls **draw** with:
-  `UIView.s1Accent` answers `S1Power.deadAccent` inside a dark zone and sets
-  `S1DesktopStyle.unpowered`, which makes the style's palette `palette.greyed()` and its glow
-  zero. That flag is sound only because every drawing in `S1DesktopStyle` is called with
-  `accent: s1Accent`, so the flag is set immediately before each draw. Two PaintCode-drawn
-  controls (the oscillator wave selector, the XY pads' pucks) go through `S1Power.draw(in:)`,
-  which renders them to an image and greys it — one PORT line each.
-- **`CALayer.compositingFilter` was not used**, though a saturation blend over each zone would
-  have been ten lines: `renderInContext`, which the render driver uses, ignores it, so it could
-  not have been verified here.
-- **What changes in the dark comes back right.** `S1PowerAware.powerDidReturn()` has a control
-  recolour itself from its state after the saved colours are restored (the segmented pickers, the
-  step number boxes' faces). Two things are deliberately left alone: a button's attributed title
-  (the Tuning button's two greys would flatten) and `UIButton.titleColor` (not always what the
-  label shows). **Check:** a render after off-then-on is pixel-identical to one never darkened.
-- **The cycle.** `S1CabinetPower.run(powered:)`: zones still to change, shuffled; the first
-  settles one second in and the last at eight; each blinks two to four times in the 0.35–0.9 s
-  before it settles. The other button mid-cycle bumps a generation counter and the abandoned
-  cycle's pending blocks do nothing. Randomness and the clock are injectable for the tests.
+In the test the main thread is also the render thread, so the CC and the pads' completion ran in
+one run-loop turn with no render between: certain failure. In a host the render thread runs every
+few milliseconds, so the window is a block wide and the wheel is almost always right — which is
+what the owner saw. But the race is real, and the wheel's own read-back is inside it every time:
+**the Cutoff knob trailed the mod wheel by one step**, and kept the last step's error.
 
-**Consequences.** Not saved: the synth opens lit. A new `S1Palette` colour must be added to
-`greyed()` (a test counts the fields). A control that sets a held colour from state should adopt
-`S1PowerAware`.
+**Decision.** `S1HostedSynth.getSynthParameter` answers with the interface's own write while that
+write is still on its way: inside the echo window, and only while the kernel still holds exactly
+what it held when the write was made (`before`, recorded with the write). The moment the kernel
+holds anything else — our value landed, or a host's — the kernel answers. That is not a cache,
+which `testParametersRoundTripThroughTheDSP` rightly forbids and which the first cut of this fix
+(return the written value for the whole window) was; that test caught it.
+
+The test now renders while it waits, because a host never stops, and also asserts the kernel's
+cutoff and the Cutoff knob. **Revert-and-fail:** with the rendering wait alone it still failed,
+identically; it passes only with the read fix. Full suite 333/333, the first all-green run since
+before Phase 6.
+
+**Not established:** which commit turned the test red. It needs the pads' completion and the CC
+in one turn, so anything that moved panel loading relative to the test's send could have.
+
+---
+
+## ADR-064 — Cabinet is the default skin
+
+**Date:** 2026-09-17 · **Status:** accepted · **Amends:** ADR-046
+
+The owner: "the Cabinet skin should now be the default." `S1SkinChoice.default` is `.cabinet`;
+an absent or unknown `S1Skin` opens it, and an explicit `studio` — anyone who chose it through
+0.5.0 — stays Studio. The skin still dresses only the desktop layout, and **the default layout is
+still classic** (ADR-052), so a fresh install sees Cabinet the first time Desktop is chosen. The
+test suite **sets** Studio in its scratch preferences, because the desktop tests were written under
+it — set, not registered as the classic layout is: a registered default is process-wide and would
+answer for the empty suite on which `SkinTests` checks the real default.
 

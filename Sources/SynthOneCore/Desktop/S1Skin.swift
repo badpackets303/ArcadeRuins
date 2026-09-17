@@ -33,12 +33,17 @@ public enum S1SkinChoice: String, CaseIterable {
 
     public static let defaultsKey = "S1Skin"
 
-    /// The skin the products open with. Absent or unknown means Studio.
+    /// The skin the desktop layout opens with when none has been chosen: Cabinet, at the owner's
+    /// word (2026-09-17, ADR-064). It was Studio through 0.5.0.
+    public static let `default` = S1SkinChoice.cabinet
+
+    /// The skin the products open with. Absent or unknown means the default; an explicit
+    /// `studio` — anyone who chose it — stays Studio.
     public static var chosen: S1SkinChoice {
         let stored = S1Preferences.store.string(forKey: defaultsKey) ?? ""
         // P7-10 (ADR-060): Cabinet replaced Neon Ruins, so whoever chose that gets its successor
         if stored == "neonRuins" { return .cabinet }
-        return S1SkinChoice(rawValue: stored) ?? .studio
+        return S1SkinChoice(rawValue: stored) ?? .default
     }
 
     /// Remembered for the next launch; the running interface does not change.

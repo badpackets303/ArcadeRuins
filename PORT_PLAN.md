@@ -388,10 +388,8 @@ decoration; it never moves anything.
   skin: a painted window with the sections pinned to its frames. ADR-059, which amends ADR-046.
 - **P7-10** ✅ **Done 2026-09-17** (unreleased). Owner: "get rid of the neon arcade skin and replace it with
   the cabinet skin." Skins are Studio | Cabinet; a stored Neon Ruins opens Cabinet. ADR-060.
-- **P7-11** ✅ **Done 2026-09-17** (unreleased). Owner: the cabinet's joystick, live, "has the mod wheel effect when
-  dragged". Up is the mod wheel, sideways bends the pitch, and it springs back. ADR-061.
-- **P7-12** ✅ **Done 2026-09-17** (unreleased). Owner: the console's left red button flickers the panels off to
-  greyscale over eight seconds, the right one flickers them back. ADR-062.
+- **P7-11, P7-12** ✅ **Done 2026-09-17**, released in 0.5.0. Two Cabinet extras, not published:
+  `docs/private/cabinet-extras.md` (ADR-061, ADR-062).
 - **P7-7** ✅ **Done 2026-09-14.** Owner: "Remove the 'Arcade' skin as an option." Neon Ruins is the
   same idea done properly, and nothing had shipped with Arcade. `S1SkinChoice` is `studio |
   neonRuins`; the skin, its header and browser art, its drawn wordmark and its grunge tile are

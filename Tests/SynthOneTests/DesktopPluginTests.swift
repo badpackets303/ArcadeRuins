@@ -73,7 +73,7 @@ final class DesktopPluginTests: XCTestCase {
         pickers.select(S1Layout.classic)
         XCTAssertEqual(S1Layout.current, .classic, "a host can reach the classic interface too")
         S1Preferences.store.removeObject(forKey: S1Layout.classicDefaultsKey)
-        S1Preferences.store.removeObject(forKey: S1SkinChoice.defaultsKey)
+        S1SkinChoice.choose(.studio)   // ADR-064: the suite's skin, not the product's default
     }
 
     func testTheHostIsAskedForTheDesignSize() {

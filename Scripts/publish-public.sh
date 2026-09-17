@@ -7,6 +7,7 @@
 #   upstream/                  AudioKit Synth One's tree, which includes AudioKit's Audiobus API key.
 #                              Scripts/fetch-references.sh fetches it instead.
 #   docs/reference/appstore/   AudioKit's App Store screenshots, with their wordmark.
+#   docs/private/              What the owner does not want published (2026-09-17).
 #
 # This commits in the public working copy but never pushes. Pushing is a separate, deliberate step.
 #
@@ -31,14 +32,14 @@ fi
 STAGING=$(mktemp -d)
 trap 'rm -rf "$STAGING"' EXIT
 git archive HEAD | tar -x -C "$STAGING"
-rm -rf "$STAGING/upstream" "$STAGING/docs/reference/appstore"
+rm -rf "$STAGING/upstream" "$STAGING/docs/reference/appstore" "$STAGING/docs/private"
 printf '\n# AudioKit Synth One, fetched by Scripts/fetch-references.sh; not part of this repository\nupstream/\n' >> "$STAGING/.gitignore"
 
 # Mirror the export into the working copy, keeping only its .git.
 rsync -a --delete --exclude '/.git' "$STAGING/" "$PUBLIC/"
 
 # Nothing from the excluded paths may reach the public tree.
-if [ -e "$PUBLIC/upstream" ] || [ -e "$PUBLIC/docs/reference/appstore" ]; then
+if [ -e "$PUBLIC/upstream" ] || [ -e "$PUBLIC/docs/reference/appstore" ] || [ -e "$PUBLIC/docs/private" ]; then
     echo "✋ An excluded path is present in $PUBLIC" >&2
     exit 1
 fi

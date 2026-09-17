@@ -120,7 +120,7 @@ public final class S1HostedSynth: S1SynthControlling {
 
     /// When the interface last wrote each address, and what it wrote. Written by the
     /// interface and read on the main queue, so it is locked.
-    private var localWrites: [AUParameterAddress: (time: TimeInterval, value: AUValue)] = [:]
+    private var localWrites: [AUParameterAddress: (time: TimeInterval, value: AUValue, before: AUValue)] = [:]
     private let localWritesLock = NSLock()
 
     /// Addresses with a reconciliation already scheduled. Main queue only.
@@ -170,7 +170,7 @@ public final class S1HostedSynth: S1SynthControlling {
         onChange(parameter, Double(value))
     }
 
-    private func localWrite(_ address: AUParameterAddress) -> (time: TimeInterval, value: AUValue)? {
+    private func localWrite(_ address: AUParameterAddress) -> (time: TimeInterval, value: AUValue, before: AUValue)? {
         localWritesLock.lock()
         defer { localWritesLock.unlock() }
         return localWrites[address]
@@ -231,7 +231,8 @@ public final class S1HostedSynth: S1SynthControlling {
             return
         }
         localWritesLock.lock()
-        localWrites[auParameter.address] = (ProcessInfo.processInfo.systemUptime, AUValue(value))
+        localWrites[auParameter.address] = (ProcessInfo.processInfo.systemUptime, AUValue(value),
+                                            audioUnit.getSynthParameter(parameter))
         localWritesLock.unlock()
         auParameter.setValue(AUValue(value), originator: observerToken)
     }
@@ -252,8 +253,27 @@ public final class S1HostedSynth: S1SynthControlling {
 
     // MARK: Parameters
 
+    /// **A read sees the interface's own write while it is still on its way** (ADR-063). A
+    /// write goes through the parameter tree and, once render resources are allocated, reaches
+    /// the DSP at the next render (ADR-022); for up to a block the kernel holds the old value.
+    /// Upstream's interface reads straight back after writing, as it could when the kernel was
+    /// written directly: the mod wheel sets the cutoff and tells the Cutoff knob
+    /// `getSynthParameter(.cutoff)`; the XY pads settle and ask where the cutoff is. Answered
+    /// from the kernel, those put the knob and the wheel back where they were, and nothing
+    /// corrected them, because a write that lands as written is never reported.
+    ///
+    /// This is **not a cache** (`testParametersRoundTripThroughTheDSP` forbids one, rightly: it
+    /// would be wrong the moment a host automated anything). The written value is the answer
+    /// only while the kernel still holds exactly what it held when the write was made — that is,
+    /// while nothing at all has reached it. The moment it holds anything else, ours or the
+    /// host's, the kernel answers.
     public func getSynthParameter(_ parameter: S1Parameter) -> Double {
-        Double(audioUnit.getSynthParameter(parameter))
+        let actual = audioUnit.getSynthParameter(parameter)
+        if let auParameter = auParameter(parameter), let write = localWrite(auParameter.address),
+           actual == write.before, write.before != write.value, isInsideEchoWindow(auParameter.address) {
+            return Double(min(max(write.value, auParameter.minValue), auParameter.maxValue))
+        }
+        return Double(actual)
     }
 
     public func getDependentParameter(_ parameter: S1Parameter) -> Double {

@@ -805,8 +805,26 @@ final class HostMIDIInterfaceTests: XCTestCase {
         let host = try HostDriver(unit: unit)
         manager.modWheelPad.setVerticalValue01(0)
         host.send([0xB0, 1, 127])
-        waitForRenderThreadMessages()
+        // ADR-063: the wheel writes the cutoff through the parameter tree, which reaches the DSP
+        // at the next render. Until then the kernel held the preset's 20 kHz, and whatever asked
+        // it where the cutoff was — the XY pads settling into place — put the wheel back at
+        // 20 kHz's position, 0.03, and the Cutoff knob with it. Reads see the interface's own
+        // writes now; and the wait renders, because a host never stops.
+        waitWhileRendering(host, seconds: 0.6)
         XCTAssertEqual(manager.modWheelPad.verticalValue, 1, accuracy: 0.001)
+        XCTAssertEqual(Conductor.sharedInstance.synth.getSynthParameter(.cutoff), 360, accuracy: 0.5,
+                       "the wheel at the top is 3 × 120 Hz under the cutoff routing")
+        let cutoffKnob = try XCTUnwrap(manager.generatorsPanel.cutoff)
+        XCTAssertEqual(cutoffKnob.value, 360, accuracy: 0.5, "and the Cutoff knob follows the wheel")
+    }
+
+    /// The main run loop turns while the audio clock keeps running, a block at a time.
+    private func waitWhileRendering(_ host: HostDriver, seconds: TimeInterval) {
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end {
+            host.render()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
     }
 
     /// In the standalone the pedal holds on-screen keys too, through `Manager`'s sustainer.

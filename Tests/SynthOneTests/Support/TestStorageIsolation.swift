@@ -38,7 +38,12 @@ final class TestStorageIsolation: NSObject, XCTestObservation {
         // P6 (ADR-045): the suite was written against the classic layout, and most of it
         // asks `makeRootViewController()` for the scaling container that layout returns.
         // Registered, not set, so a test that reads it before choosing still sees classic.
+        // ADR-064: likewise the desktop tests were written under Studio, which was the default
+        // skin until Cabinet became it; `SkinTests` checks the real default on a suite of its own.
+        // **Set, not registered**: a registered default is process-wide, so it would answer for the
+        // empty suite that test reads too. Tests that choose a skin put Studio back, not nothing.
         S1Preferences.store.register(defaults: [S1Layout.classicDefaultsKey: true])
+        S1SkinChoice.choose(.studio)
         Disk.sharedSupportURL = Self.supportURL
         Disk.settingsURL = Self.settingsURL
         Disk.cachesURL = Self.cachesURL
