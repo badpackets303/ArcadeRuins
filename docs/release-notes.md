@@ -2,6 +2,25 @@
 
 Versions are `MARKETING_VERSION` in `project.yml`; both products carry the same number.
 
+## 0.4.0 — the Cabinet skin (2026-09-17)
+
+One addition to the desktop layout (ADR-059). The DSP, the 150 parameters and the presets are
+unchanged, and the classic layout and the other two skins look as they did.
+
+- **Cabinet, a third skin.** Settings ▸ Skin ▸ Cabinet (or View ▸ Skin), with Layout set to
+  Desktop; it applies at the next launch. The whole window is a painted arcade cabinet: the section
+  frames and titles, the header, the wordmark and the Save, Panic, Settings and Presets buttons are
+  artwork, and Neon Ruins' controls — one neon colour per section — sit in the frames. The preset
+  name reads in the painted display, the painted arrows step through presets, **Presets** opens
+  the browser, the wordmark opens About, and the scope runs in the cabinet's screen.
+- To fit the painted frames, the oscillators, the envelopes, the LFO block and Voice draw a size
+  smaller under this skin. Every control, binding and shortcut is the same.
+- **LFO Rate and Amount no longer shift as they turn**, under every skin. A rate's readout changes
+  length ("1/8 note", "1/4 triplet") and its cell used to grow with it, pushing its neighbours.
+
+Known: the painting stretches with the window, so a window far from 1440×900's shape distorts it
+slightly.
+
 ## 0.3.0 — the desktop layout, skins and an icon (2026-09-14)
 
 Everything since 0.1.0 in one release: Phases 6, 7 and 8 of the port (ADR-045 to ADR-053). The DSP,

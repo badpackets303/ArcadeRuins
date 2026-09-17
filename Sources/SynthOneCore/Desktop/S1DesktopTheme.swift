@@ -132,6 +132,11 @@ final class S1GradientView: UIView {
         hairline.backgroundColor = colour.cgColor
     }
 
+    /// P7-9: a template skin clears a region the painting already fills.
+    func setColours(top: UIColor, bottom: UIColor) {
+        gradient.colors = [top.cgColor, bottom.cgColor]
+    }
+
     init(top: UIColor, bottom: UIColor, hairline hairlineColor: UIColor? = nil) {
         super.init(frame: .zero)
         gradient.colors = [top.cgColor, bottom.cgColor]

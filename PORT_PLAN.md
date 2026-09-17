@@ -383,6 +383,9 @@ decoration; it never moves anything.
   last** — the owner's artwork as `Sources/SynthOne/ArcadeRuins.icon`, an Icon Composer bundle.
   A mac-idiom icon set was tried first and macOS 26 drew the owner's rounded square nested inside
   its own on a light plate; the `.icon` bundle is the artwork the system shapes. ADR-052. 54 green.
+- **P7-9** ✅ **Done 2026-09-17** (branch `cabinet-skin`, unreleased). Owner: "another similar skin … use this as
+  the background template. All you need to do is place the knobs and controls over it." The Cabinet
+  skin: a painted window with the sections pinned to its frames. ADR-059, which amends ADR-046.
 - **P7-7** ✅ **Done 2026-09-14.** Owner: "Remove the 'Arcade' skin as an option." Neon Ruins is the
   same idea done properly, and nothing had shipped with Arcade. `S1SkinChoice` is `studio |
   neonRuins`; the skin, its header and browser art, its drawn wordmark and its grunge tile are
@@ -464,3 +467,22 @@ dependencies (Apple Developer account, notarization).
 
 Expect Phase 3 and Phase 4 to each span several sessions. Keep task granularity at "one commit,
 one verification" so a session ending mid-phase never loses ground.
+
+---
+
+## 6. Cross-platform plugin — phases X0–X4 *(added 2026-09-16, ADR-054; nothing built)*
+
+A second product on the same engine: a JUCE 9 build shipping VST3, AU and a standalone on macOS,
+Windows and Linux. The full plan, with acceptance criteria per task, is the page at
+<https://claude.ai/artifact/9zr5fP3KeuYMt5kvcmcaDH>. Task IDs are permanent and use the prefix `X`.
+
+| Phase | What | Gate |
+|---|---|---|
+| **X0** | Decisions and survey. **X0-1 framework: JUCE 9, Starter licence — decided (ADR-054).** **X0-2 Catalyst products: kept through X2, decided at the X3 gate; the JUCE build ships no AU before then (ADR-055).** **X0-3 repo shape: one repository, `Sources/S1Engine/` + `Sources/S1Plugin/`, JUCE by FetchContent (ADR-057, proposed).** **X0-4 identity: `BP03`/`Ruin`, parameter ID = `S1Parameter` case name, AU subtype deferred (ADR-058, proposed).**, **X0-5 scope: desktop layout only, preset files kept, MIDI learn deferred, Dev panel dropped (ADR-056).** | ADRs recorded |
+| **X1** | A portable C++ engine: CMake build of Soundpipe + kernel; `AEArray`/`AEMessageQueue`/`NSMutableArray` replaced by C++; Apple types out of the kernel interface, sample-positioned events; tunings, presets and wavetables ported from Swift; C++ golden harness; the Mac app and AUv3 switch to it | Goldens **exact** on the Mac products |
+| **X2** | The plugin with the host's generic interface: JUCE project + 3-OS CI; 150 parameters generated from `S1Parameter.h` with dependents; sample-accurate events and ramps; MIDI through `S1HostMIDI`; state; host tempo/transport; flush-to-zero; `pluginval` level 10; preset library on disk; standalone shell | Goldens at 44.1/48/96 kHz and odd block sizes on all three OSes |
+| **X3** | The interface, rebuilt from the 0.3.0 desktop layout and Neon Ruins: layout spec as data; controls kit; sections and rows; preset browser; Tunings; Studio + Neon Ruins skins; scaling; keyboard drawer and play bar | Owner finds nothing missing within the X0-5 scope |
+| **X4** | Installers (pkg / Windows installer / tarball), signing (notarisation reused; Windows Authenticode is the owner's certificate), host matrix, docs, release | Tagged release, checksums, goldens green on the release commit |
+
+The engine carries over; the sound is proven by the existing goldens, not assumed. The interface
+is the bulk of the work (X3, 10–16 sessions against 4–6 each for X1 and X2).

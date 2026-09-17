@@ -100,6 +100,18 @@ final class S1ControlCell: UIStackView {
     @available(*, unavailable)
     required init(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
+    /// Holds the cell at one width whatever its readout says. A rate reads "1/8 note" and then
+    /// "1/4 triplet": left to its text, the cell grew and pushed its neighbours along as the knob
+    /// turned (owner, 2026-09-17). A readout too long for the width draws smaller instead.
+    func fixWidth(_ width: CGFloat) {
+        widthAnchor.constraint(equalToConstant: width).isActive = true
+        for label in [titleLabel, valueLabel] {
+            label.adjustsFontSizeToFitWidth = true
+            label.minimumScaleFactor = 0.7
+            label.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor).isActive = true
+        }
+    }
+
     func refresh() {
         guard let format, let knob = control as? Knob else { return }
         valueLabel.text = format.string(for: knob.value)

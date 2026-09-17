@@ -21,6 +21,10 @@ extension S1DesktopLayout {
     // at 900 tall, about 84 points of fader travel.
     private var rowHeights: (generators: CGFloat, envelopes: CGFloat, effects: CGFloat) { (158, 220, 122) }
 
+    /// P7-9 (ADR-059): a template's frames are smaller than the rows' own — the painting gives a
+    /// sixth of the window to the cabinet — so the three tightest sections draw a size down.
+    private var isCompact: Bool { skin.template != nil }
+
     func buildRows() {
         let rows = [generatorsRow(), envelopesRow(), effectsRow(), sequencerRow()]
         rows.forEach { editor.addArrangedSubview($0) }
@@ -106,23 +110,24 @@ extension S1DesktopLayout {
         // P8-0: the sidebar is gone and the row has the whole 1440 (owner, 2026-09-13: "more
         // wiggle room"). The fixed sections grew — wider selectors, 44-point knobs — and Mix
         // still has about 560 points for its seven.
+        let oscKnob: CGFloat = isCompact ? 36 : 44
         let osc1 = section("OSC 1", width: 184)   // 152 selector + 2 × 14 margin, with 4 to spare
-        verticalBody(osc1, spacing: 8)
+        verticalBody(osc1, spacing: isCompact ? 3 : 8)
         osc1.body.alignment = .center
         move(g.morph1Selector, into: nil); remember(g.morph1Selector, from: g)
-        sized(g.morph1Selector, width: 152, height: 36)
+        sized(g.morph1Selector, width: isCompact ? 136 : 152, height: isCompact ? 30 : 36)
         osc1.add(g.morph1Selector)
-        osc1.add(knobCell(g.morph1SemitoneOffset, "Semitones", 44, .semitones, from: g))
+        osc1.add(knobCell(g.morph1SemitoneOffset, "Semitones", oscKnob, .semitones, from: g))
 
         let osc2 = section("OSC 2", width: 204)   // 172 selector + 2 × 14 margin, with 4 to spare
-        verticalBody(osc2, spacing: 8)
+        verticalBody(osc2, spacing: isCompact ? 3 : 8)
         move(g.morph2Selector, into: nil); remember(g.morph2Selector, from: g)
-        sized(g.morph2Selector, width: 172, height: 36)
+        sized(g.morph2Selector, width: isCompact ? 148 : 172, height: isCompact ? 30 : 36)
         osc2.add(centred(g.morph2Selector))
         // P8-1: the two knobs each take half the width, so they sit apart (owner: "scrunched
         // together"); the body fills, and the selector is centred on its own line above.
-        let osc2Knobs = knobRow([knobCell(g.morph2SemitoneOffset, "Semitones", 44, .semitones, from: g),
-                                 knobCell(g.morph2Detuning, "Detune", 44, .decimal, from: g)])
+        let osc2Knobs = knobRow([knobCell(g.morph2SemitoneOffset, "Semitones", oscKnob, .semitones, from: g),
+                                 knobCell(g.morph2Detuning, "Detune", oscKnob, .decimal, from: g)])
         osc2Knobs.distribution = .fillEqually
         osc2.add(osc2Knobs)
 
@@ -154,7 +159,13 @@ extension S1DesktopLayout {
         // carries the type.
 
         let voice = section("Voice", width: 156)
-        voice.add(knobCell(g.glideKnob, "Glide", 52, .decimal, from: g))
+        if isCompact {
+            // The painted frame is 120 points wide: the switches go under the knob, not beside it
+            verticalBody(voice, spacing: 2)
+            voice.body.alignment = .center
+            voice.body.layoutMargins = UIEdgeInsets(top: 0, left: 6, bottom: 2, right: 6)
+        }
+        voice.add(knobCell(g.glideKnob, "Glide", isCompact ? 34 : 52, .decimal, from: g))
         voice.add(S1SwitchColumn([switchCell(g.isMonoToggle, "Mono", from: g),
                                   switchCell(g.legatoModeToggle, "Legato", from: g)]))
 
@@ -167,24 +178,25 @@ extension S1DesktopLayout {
         let e = manager.envelopesPanel
         let fx = manager.fxPanel
 
+        let envelopeKnob: CGFloat = isCompact ? 38 : 46
         let filterEnvelope = section("Filter Envelope")
         verticalBody(filterEnvelope)
-        filterEnvelope.body.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 6, right: 12)
+        filterEnvelope.body.layoutMargins = UIEdgeInsets(top: isCompact ? 4 : 8, left: 12, bottom: isCompact ? 2 : 6, right: 12)
         plot(e.filterADSRView, in: filterEnvelope)
-        filterEnvelope.add(knobRow([knobCell(e.filterAttackKnob, "Attack", 46, .seconds, from: e),
-                                    knobCell(e.filterDecayKnob, "Decay", 46, .seconds, from: e),
-                                    knobCell(e.filterSustainKnob, "Sustain", 46, .percent, from: e),
-                                    knobCell(e.filterReleaseKnob, "Release", 46, .seconds, from: e)]))
+        filterEnvelope.add(knobRow([knobCell(e.filterAttackKnob, "Attack", envelopeKnob, .seconds, from: e),
+                                    knobCell(e.filterDecayKnob, "Decay", envelopeKnob, .seconds, from: e),
+                                    knobCell(e.filterSustainKnob, "Sustain", envelopeKnob, .percent, from: e),
+                                    knobCell(e.filterReleaseKnob, "Release", envelopeKnob, .seconds, from: e)]))
 
         let amplitudeEnvelope = section("Amplitude Envelope")
         verticalBody(amplitudeEnvelope)
-        amplitudeEnvelope.body.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 6, right: 12)
+        amplitudeEnvelope.body.layoutMargins = UIEdgeInsets(top: isCompact ? 4 : 8, left: 12, bottom: isCompact ? 2 : 6, right: 12)
         plot(e.adsrView, in: amplitudeEnvelope)
-        amplitudeEnvelope.add(knobRow([knobCell(e.attackKnob, "Attack", 46, .seconds, from: e),
-                                       knobCell(e.decayKnob, "Decay", 46, .seconds, from: e),
-                                       knobCell(e.sustainKnob, "Sustain", 46, .percent, from: e),
-                                       knobCell(e.releaseKnob, "Release", 46, .seconds, from: e),
-                                       knobCell(e.adsrPitchTrackingKnob, "Pitch Track", 46, .decimal, from: e)]))
+        amplitudeEnvelope.add(knobRow([knobCell(e.attackKnob, "Attack", envelopeKnob, .seconds, from: e),
+                                       knobCell(e.decayKnob, "Decay", envelopeKnob, .seconds, from: e),
+                                       knobCell(e.sustainKnob, "Sustain", envelopeKnob, .percent, from: e),
+                                       knobCell(e.releaseKnob, "Release", envelopeKnob, .seconds, from: e),
+                                       knobCell(e.adsrPitchTrackingKnob, "Pitch Track", envelopeKnob, .decimal, from: e)]))
 
         // P8-1 (owner: "clunky and haphazard, with the 4 tiny knobs scrunched up on the right"):
         // two columns. Left, the two LFOs — name, wave picker, rate and amount, 40-point knobs
@@ -193,7 +205,8 @@ extension S1DesktopLayout {
         lfo.body.alignment = .center
         lfo.body.distribution = .fill
         lfo.body.spacing = 12
-        lfo.body.layoutMargins = UIEdgeInsets(top: 4, left: 12, bottom: 4, right: 12)
+        lfo.body.layoutMargins = UIEdgeInsets(top: isCompact ? 0 : 4, left: isCompact ? 6 : 12, bottom: isCompact ? 0 : 4, right: isCompact ? 6 : 12)
+        if isCompact { lfo.body.spacing = 4 }
         lfo.addHeaderAccessory(switchCell(fx.tempoSyncToggle, "Tempo sync", from: fx))
         let lfos = UIStackView(arrangedSubviews: [
             lfoLine("LFO 1", picker: fx.lfo1WavePicker, rate: fx.lfo1RateKnob, amount: fx.lfo1AmpKnob,
@@ -203,7 +216,7 @@ extension S1DesktopLayout {
         ])
         lfos.axis = .vertical
         lfos.alignment = .leading
-        lfos.spacing = 6
+        lfos.spacing = isCompact ? 0 : 6
         lfo.add(lfos)
         lfo.add(flexibleSpace())
         let targets: [LFOToggle] = [fx.cutoffLFOToggle, fx.resonanceLFOToggle, fx.oscMixLFOToggle, fx.reverbMixLFOToggle,
@@ -213,7 +226,7 @@ extension S1DesktopLayout {
             let line = UIStackView(arrangedSubviews: targets[start..<start + 3].map { toggle in
                 move(toggle, into: nil); remember(toggle, from: fx)
                 toggle.drawsDesktopStyle = true
-                sized(toggle, width: 66, height: 22)
+                sized(toggle, width: isCompact ? 52 : 66, height: 22)
                 return toggle
             })
             line.axis = .horizontal
@@ -235,7 +248,7 @@ extension S1DesktopLayout {
     private func plot(_ view: AKADSRView, in section: S1SectionView) {
         move(view, into: nil)
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        view.heightAnchor.constraint(equalToConstant: 54).isActive = true
+        view.heightAnchor.constraint(equalToConstant: isCompact ? 36 : 54).isActive = true
         view.layer.cornerRadius = 4
         view.layer.borderWidth = 1
         view.layer.borderColor = S1DesktopTheme.plotBorder.cgColor
@@ -260,14 +273,28 @@ extension S1DesktopLayout {
         label.textAlignment = .left
         move(picker, into: nil); remember(picker, from: panel)
         picker.drawsDesktopStyle = true
-        sized(picker, width: 112, height: 26)
-        let rateCell = knobCell(rate, "Rate", 40, rateFormat, from: panel)
+        sized(picker, width: isCompact ? 88 : 112, height: isCompact ? 24 : 26)
+        let knob: CGFloat = isCompact ? 28 : 40
+        let rateCell = knobCell(rate, "Rate", knob, rateFormat, from: panel)
         rateCells.append(rateCell)
-        let line = UIStackView(arrangedSubviews: [label, picker, rateCell,
-                                                  knobCell(amount, "Amount", 40, .percent, from: panel)])
+        let amountCell = knobCell(amount, "Amount", knob, .percent, from: panel)
+        // Fixed widths, so a readout that changes length moves nothing
+        [rateCell, amountCell].forEach { $0.fixWidth(isCompact ? 54 : 64) }
+        var leading: [UIView] = [label, picker]
+        if isCompact {
+            // The name goes over its picker: the frame has no width for it beside
+            let named = UIStackView(arrangedSubviews: [label, picker])
+            named.axis = .vertical
+            named.alignment = .leading
+            named.spacing = 2
+            [rateCell, amountCell].forEach { $0.spacing = 0 }
+            leading = [named]
+        }
+        let line = UIStackView(arrangedSubviews: leading + [rateCell, amountCell])
         line.axis = .horizontal
         line.alignment = .center
         line.spacing = 10
+        if isCompact { line.setCustomSpacing(14, after: leading[0]) }   // the knobs a notch right of the picker
         return line
     }
 

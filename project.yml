@@ -17,8 +17,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"                 # R-6: pin the language mode; modernise deliberately, later
     IPHONEOS_DEPLOYMENT_TARGET: "14.0"   # -> macOS 11 under Catalyst
-    MARKETING_VERSION: "0.3.0"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "0.4.0"
+    CURRENT_PROJECT_VERSION: "4"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     CLANG_ENABLE_MODULES: YES
     # gnu11, not c11: TAAE uses GNU extensions such as typeof().

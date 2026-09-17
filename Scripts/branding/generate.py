@@ -13,7 +13,7 @@ import json
 import os
 import sys
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import appicon
@@ -153,6 +153,54 @@ def fitted_logo(imageset, filename, size):
     return path, size
 
 
+def feather_mask(w,h,f=5):
+    m=Image.new('L',(w,h),0)
+    ImageDraw.Draw(m).rectangle([f,f,w-f-1,h-f-1],fill=255)
+    return m.filter(ImageFilter.GaussianBlur(f/2))
+def clone(im,dst,src,f=5):
+    x0,y0,x1,y1=dst; w,h=x1-x0,y1-y0
+    patch=im.crop((src[0],src[1],src[0]+w,src[1]+h))
+    im.paste(patch,(x0,y0),feather_mask(w,h,f))
+def rowfill(im,dst,refx,f=3):
+    """Each row takes the colour of the clean columns at refx."""
+    x0,y0,x1,y1=dst; w,h=x1-x0,y1-y0
+    col=im.crop((refx,y0,refx+6,y1)).resize((1,h),Image.BOX).resize((w,h),Image.NEAREST)
+    im.paste(col,(x0,y0),feather_mask(w,h,f))
+def clean_template(im):
+    """Takes the mock's painted controls off the owner's template (P7-9, ADR-059): the live
+    controls sit where they were. Frames, titles, the header and its buttons stay."""
+    rowfill(im,(570,24,902,70),534)                 # the preset name
+    clone(im,(1416,302,1553,334),(900,302))        # Tempo sync
+    clone(im,(1116,421,1555,491),(1116,340))        # mod-target chips
+    clone(im,(406,497,484,530),(306,497))           # Reverb On
+    clone(im,(694,497,779,530),(594,497))           # Delay On
+    clone(im,(1446,539,1554,640),(1120,539))        # Master switches
+    clone(im,(1378,620,1445,648),(1120,560))        # Volume
+    clone(im,(1480,674,1553,711),(1400,674))        # Snap
+    clone(im,(1212,728,1551,920),(700,725))         # the pads and their captions
+    rowfill(im,(1244,68,1314,97),1174)      # Record: a plugin has none, and the label counts
+    bar=im.crop((1010,950,1560,992))
+    im.paste(bar,(6,950)); im.paste(ImageOps.mirror(bar),(556,950),feather_mask(550,42,4))
+    clone(im,(980,950,1106,992),(1300,950),8)
+    return im
+
+
+def cabinet_template():
+    """The Cabinet skin's window, at twice the painting's size so a 1440-point window is not
+    drawn from fewer pixels than it has."""
+    source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "ar-template.png")
+    image = clean_template(Image.open(source).convert("RGB"))
+    image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
+    folder = os.path.join(ASSETS, "s1_template_cabinet.imageset")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, "s1_template_cabinet@2x.jpg")
+    image.save(path, quality=90)
+    with open(os.path.join(folder, "Contents.json"), "w") as contents:
+        json.dump({"images": [{"filename": "s1_template_cabinet@2x.jpg", "idiom": "universal", "scale": "2x"}],
+                   "info": {"author": "xcode", "version": 1}}, contents, indent=2)
+    return path, image.size
+
+
 def app_icon():
     """SynthOneCore's iOS icon set: all 18 sizes, from the owner's artwork.
 
@@ -187,6 +235,7 @@ if __name__ == "__main__":
     print("%-52s %s" % fitted_logo("s1_logo.imageset", "s1_logo.png", (196, 28)))
     # P7-4 (ADR-048): the Neon Ruins skin's wordmark, a 220×24-point frame (@2x)
     print("%-52s %s" % fitted_logo("s1_wordmark_neon.imageset", "s1_wordmark_neon@2x.png", (440, 48)))
+    print("%-52s %s" % cabinet_template())
     for filename, pixels in app_icon():
         print(f"  SynthOneCore AppIcon.appiconset/{filename:22} {pixels}x{pixels}")
     path, pixels = icon_bundle_art()

@@ -3197,3 +3197,254 @@ scene's 600×382 right column; under Classic the skin picker is disabled and tit
 `DesktopPluginTests`: the hosted popover carries both, with the host wording, and can choose
 Classic. Rendered the popover in both layouts on 2026-09-14. The owner's real defaults were
 unchanged by a 58-test run (checked before and after).
+
+## ADR-054 — The cross-platform plugin is built on JUCE 9, under the free Starter licence
+
+**Date:** 2026-09-16 · **Status:** Accepted (owner's choice) · **Cross-platform plan, X0-1** ·
+Plan: <https://claude.ai/artifact/9zr5fP3KeuYMt5kvcmcaDH>
+
+**Context.** The owner asked what a cross-platform VST of Arcade Ruins would take. The survey
+(2026-09-15): Soundpipe (7,978 lines of C) and the kernel (≈5,000 lines, Objective-C++ in form)
+carry over; ≈3,500 lines of Swift engine logic (tunings, presets, wavetables) must be rewritten in
+C++; ≈37,000 lines of UIKit across 11 storyboards must be redrawn. The plan has five phases,
+X0–X4, and its first decision is the framework: JUCE (VST3/AU/AAX/standalone from one tree, with a
+UI toolkit; AGPLv3 or a commercial EULA), CLAP + clap-wrapper (MIT, no UI toolkit) or iPlug2
+(permissive, smaller community). The owner: "I would like to move forward with JUCE", and on the
+licence: "I just want simple open source and have no plans to sell this."
+
+**Licence terms as read on 2026-09-16.** JUCE 9.0.2 (released 2026-09-07) is dual-licensed under
+the AGPLv3 and the JUCE 9 EULA (dated 2026-06-17). The EULA's tiers: **Starter**, free and
+perpetual, all features, revenue up to $20,000 a year; **Indie**, $40 per user per month or $800
+once, up to $300,000; **Pro**, $175 per user per month (12-month minimum) or $3,500 once, no limit;
+**Educational**, free. Revenue for an individual licensee is everything the product brings in over
+the previous 12 months, donations and sponsorship included. The JUCE 9 EULA has no splash-screen
+clause (JUCE 8's Personal tier required one) — worth confirming on the JUCE forum before X2 ships,
+but the text does not ask for it.
+
+**Decision.** JUCE 9, pinned by tag, under the **Starter** licence.
+- Starter over AGPLv3 because it changes nothing about the project's licence story: Arcade Ruins
+  stays MIT, `NOTICE.md` gains one entry, and the shipped binaries carry no copyleft. Under
+  AGPLv3 every distributed binary becomes an AGPL work whose exact source must be published (the
+  public mirror already does that) and every fork inherits AGPL on the combination — more to
+  explain, for no gain to a project with no revenue.
+- Starter over Indie because there is nothing to sell. If revenue ever appears, Indie's $800
+  perpetual licence is the upgrade, and nothing in the code changes.
+- CLAP is not ruled out as an extra *format*: `clap-juce-extensions` can add it to the JUCE build.
+  That is an X2-1 question, not a framework question.
+
+**Consequences.**
+- The plan's task IDs use the prefix `X` (X0–X4) and are permanent, like `P0-1 … P8-n`.
+- The Mac app and AUv3 are untouched by this decision. Whether they stay beside the JUCE build
+  (which can ship AU too) is X0-2, still the owner's.
+- `NOTICE.md` gets a JUCE entry when JUCE source enters the repository (X2-1), naming the EULA
+  and the Starter tier; nothing to add before then.
+- Section 10.2 of the EULA lets Raw Material Software name licensees in its marketing; the owner
+  can opt out by writing to them.
+
+**Verification.** Terms read from <https://juce.com/legal/juce-9-licence/>,
+<https://juce.com/get-juce/>, the repository's `LICENSE.md` and its releases page on 2026-09-16.
+Re-read them at X2-1 before the first CI build; licences change between major versions.
+
+## ADR-055 — The Catalyst app and AUv3 stay through X2; their fate is decided at the X3 gate
+
+**Date:** 2026-09-16 · **Status:** Accepted (owner's choice; the final question deferred by design) ·
+**Cross-platform plan, X0-2** · Follows ADR-054
+
+**Context.** The JUCE build (ADR-054) can ship an AU as well as a VST3, so once it exists the Mac
+has two candidate AUs: the Catalyst AUv3 that hosts sessions already know as `aumu`/`ruin`/`BP03`
+(permanent since ADR-029), and JUCE's. The plan asked whether to keep both products or retire the
+Catalyst pair. The owner: "Keep the Catalyst products through X2 and decide later."
+
+**Decision.**
+1. **The Catalyst app and AUv3 are kept, built, tested and released as now through X1 and X2.**
+   X1 puts them on the portable C++ engine, so they are how the engine proves itself (goldens exact)
+   before any JUCE code runs; they are not a legacy branch during those phases but the reference.
+2. **Whether they ship at X4 is decided at the X3 gate**, when the owner has used the JUCE
+   interface in Logic and a Windows host. Until then the plan carries both outcomes.
+3. **The JUCE build ships no AU publicly before that decision.** X2's public release (0.4.0, the
+   generic-interface build) is VST3 and the standalone on all three OSes; the AU format is built and
+   validated in CI but not released. An AU's `manufacturer`+`subtype` is permanent the day a host
+   saves a session with it (ADR-029), and whichever way X0-2 falls, one of two things is true: the
+   JUCE AU inherits `ruin` after the Catalyst AUv3 is retired, or it gets its own subtype for good
+   because both stay. Shipping it earlier under either choice would pre-empt the decision.
+
+**Consequences.**
+- X0-4 (plugin identity) fixes the VST3 class ID, the JUCE plugin and manufacturer codes and the
+  parameter-ID rule now, and leaves the JUCE AU subtype as "`ruin` if the Catalyst AUv3 retires,
+  otherwise a new code" — to be filled in at the X3 gate.
+- The App Group `8RSH7U3222.com.badpackets303.ArcadeRuins` remains the Catalyst products' preset
+  store. X2-9 gives the JUCE build its own per-OS folder; whether the two share on the Mac is
+  settled with X0-2, not before.
+- Every DSP change during X1–X2 lands once, in the C++ engine, and both product families pick it
+  up — the point of the X1 gate.
+
+**Verification.** None to run; recorded in STATE.md "Decisions settled", PORT_PLAN.md §6 and the
+plan page.
+
+## ADR-056 — What the JUCE build does not carry in 1.0
+
+**Date:** 2026-09-16 · **Status:** Accepted (owner's choice on the layout; the rest my call) ·
+**Cross-platform plan, X0-5** · Follows ADR-054, ADR-055
+
+**Context.** The JUCE interface (X3) is drawn from scratch; nothing from the 11 storyboards
+crosses as code. Four things in the Mac products either double that work or belong to the host.
+
+**Decision.** For the JUCE build's 1.0:
+1. **Desktop layout only.** The classic iPad-style layout is not rebuilt. It *could* be — it is a
+   second complete interface, not a technical impossibility — but X3 is already the largest phase.
+   The owner: "I'm fine with that for now." The classic layout stays in the Catalyst products
+   (ADR-052 makes it their default) and can be added to the JUCE build later as its own phase.
+2. **Preset files: export and import stay.** X3-4 already imports banks the Mac app exported;
+   exporting a preset or bank to a file is the same code the other way. Apple's share sheet has no
+   equivalent and is not wanted.
+3. **MIDI learn is left out of 1.0.** Hosts map hardware controllers to plugin parameters
+   themselves, and every parameter is automatable (X2-2), so the plugin needs none. The standalone
+   is the only place it would be missed; deferred, not dropped.
+4. **The Dev panel is dropped.** It was upstream's internal tuning surface.
+
+**Consequences.**
+- X3-1's layout specification measures the desktop layout at 0.3.0 and nothing else.
+- Every X3 acceptance criterion that says "as the Mac app does" means the desktop layout.
+- `S1Parameter.h` keeps every parameter; nothing here removes one, so presets stay interchangeable
+  between the Catalyst products and the JUCE build.
+
+**Verification.** None to run; recorded in STATE.md "Decisions settled", PORT_PLAN.md §6 and the
+plan page.
+
+## ADR-057 — Repository shape for the cross-platform build: one repository, an engine directory, JUCE fetched by tag
+
+**Date:** 2026-09-16 · **Status:** Proposed — stands unless the owner objects · **Cross-platform
+plan, X0-3** · Follows ADR-054–056
+
+**Context.** Two product families will build from one engine: the Catalyst app and AUv3 through
+XcodeGen, and the JUCE VST3/AU/standalone through CMake. The engine's sources today are spread
+across `Sources/Soundpipe` (pure C), `Sources/SynthOneCore/DSP/{Kernel, Note State, Sequencer,
+Rate}` and `S1Parameter.h` (Objective-C++ until X1), with Apple adapters in `AudioUnitBase` and
+`DSP/Audio Unit`. The public mirror is produced by `Scripts/publish-public.sh` with `git archive`,
+which carries no submodules. `upstream/` (23 MB) is excluded from the mirror and must stay
+read-only. The options were one repository or a separate engine repository consumed as a submodule.
+
+**Decision.** One repository, `SynthOneMac`, mirrored as before.
+
+1. **`Sources/S1Engine/`** — the portable engine: a CMake static library `s1engine`, C++17, no
+   Apple headers. X1 moves the kernel, note state, sequencer, rate and `S1Parameter.h` there with
+   `git mv` as each file is converted, so history follows the code. It compiles
+   `Sources/Soundpipe` in place; Soundpipe does not move. `S1` prefix because the directory is ours
+   (ADR-009); the files inside keep their ported names.
+2. **`Sources/SynthOneCore/AudioUnitBase` and `DSP/Audio Unit` stay** — they are the Apple
+   adapter. After X1-8 `S1AudioUnit` is a thin wrapper over `s1engine`; TAAE stays with it for the
+   UI-side messaging the Catalyst products still use.
+3. **`Sources/S1Plugin/`** — the JUCE product: `CMakeLists.txt`, the processor, the editor (X3),
+   resources. A root `CMakeLists.txt` adds `S1Engine`, `S1Plugin` and the C++ golden harness.
+4. **JUCE is fetched, not vendored:** CMake `FetchContent` pinned to the release tag (9.0.2 today),
+   hash-checked. No submodule, so `git archive` and the mirror are unaffected and the repository does
+   not grow by JUCE's size. `.references/`-style caching (`Scripts/fetch-references.sh`) is the
+   precedent.
+5. **XcodeGen stays the source of truth for the Xcode targets.** `project.yml` gains the new
+   header search path; it does not drive CMake and CMake does not drive it. The Xcode framework
+   compiles the engine's sources directly (as it compiles Soundpipe's today) rather than linking
+   the CMake library, so `Scripts/build.sh` needs no CMake.
+6. **Tests:** the Xcode suite stays where it is; the C++ golden harness (X1-7) lives in
+   `Tests/Engine/` and reads the same `Tests/Goldens/*.wav`. CI (X2-1) runs both.
+
+**Why not a separate repository.** One engine, one golden set, one `upstream/` pin, one publish
+script, and a DSP fix that lands in one commit for both product families — the point of the X1
+gate (ADR-055). A submodule would also need the mirror script rewritten.
+
+**Consequences.**
+- CLAUDE.md's layout table gains `Sources/S1Engine/` and `Sources/S1Plugin/` when X1-1 creates them.
+- `NOTICE.md` gains JUCE (ADR-054) at X2-1 and, if X2-1 adds CLAP, `clap-juce-extensions`.
+- Nothing moves before X1-1. This ADR settles where things go, not when.
+
+## ADR-058 — The JUCE build's identity: `BP03` / `Ruin`, parameter ID = enum name, AU subtype deferred
+
+**Date:** 2026-09-16 · **Status:** Proposed — stands unless the owner objects · **Cross-platform
+plan, X0-4** · Follows ADR-029, ADR-055
+
+**Context.** A host stores a plugin's identity in every session that uses it, so the codes are
+permanent from the first public release (ADR-029 learned this with `aks1` → `ruin`, free only
+because nothing had shipped). JUCE derives every format's identity from two four-character codes:
+`PLUGIN_MANUFACTURER_CODE` and `PLUGIN_CODE`. The VST3 class ID is a hash of both; the AU
+`manufacturer`/`subtype` pair *is* both. JUCE documents GarageBand's requirement that the plugin
+code start with an upper-case letter followed by lower-case ones, and that the manufacturer code
+contain an upper-case letter. Parameter IDs are equally permanent: a host's automation lanes and
+session state refer to them.
+
+**Decision.**
+
+| | Value | Why |
+|---|---|---|
+| Manufacturer code | **`BP03`** | The manufacturer the Catalyst AUv3 already ships under (ADR-005, ADR-029); one manufacturer, however many plugins. |
+| Plugin code | **`Ruin`** | Upper-case first letter for GarageBand; `ruin` is taken by the Catalyst AUv3 and, in JUCE, one code serves every format. |
+| VST3 class ID | derived by JUCE from `BP03`+`Ruin` | Recorded in the X0-4 table once the first build prints it; never changed after 0.4.0. |
+| Bundle IDs | `com.badpackets303.ArcadeRuins.vst3` · `.component` · `.app` **not shared** with the Catalyst app: the JUCE standalone is `com.badpackets303.ArcadeRuinsStandalone` | The Catalyst app owns `com.badpackets303.ArcadeRuins`; two apps with one bundle ID confuse Launch Services. |
+| Product name in hosts | **Arcade Ruins** | Same instrument. VST3 and AU lists are separate, so 0.4.0 shows no duplicate. |
+| Parameter ID | **the `S1Parameter` enum case name**, e.g. `cutoff`, `index1`, `sequencerNoteOn00`; JUCE version hint 1 | Generated from `S1Parameter.h`, never typed; a renamed case fails a test, which is the point. 150 of them. |
+| AU subtype for the JUCE AU | **left blank until the X3 gate** | ADR-055. |
+
+**On the deferred AU subtype, what the codes above imply.** Because JUCE uses one plugin code
+for every format, the JUCE AU — if it ships — will be `aumu`/`Ruin`/`BP03`: a different plugin
+from the Catalyst AUv3 (`ruin`) in every host's eyes. The "inherit `ruin`" branch of ADR-055 is
+therefore only open if `PLUGIN_CODE` were `ruin`, which would put the same code on the VST3 (its
+class ID would change if switched later, breaking 0.4.0 sessions) and would fail GarageBand's
+rule. It is also worth less than it looks: a session saved with the AUv3 stores `S1AudioUnit`'s
+`fullState` blob, which the JUCE AU would have to read to restore it. So the X3-gate decision is
+really: ship the JUCE AU as a second AU beside the Catalyst one (and retire the Catalyst pair or
+not), never as a drop-in replacement for it. Recorded so the gate is not surprised.
+
+**Standalone on macOS.** 0.4.0's macOS package is the VST3 alone; the JUCE standalone ships on
+Windows and Linux, where there is no Catalyst app. A macOS JUCE standalone waits on the same
+X3-gate decision as the AU.
+
+**Verification.** X0-4's acceptance test: parameter count 150, every ID equal to its enum name,
+codes equal to this table. The VST3 class ID is appended to the table by X2-1's first CI build.
+
+---
+
+## ADR-059 — A skin may bring a painted window, and then it places the sections (Cabinet)
+
+**Date:** 2026-09-17 · **Status:** accepted · **Amends:** ADR-046 ("a skin never moves anything")
+
+**Context.** The owner supplied a finished painting of the whole window — `ar-template.png`,
+1585×992: an arcade cabinet down the left, a header with the wordmark, a preset display and five
+toolbar buttons, and a neon frame with a title for each of the fifteen sections — and asked for a
+skin "similar to Neon Ruins" with "the knobs and controls placed over it". The painting's frames
+are not where the layout's rows put the sections: the cabinet takes a sixth of the width, the
+envelope row is 163 points tall against 220, and Bitcrusher and Master sit lower than their row.
+ADR-046 ruled that a skin is palette and decoration, never layout.
+
+**Decision.** A skin may carry an `S1SkinTemplate`: the image, its size, and the rectangle of each
+section and toolbar control in the image's own pixels. `S1DesktopLayout` builds exactly as for any
+skin — every control moved, bound, remembered for MIDI learn — and then `applyTemplate` lifts the
+sections out of their rows and pins each to its rectangle as fractions of the window, hides the
+toolbar and the rows, and takes the toolbar's controls to the painted header. **What a section
+holds and how it is bound stays the layout's; only where it sits is the skin's.** The other skins
+are untouched, and `testEverySkinLaysOutEverySectionInTheSamePlace` still holds for them.
+
+- **The painting is cleaned, not used raw.** The mock had controls painted in (the preset name,
+  toggles, the mod-target chips, the pads, the play bar, the Record label). `generate.py`'s
+  `clean_template` clones clean texture over them, so nothing painted can disagree with a live
+  control. Frames, titles, header art and the Save / Panic / Settings / Presets buttons stay.
+  The asset is written at 2× (3170×1984 JPEG, 1.2 MB).
+- **Sections are bare** (`dress.bareSections`): no fill, border, glow, texture or visible title;
+  the header strip is 30 points to match the painting. The title label stays for VoiceOver.
+- **Painted buttons are proxied.** The storyboard's Save, Panic and Settings sit under their
+  painted plates at alpha 0 — a popover anchors to its button — and a clear `S1ActionButton` on top
+  passes the click on. They cannot simply be made transparent: `SynthButton.isSelected` repaints
+  its background grey. Presets is a new way into the browser; the wordmark is About. Record's plate
+  is painted empty: the standalone puts its live button and time label there, the plugin an About
+  label.
+- **The scope runs in the cabinet's screen.** The status bar shares the bottom strip with the
+  play bar; the preset card hangs from the display rather than the (hidden) toolbar.
+- **Three sections draw a size down** (`isCompact`): OSC 1/2 (36-point knobs, 30-point pickers),
+  the envelopes (38-point knobs, a 36-point plot), the LFO block (28-point knobs, name over picker,
+  54-point chips) and Voice (switches under the knob). Everything else fits as built.
+- **The painting stretches with the window.** The design window is its shape to a part in a
+  thousand. An aspect-fitted canvas was tried first and the solver shrank the canvas instead of the
+  sections' contents; and `pin` scales from the canvas's trailing and bottom *positions*, which
+  equal its size only while it starts at the root's origin.
+
+**Consequences.** A template skin is tied to the section list: a new section needs a frame in the
+painting (the test asserts the two key sets are equal). The window above 1440×900 stretches the
+art rather than adding room for art. Neon Ruins' palette and accents are reused, not copied.
+

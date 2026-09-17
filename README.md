@@ -33,7 +33,7 @@ In a plugin, the arpeggiator and sequencer follow the host's tempo and transport
 
 ## Status
 
-Version 0.3.0. The plugin loads, validates, renders, saves its state into a host session and
+Version 0.4.0. The plugin loads, validates, renders, saves its state into a host session and
 responds to automation; the standalone runs; both have a layout designed for a Mac window rather
 than an iPad screen. See [STATE.md](STATE.md) for live status, [PORT_PLAN.md](PORT_PLAN.md) for the
 task board and [docs/release-notes.md](docs/release-notes.md) for what changed in each version.
@@ -42,7 +42,7 @@ This is a personal project, shared for testing. It is not on the App Store.
 
 ## Download and install
 
-### [⬇ Download Arcade Ruins 0.3.0 for macOS](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.3.0-macOS.zip)
+### [⬇ Download Arcade Ruins 0.4.0 for macOS](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.4.0-macOS.zip)
 
 **That one download is both products** — the standalone app *and* the AUv3 plugin:
 
@@ -58,7 +58,7 @@ Signed with Developer ID and notarised by Apple. macOS 11 or later; universal, A
 Intel. Every version is on the [Releases](https://github.com/badpackets303/ArcadeRuins/releases) page.
 
 1. Download and unzip
-   [`ArcadeRuins-0.3.0-macOS.zip`](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.3.0-macOS.zip).
+   [`ArcadeRuins-0.4.0-macOS.zip`](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.4.0-macOS.zip).
 2. Move **ArcadeRuins.app** to your **Applications** folder. The plugin is only registered from there.
 3. **Open it once.** That registers the plugin with macOS. It opens without a Gatekeeper warning.
 4. **Quit and reopen your DAW**, then look among its AU instruments for **BadPackets: Arcade Ruins**
@@ -87,6 +87,11 @@ has been tested in Logic Pro; other hosts are untested. Please report problems, 
 **The Neon Ruins skin**, over the same layout: one neon colour per section, drawn entirely in code.
 
 ![The Neon Ruins skin](docs/screenshots/neon-ruins-skin.png)
+
+**The Cabinet skin**: the same controls and colours over a painted arcade cabinet — the frames,
+titles, header and toolbar buttons are artwork, and the scope runs in the cabinet's screen.
+
+![The Cabinet skin](docs/screenshots/cabinet-skin.png)
 
 **The preset browser** drops down from the preset name — 695 factory presets in 13 banks plus your
 own, with search (⌘F), favourites, categories, notes and reordering. In Studio:
@@ -122,11 +127,12 @@ transpose, octave and the wheels).
 - **Plugin.** The same layout, at 1440×900 in the host's plugin window. Editors and the tunings
   panel open as overlays inside it.
 
-**Skins.** Settings (in the toolbar) ▸ Skin, or View ▸ Skin ▸ Studio | Neon Ruins, applied at the
+**Skins.** Settings (in the toolbar) ▸ Skin, or View ▸ Skin ▸ Studio | Neon Ruins | Cabinet, applied at the
 next launch. Settings is also how the **plugin** chooses its layout and skin, since it has no menu
 of its own. Studio is the dark-grey default; Neon Ruins is synthwave — one neon colour per section
 (orange, mint, pink, violet, gold, cyan), hot borders over worn near-black panels, glowing
-controls, a sunset and grid in the header, the preset lists on a CRT, and the wordmark lit. A skin changes only how things look: every control, size and shortcut is the same
+controls, a sunset and grid in the header, the preset lists on a CRT, and the wordmark lit. Cabinet (0.4.0) puts Neon Ruins' controls over a painted window: it is the one skin that
+places the sections, in the painting's frames, and draws three of them a size smaller to fit. A skin changes only how things look: every control, size and shortcut is the same
 under each. From a terminal:
 
 ```bash
@@ -205,7 +211,7 @@ there as a numbered ADR, including the ones that were wrong first.
 - **Rebranded.** All AudioKit wordmarks and logo artwork have been replaced.
 - **A desktop layout.** 0.1.0 preserved the iPad layout exactly. 0.2.0 re-homes the same controls
   into a layout for a Mac window — everything visible, a preset browser that drops down from the
-  toolbar, no on-screen keyboard — and keeps the classic layout behind a switch. 0.3.0 adds skins.
+  toolbar, no on-screen keyboard — and keeps the classic layout behind a switch. 0.3.0 adds skins; 0.4.0 adds the Cabinet skin.
 
 ## Licence
 

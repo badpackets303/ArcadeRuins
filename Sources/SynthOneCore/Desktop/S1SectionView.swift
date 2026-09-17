@@ -35,6 +35,14 @@ final class S1SectionView: UIView {
     private func applyAccent() {
         guard let accent else { return }
         let dress = S1Skins.current.dress
+        defer {
+            if dress.litFromAccent {
+                for case let button as UIButton in headerAccessories.arrangedSubviews where button.layer.borderWidth > 0 {
+                    button.layer.borderColor = accent.cgColor
+                }
+            }
+        }
+        if dress.bareSections { return }   // P7-9: the template has the frame and the title
         gradient.borderColor = accent.cgColor
         rim.borderColor = accent.mixed(with: .white, 0.45).withAlphaComponent(0.5).cgColor
         layer.shadowColor = accent.cgColor
@@ -44,11 +52,6 @@ final class S1SectionView: UIView {
         titleLabel.layer.shadowOpacity = 0.9
         titleLabel.layer.shadowRadius = 4
         titleLabel.layer.shadowOffset = .zero
-        if dress.litFromAccent {
-            for case let button as UIButton in headerAccessories.arrangedSubviews where button.layer.borderWidth > 0 {
-                button.layer.borderColor = accent.cgColor
-            }
-        }
     }
     private let header = S1GradientView(top: S1DesktopTheme.sectionHeaderTop,
                                         bottom: S1DesktopTheme.sectionHeaderBottom,
@@ -127,6 +130,18 @@ final class S1SectionView: UIView {
         headerAccessories.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(headerAccessories)
 
+        if dress.bareSections {
+            // P7-9 (ADR-059): the painting carries the frame, the strip and the title. The
+            // label stays for VoiceOver and the tests; it is only not seen.
+            for sublayer in [gradient, bloom, rim] { sublayer.isHidden = true }
+            layer.shadowOpacity = 0
+            texture.isHidden = true
+            header.alpha = 1
+            header.setColours(top: .clear, bottom: .clear)
+            header.setHairline(.clear)
+            titleLabel.alpha = 0
+        }
+
         body.axis = .horizontal
         body.alignment = .center
         body.distribution = .equalCentering
@@ -140,7 +155,7 @@ final class S1SectionView: UIView {
             header.topAnchor.constraint(equalTo: topAnchor),
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
-            header.heightAnchor.constraint(equalToConstant: S1DesktopTheme.sectionHeaderHeight),
+            header.heightAnchor.constraint(equalToConstant: dress.sectionHeaderHeight),
 
             titleLabel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 10),
             titleLabel.centerYAnchor.constraint(equalTo: header.centerYAnchor),

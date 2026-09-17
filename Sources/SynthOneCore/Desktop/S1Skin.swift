@@ -29,6 +29,7 @@ public enum S1SkinChoice: String, CaseIterable {
 
     case studio
     case neonRuins
+    case cabinet
 
     public static let defaultsKey = "S1Skin"
 
@@ -46,6 +47,7 @@ public enum S1SkinChoice: String, CaseIterable {
         switch self {
         case .studio: return NSLocalizedString("Studio", comment: "Skin name")
         case .neonRuins: return NSLocalizedString("Neon Ruins", comment: "Skin name")
+        case .cabinet: return NSLocalizedString("Cabinet", comment: "Skin name")
         }
     }
 
@@ -53,6 +55,7 @@ public enum S1SkinChoice: String, CaseIterable {
         switch self {
         case .studio: return S1StudioSkin()
         case .neonRuins: return S1NeonRuinsSkin()
+        case .cabinet: return S1CabinetSkin()
         }
     }
 }
@@ -162,6 +165,11 @@ struct S1SkinDress {
     var litFromAccent = false
     /// The wordmark's frame in the toolbar. 120×26 is the layout's own; a skin may ask for more.
     var wordmarkSize = CGSize(width: 120, height: 26)
+    /// P7-9 (ADR-059): a section draws nothing of its own — no fill, border, glow, texture or
+    /// title — because the skin's template has the frame and the title painted in.
+    var bareSections = false
+    /// The header strip's height; the template's strips are taller than the layout's.
+    var sectionHeaderHeight: CGFloat = S1DesktopTheme.sectionHeaderHeight
 }
 
 protocol S1Skin: AnyObject {
@@ -178,6 +186,9 @@ protocol S1Skin: AnyObject {
 
     /// Art behind the whole window, under the toolbar, rows and bars, or nil.
     func makeBackdropArt() -> UIView?
+
+    /// P7-9 (ADR-059): a painted window the layout places its sections and toolbar over, or nil.
+    var template: S1SkinTemplate? { get }
 
     /// Multiplies every glow's blur; 1 is the Studio glow.
     var glow: CGFloat { get }
@@ -205,6 +216,7 @@ extension S1Skin {
     var dress: S1SkinDress { S1SkinDress() }
     func sectionAccent(for key: String) -> UIColor? { nil }
     func makeBackdropArt() -> UIView? { nil }
+    var template: S1SkinTemplate? { nil }
 }
 
 // MARK: - Studio: the 0.2.0 look
@@ -402,5 +414,95 @@ final class S1NeonRuinsSkin: S1Skin {
         thumbOff: UIColor(hex: 0x6a5a80),
         thumbOn: .white,
         plotBorder: S1NeonRuinsSkin.cyan
+    )
+}
+
+// MARK: - Cabinet: the owner's painted window (P7-9, ADR-059)
+
+/// Where a painted window keeps each thing, in the painting's own pixels. The layout pins its
+/// sections and toolbar controls to these, as fractions of the canvas, so the window stays fluid.
+struct S1SkinTemplate {
+    let imageName: String
+    let size: CGSize
+    /// By the section keys `S1DesktopLayout.sections` uses.
+    let sections: [String: CGRect]
+    let presetField: CGRect
+    let previous: CGRect
+    let next: CGRect
+    let dice: CGPoint
+    let wordmark: CGRect
+    let scope: CGRect
+    let save: CGRect
+    let record: CGRect
+    let panic: CGRect
+    let settings: CGRect
+    let presets: CGRect
+    let playBar: CGRect
+    let statusBar: CGRect
+}
+
+private func rect(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
+    CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
+}
+
+/// Neon Ruins' colours and drawing over the owner's artwork (2026-09-17): the frames, titles,
+/// header and cabinet are the painting's; the controls are the layout's.
+final class S1CabinetSkin: S1Skin {
+
+    private let neon = S1NeonRuinsSkin()
+
+    let choice = S1SkinChoice.cabinet
+    let glow: CGFloat = 3
+    let sectionTexture: UIImage? = nil
+    var sectionGlow: UIColor? { nil }
+    var frameAccent: UIColor? { neon.frameAccent }
+    func makeWordmark() -> UIView? { nil }
+    func makeToolbarArt() -> UIView? { nil }
+    func makePanelArt() -> UIView? { S1NeonRuinsPanelArt() }
+    func sectionAccent(for key: String) -> UIColor? { neon.sectionAccent(for: key) }
+    var palette: S1Palette { neon.palette }
+
+    let dress: S1SkinDress = {
+        var dress = S1NeonRuinsSkin().dress
+        dress.sectionBloom = false
+        dress.bareSections = true
+        dress.sectionHeaderHeight = 30
+        return dress
+    }()
+
+    /// Measured on `Scripts/branding/source/ar-template.png`: each frame's inner edge.
+    let template: S1SkinTemplate? = S1SkinTemplate(
+        imageName: "s1_template_cabinet",
+        size: CGSize(width: 1_585, height: 992),
+        sections: [
+            "OSC 1": rect(248, 118, 423, 286),
+            "OSC 2": rect(438, 118, 627, 286),
+            "Mix": rect(643, 118, 1_121, 286),
+            "Filter": rect(1_135, 118, 1_407, 286),
+            "Voice": rect(1_423, 118, 1_555, 286),
+            "Filter Envelope": rect(235, 300, 640, 480),
+            "Amplitude Envelope": rect(655, 300, 1_097, 480),
+            "LFO & Mod Targets": rect(1_112, 300, 1_555, 487),
+            "Reverb": rect(235, 495, 485, 656),
+            "Delay": rect(500, 495, 780, 656),
+            "Phaser": rect(794, 495, 1_081, 656),
+            "Bitcrusher": rect(1_094, 503, 1_357, 656),
+            "Master": rect(1_373, 505, 1_555, 656),
+            "Sequencer": rect(236, 670, 1_189, 929),
+            "Pads": rect(1_205, 672, 1_554, 931)
+        ],
+        presetField: rect(572, 26, 868, 68),
+        previous: rect(534, 28, 572, 66),
+        next: rect(898, 28, 936, 66),
+        dice: CGPoint(x: 882, y: 47),
+        wordmark: rect(50, 10, 432, 60),
+        scope: rect(34, 112, 210, 272),
+        save: rect(1_147, 64, 1_232, 100),
+        record: rect(1_238, 64, 1_319, 100),
+        panic: rect(1_324, 64, 1_393, 100),
+        settings: rect(1_397, 64, 1_474, 100),
+        presets: rect(1_478, 64, 1_558, 100),
+        playBar: rect(6, 950, 990, 992),
+        statusBar: rect(1_000, 950, 1_578, 992)
     )
 }

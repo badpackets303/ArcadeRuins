@@ -35,6 +35,9 @@ final class S1DesktopLayout: NSObject {
     let editor = UIStackView()
     let playBar = S1GradientView(top: S1DesktopTheme.playBarTop, bottom: S1DesktopTheme.playBarBottom)
     let statusBar = UIView()
+    let statusDivider = UIView()
+    /// P7-9 (ADR-059): the painted window and the canvas the template's rectangles are fractions of.
+    var templateCanvas: UIView?
 
     /// The controls moved out of each panel, so MIDI learn can still find them.
     private var movedControls: [ObjectIdentifier: [UIView]] = [:]
@@ -186,7 +189,6 @@ final class S1DesktopLayout: NSObject {
         editor.layoutMargins = UIEdgeInsets(top: S1DesktopTheme.editorPadding, left: S1DesktopTheme.editorPadding,
                                             bottom: S1DesktopTheme.editorPadding, right: S1DesktopTheme.editorPadding)
 
-        let statusDivider = UIView()
         statusDivider.backgroundColor = S1DesktopTheme.sectionBorder
         statusDivider.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(statusDivider)
@@ -222,6 +224,7 @@ final class S1DesktopLayout: NSObject {
         buildRows()
         buildPlayBar()
         buildStatusBar()
+        if let template = skin.template { applyTemplate(template) }   // P7-9
         buildPresetPanel()   // last: it floats over the rows
     }
 
@@ -232,7 +235,7 @@ final class S1DesktopLayout: NSObject {
 
     // MARK: - Toolbar
 
-    private var header: HeaderViewController? {
+    var header: HeaderViewController? {
         manager.children.first { $0 is HeaderViewController } as? HeaderViewController
     }
 
@@ -435,7 +438,9 @@ final class S1DesktopLayout: NSObject {
             presetBackdrop.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             presetBackdrop.bottomAnchor.constraint(equalTo: root.bottomAnchor),
 
-            presetPanel.topAnchor.constraint(equalTo: toolbar.bottomAnchor, constant: 4),
+            // P7-9: a template's header is taller than the toolbar, so the card hangs from the name itself
+            presetPanel.topAnchor.constraint(equalTo: skin.template == nil ? toolbar.bottomAnchor : presetField.bottomAnchor,
+                                             constant: skin.template == nil ? 4 : 10),
             presetPanel.centerXAnchor.constraint(equalTo: presetField.centerXAnchor),
             presetPanel.widthAnchor.constraint(equalToConstant: S1DesktopTheme.presetPanelWidth),
             height,

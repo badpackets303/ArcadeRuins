@@ -233,7 +233,8 @@ final class SkinTests: XCTestCase {
     func testEverySkinLaysOutEverySectionInTheSamePlace() throws {
         let (_, studio) = try makeDesktop(skin: S1StudioSkin())
         let studioFrames = studio.sections.mapValues { $0.convert($0.bounds, to: nil) }
-        for choice in S1SkinChoice.allCases where choice != .studio {
+        // P7-9 (ADR-059): a skin with a template places the sections itself; its own test follows
+        for choice in S1SkinChoice.allCases where choice != .studio && choice.makeSkin().template == nil {
             let (_, other) = try makeDesktop(skin: choice.makeSkin())
             XCTAssertEqual(Set(other.sections.keys), Set(studioFrames.keys), "\(choice)")
             for (name, section) in other.sections {
@@ -271,10 +272,56 @@ final class SkinTests: XCTestCase {
     }
 
     func testTheChoiceListsNeonRuinsAndRoundTripsIt() {
-        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .neonRuins], "Arcade was dropped at P7-7")
+        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .neonRuins, .cabinet], "Arcade was dropped at P7-7; Cabinet came at P7-9")
         S1SkinChoice.choose(.neonRuins)
         XCTAssertEqual(S1SkinChoice.chosen, .neonRuins)
         XCTAssertEqual(S1SkinChoice.neonRuins.makeSkin().choice, .neonRuins)
         XCTAssertEqual(S1SkinChoice.neonRuins.rawValue, "neonRuins", "the launch argument and the default's value")
+    }
+
+    // MARK: - Cabinet: the owner's painted window (P7-9, ADR-059)
+
+    func testCabinetPinsEverySectionToItsPaintedFrameAndKeepsEveryControl() throws {
+        let (_, studio) = try makeDesktop(skin: S1StudioSkin())
+        let studioKnobs = studio.sections.mapValues { views(of: Knob.self, under: $0).count }
+
+        let skin = S1CabinetSkin()
+        let template = try XCTUnwrap(skin.template)
+        XCTAssertNotNil(UIImage.synthOne(template.imageName), "the painting is an asset, generated from the owner's template")
+        let (manager, layout) = try makeDesktop(skin: skin)
+        let canvas = try XCTUnwrap(layout.templateCanvas)
+        XCTAssertEqual(canvas.frame, manager.view.bounds)
+        XCTAssertEqual(Set(template.sections.keys), Set(layout.sections.keys), "a frame for every section, and no other")
+
+        let scale = CGPoint(x: canvas.bounds.width / template.size.width, y: canvas.bounds.height / template.size.height)
+        for (name, section) in layout.sections {
+            let painted = try XCTUnwrap(template.sections[name])
+            let frame = section.convert(section.bounds, to: canvas)
+            XCTAssertEqual(frame.minX, painted.minX * scale.x, accuracy: 1, name)
+            XCTAssertEqual(frame.minY, painted.minY * scale.y, accuracy: 1, name)
+            XCTAssertEqual(frame.width, painted.width * scale.x, accuracy: 1, name)
+            XCTAssertEqual(frame.height, painted.height * scale.y, accuracy: 1, name)
+            XCTAssertEqual(views(of: Knob.self, under: section).count, studioKnobs[name], "\(name) keeps its knobs")
+            XCTAssertEqual(section.titleLabel.alpha, 0, "the title is the painting's")
+            // Nothing a section holds may be squeezed out of its painted frame
+            for knob in views(of: Knob.self, under: section) {
+                XCTAssertTrue(section.bounds.insetBy(dx: -0.5, dy: -0.5).contains(knob.convert(knob.bounds, to: section)), "\(name)")
+                XCTAssertGreaterThan(knob.bounds.width, 20, name)
+            }
+        }
+        XCTAssertTrue(layout.toolbar.isHidden)
+        XCTAssertTrue(layout.editor.isHidden)
+        XCTAssertTrue(layout.presetField.isDescendant(of: canvas), "the preset name sits in the painted display")
+        let labels = Set(views(of: S1ActionButton.self, under: canvas).compactMap(\.accessibilityLabel))
+        XCTAssertTrue(labels.isSuperset(of: ["Save", "Panic", "Settings", "Presets", "Previous preset", "Next preset", "About Arcade Ruins"]))
+    }
+
+    func testTheCabinetPresetsButtonDropsTheBrowser() throws {
+        let (_, layout) = try makeDesktop(skin: S1CabinetSkin())
+        let canvas = try XCTUnwrap(layout.templateCanvas)
+        let presets = try XCTUnwrap(views(of: S1ActionButton.self, under: canvas).first { $0.accessibilityLabel == "Presets" && $0 !== layout.presetFieldButton })
+        XCTAssertFalse(layout.isPresetPanelVisible)
+        presets.action?()
+        XCTAssertTrue(layout.isPresetPanelVisible)
     }
 }
