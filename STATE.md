@@ -276,21 +276,23 @@ from here and one was wrong. It is one letter of one caption and **does not bloc
 move ahead."** Recorded as their judgement of the interface, not as a fix: nothing changed between
 the two looks, and the resize experiment was not run. ADR-096 stands as it is.
 
-**X4-5, 2026-09-22 on the owner's word: the source and the tag are PUBLIC, the release is a
-DRAFT waiting on one file.** `badpackets303/ArcadeRuins` `main` at `409bb8c` and tag **`v1.0.0`**
-are pushed; the release page carries the macOS `.pkg` and both Linux tarballs and **is not
-published**, because **`ArcadeRuins-1.0.0-Windows-x64.exe` exists only on the owner's Windows
-machine** — it is built there and was never copied here. Publishing without it would leave the
-README's Windows link dead, so the draft waits. The owner uploads it (drag it onto the draft on
-GitHub, or `gh release upload v1.0.0 <path> --repo badpackets303/ArcadeRuins`) and publishes.
-Its SHA-256 is already in the notes: `bfd06a04…`. **The README on `main` already links to all
-four downloads, so those links 404 until the draft is published.** **X4-3, the host matrix, is as done as it can be here** — the owner, 2026-09-22:
-*"I tested the plug-in in Logic - no major issues. I do not have access to other DAW's, so will
-have to ask users to try it."* So **Logic Pro is tried by hand and no other host has been
-opened**, and that is stated plainly in the README, the release notes and the release page rather
-than left as an implication — with a request for reports, since that is the only way the list
-grows. The plan's committed table (load, play, automate, save/reload, resize per host) is not
-written: there would be one row.
+**X4-5 DONE — Arcade Ruins 1.0.0 IS PUBLISHED, 2026-09-22 15:40 UTC, on the owner's word
+("publish"):** <https://github.com/badpackets303/ArcadeRuins/releases/tag/v1.0.0>, four assets,
+not a pre-release. Public `main` at `703f44e`, tag `v1.0.0`. **Verified from GitHub's side, not
+just from disk:** every asset downloaded back anonymously — all four SHA-256 match the notes
+(including the owner's own Windows upload, so nothing was corrupted in transit), the `.pkg` still
+answers `accepted / source=Notarized Developer ID` with its ticket stapled *as a downloader
+receives it*, the `.exe` is a real PE installer and the tarballs carry their `install.sh`. All
+four README links return 200 to a stranger.
+
+**Permanent from this moment** (ADR-093): the AU's `aumu`/`ArRu`/`BP03` and the VST3 class IDs
+`ABCDEF019182FAEB4250303341725275` / `ABCDEF011234ABCD4250303341725275`. Changing any of them now
+orphans the plugin in every session that ever loaded it. Classic's `ruin` is untouched.
+
+**Shipped with three things stated rather than hidden** — the Windows installer is unsigned
+(ADR-097), the Intel half of the universal build is untested (ADR-095), and one Windows knob
+caption can lose its last letter (ADR-096, cause found to be below this project: the arrangement
+reaching the renderer is whole). All three are in the release notes and the README.
 
 **EVERY DECISION IS SETTLED.**
 ~~one public repository or two~~ — **ONE** (ADR-098, 2026-09-22, overturning ADR-092's clause 3
