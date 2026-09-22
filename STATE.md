@@ -276,10 +276,21 @@ from here and one was wrong. It is one letter of one caption and **does not bloc
 move ahead."** Recorded as their judgement of the interface, not as a fix: nothing changed between
 the two looks, and the resize experiment was not run. ADR-096 stands as it is.
 
-**X4-5 RELEASED 2026-09-22 on the owner's word.** Tagged `v1.0.0`. **X4-3, the host matrix, was
-NOT done** — the plugin has never been confirmed loading in a DAW by hand; what stands in its
-place is Apple's `auval`, pluginval at strictness 10 and Steinberg's validator on three systems,
-and the owner's own use of it (which is how ADR-099 and ADR-096 were found).
+**X4-5, 2026-09-22 on the owner's word: the source and the tag are PUBLIC, the release is a
+DRAFT waiting on one file.** `badpackets303/ArcadeRuins` `main` at `409bb8c` and tag **`v1.0.0`**
+are pushed; the release page carries the macOS `.pkg` and both Linux tarballs and **is not
+published**, because **`ArcadeRuins-1.0.0-Windows-x64.exe` exists only on the owner's Windows
+machine** — it is built there and was never copied here. Publishing without it would leave the
+README's Windows link dead, so the draft waits. The owner uploads it (drag it onto the draft on
+GitHub, or `gh release upload v1.0.0 <path> --repo badpackets303/ArcadeRuins`) and publishes.
+Its SHA-256 is already in the notes: `bfd06a04…`. **The README on `main` already links to all
+four downloads, so those links 404 until the draft is published.** **X4-3, the host matrix, is as done as it can be here** — the owner, 2026-09-22:
+*"I tested the plug-in in Logic - no major issues. I do not have access to other DAW's, so will
+have to ask users to try it."* So **Logic Pro is tried by hand and no other host has been
+opened**, and that is stated plainly in the README, the release notes and the release page rather
+than left as an implication — with a request for reports, since that is the only way the list
+grows. The plan's committed table (load, play, automate, save/reload, resize per host) is not
+written: there would be one row.
 
 **EVERY DECISION IS SETTLED.**
 ~~one public repository or two~~ — **ONE** (ADR-098, 2026-09-22, overturning ADR-092's clause 3

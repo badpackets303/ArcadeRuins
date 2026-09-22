@@ -41,7 +41,7 @@ and its on-screen keyboard, as its designers drew them.
 | **Voices** | 6-voice polyphonic, or monophonic with glide |
 | **Parameters** | 150, all host-automatable |
 | **Presets** | 695 across 13 banks, offered to hosts as factory presets |
-| **Hosts** | any VST3 or Audio Unit host: Logic Pro, GarageBand, Live, Reaper, Bitwig, Cubase, FL Studio… |
+| **Hosts** | any VST3 or Audio Unit host. **Tried by hand in Logic Pro**; Live, Reaper, Bitwig, Cubase, FL Studio and the rest are unverified — [reports welcome](https://github.com/badpackets303/ArcadeRuins/issues) |
 
 Two morphing band-limited oscillators plus a sub and FM, a resonant multi-mode filter, a 16-step
 sequencer and arpeggiator, delay/reverb/chorus/phaser/bitcrush/autopan, and an unusually complete
@@ -75,6 +75,12 @@ This is a personal project, shared for testing. It is not on the App Store.
 Every one carries its SHA-256 on the [release page](https://github.com/badpackets303/ArcadeRuins/releases/tag/v1.0.0),
 and every one leaves your presets alone when it is uninstalled. It also
 [builds from source](#building) in a few minutes.
+
+**Which hosts have been tried:** 1.0.0 was used by hand in **Logic Pro** on macOS, and validated
+everywhere with Apple's `auval`, pluginval at strictness 10 and Steinberg's own VST3 validator —
+which load, render and automate a plugin, but are not a DAW. **No other host has been opened.**
+If you use one, [say how it went](https://github.com/badpackets303/ArcadeRuins/issues); that is
+the only way this list grows.
 
 *Version 1.0.0 — its own number; Classic keeps the 0.x line. On an Intel Mac the build is signed
 and universal but has not been tested on one.*

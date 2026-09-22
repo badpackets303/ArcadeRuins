@@ -36,7 +36,9 @@ and MSVC, where the arithmetic differs in its last digit.
   SHA-256 published with the release is the check. The macOS package is signed and notarised.
 
 Checked with Steinberg's VST3 validator (537 of 537), pluginval at strictness 10, Apple's `auval`,
-and a RealtimeSanitizer build that proves nothing allocates on the audio thread.
+and a RealtimeSanitizer build that proves nothing allocates on the audio thread. **Used by hand in
+Logic Pro; no other host has been opened** — the owner has none to open, so that list grows only
+from what people report.
 
 ## Arcade Ruins Classic 0.5.x — unreleased
 
