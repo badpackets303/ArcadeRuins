@@ -1,28 +1,47 @@
 # Arcade Ruins
 
-A polyphonic synthesizer for macOS — standalone app and AUv3 instrument plugin.
+A polyphonic synthesizer — a plugin and a standalone instrument for **Windows, macOS and Linux**.
 
-**Arcade Ruins is an unofficial macOS port of [AudioKit Synth One](https://github.com/AudioKit/AudioKitSynthOne),**
+**Arcade Ruins is an unofficial port of [AudioKit Synth One](https://github.com/AudioKit/AudioKitSynthOne),**
 which was released for iOS and iPadOS under the MIT licence and archived in 2022. It is not
 affiliated with, authorised by, or endorsed by AudioKit or AudioKit Pro, LLC. See
 [NOTICE.md](NOTICE.md) for full attribution.
 
 Synth One was a genuinely good instrument that stopped where iOS stopped. This project takes the
-DSP, the interface and the sounds to the Mac, and makes them available inside a DAW.
+DSP, the interface and the sounds to the desktop, and makes them available inside a DAW.
+
+![Arcade Ruins, the Cabinet skin](docs/screenshots/plugin-cabinet.png)
 
 ---
+
+## Two products, one instrument
+
+| | **Arcade Ruins** | **Arcade Ruins Classic** |
+|---|---|---|
+| **Runs on** | Windows 10+, macOS 11+, Linux (glibc 2.35+) | macOS 11+ |
+| **Plugin** | VST3 everywhere · Audio Unit on macOS (`aumu` / `ArRu` / `BP03`) | AUv3 (`aumu` / `ruin` / `BP03`) |
+| **Standalone** | yes, on all three | yes — a Mac Catalyst app |
+| **Interface** | the desktop layout, in the Cabinet and Studio skins; the window scales 75–150% | **Synth One's own iPad interface**, and the desktop layout behind a switch |
+| **Built with** | [JUCE](https://juce.com) 9 and CMake | UIKit (Mac Catalyst) and Xcode |
+| **Where** | [`Sources/S1Plugin`](Sources/S1Plugin) | [`Sources/SynthOne`](Sources/SynthOne), [`Sources/SynthOneAU`](Sources/SynthOneAU), [`Sources/SynthOneCore`](Sources/SynthOneCore) |
+
+They are the same instrument: **one engine** ([`Sources/S1Engine`](Sources/S1Engine), portable C++
+with no Apple or JUCE code in it) is compiled into both, with the same 150 parameters and the same
+695 factory presets, and twenty of those presets are rendered and compared in the tests of both —
+bit for bit on Apple silicon. A preset bank exported from Classic opens in Arcade Ruins. On a Mac
+the two install side by side, and a DAW lists them under their own names.
+
+Classic exists because the iPad interface is worth keeping: twelve panels, Synth One's own knobs
+and its on-screen keyboard, as its designers drew them.
 
 ## What it is
 
 | | |
 |---|---|
-| **Standalone** | Mac Catalyst app |
-| **Plugin** | AUv3 instrument — `aumu` / `ruin` / `BP03` |
-| **Hosts** | Logic Pro, GarageBand, Live, Reaper, Bitwig |
 | **Voices** | 6-voice polyphonic, or monophonic with glide |
 | **Parameters** | 150, all host-automatable |
 | **Presets** | 695 across 13 banks, offered to hosts as factory presets |
-| **Requires** | macOS 11 or later, Apple silicon or Intel |
+| **Hosts** | any VST3 or Audio Unit host: Logic Pro, GarageBand, Live, Reaper, Bitwig, Cubase, FL Studio… |
 
 Two morphing band-limited oscillators plus a sub and FM, a resonant multi-mode filter, a 16-step
 sequencer and arpeggiator, delay/reverb/chorus/phaser/bitcrush/autopan, and an unusually complete
@@ -33,16 +52,43 @@ In a plugin, the arpeggiator and sequencer follow the host's tempo and transport
 
 ## Status
 
-Version 0.5.0. The plugin loads, validates, renders, saves its state into a host session and
-responds to automation; the standalone runs; both have a layout designed for a Mac window rather
-than an iPad screen. See [STATE.md](STATE.md) for live status, [PORT_PLAN.md](PORT_PLAN.md) for the
-task board and [docs/release-notes.md](docs/release-notes.md) for what changed in each version.
+**Arcade Ruins 1.0.0** (cross-platform): complete and validated — Steinberg's VST3 validator, pluginval at
+strictness 10, Apple's `auval`, and a RealtimeSanitizer build, on macOS, Linux and Windows — and
+**being packaged for its first release**. There is no download yet.
+**Arcade Ruins Classic**: version 0.5.0 is released, below.
+
+See [STATE.md](STATE.md) for live status, [PORT_PLAN.md](PORT_PLAN.md) for the task board and
+[docs/release-notes.md](docs/release-notes.md) for what changed in each version.
 
 This is a personal project, shared for testing. It is not on the App Store.
 
 ## Download and install
 
-### [⬇ Download Arcade Ruins 0.5.0 for macOS](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.5.0-macOS.zip)
+### Arcade Ruins — Windows, macOS, Linux
+
+Not released yet. When it is, the [Releases](https://github.com/badpackets303/ArcadeRuins/releases)
+page will carry an installer for macOS (the VST3, the Audio Unit and the standalone, each a choice;
+signed and notarised), an installer for Windows (the VST3 and the standalone), and a tarball for
+Linux with an `install.sh` that needs no root — each with its SHA-256. Every one leaves your
+presets alone when it is uninstalled. Until then it [builds from source](#building) in a few minutes.
+
+*Version 1.0.0 — its own number; Classic keeps the 0.x line. On an Intel Mac the build is signed
+and universal but has not been tested on one.*
+
+**On Windows the installer is not signed** (a certificate that would silence it costs several
+hundred a year, which this project does not spend). Windows will show **"Windows protected your
+PC"**, whose default button is *Don't run*: choose **More info → Run anyway**, and expect the
+permission prompt to say *unknown publisher*. Check the published SHA-256 against your download if
+you would rather be sure. The macOS package is signed and notarised and installs without any of
+this.
+
+### Arcade Ruins Classic — macOS
+
+#### [⬇ Download Arcade Ruins Classic 0.5.0 for macOS](https://github.com/badpackets303/ArcadeRuins/releases/download/v0.5.0/ArcadeRuins-0.5.0-macOS.zip)
+
+*(0.5.0 was released before the name "Classic": it appears as **Arcade Ruins** in the Dock and in
+a DAW. The next release carries the new name; sessions keep working, because a host finds the
+plugin by its code, which has not changed.)*
 
 **That one download is both products** — the standalone app *and* the AUv3 plugin:
 
@@ -58,7 +104,7 @@ Signed with Developer ID and notarised by Apple. macOS 11 or later; universal, A
 Intel. Every version is on the [Releases](https://github.com/badpackets303/ArcadeRuins/releases) page.
 
 1. Download and unzip
-   [`ArcadeRuins-0.5.0-macOS.zip`](https://github.com/badpackets303/ArcadeRuins/releases/latest/download/ArcadeRuins-0.5.0-macOS.zip).
+   [`ArcadeRuins-0.5.0-macOS.zip`](https://github.com/badpackets303/ArcadeRuins/releases/download/v0.5.0/ArcadeRuins-0.5.0-macOS.zip).
 2. Move **ArcadeRuins.app** to your **Applications** folder. The plugin is only registered from there.
 3. **Open it once.** That registers the plugin with macOS. It opens without a Gatekeeper warning.
 4. **Quit and reopen your DAW**, then look among its AU instruments for **BadPackets: Arcade Ruins**
@@ -74,6 +120,34 @@ has been tested in Logic Pro; other hosts are untested. Please report problems, 
 [Issues](https://github.com/badpackets303/ArcadeRuins/issues).
 
 ## Screenshots
+
+### Arcade Ruins
+
+**Studio**, the plain skin — the same layout, and the same controls:
+
+![Arcade Ruins, the Studio skin](docs/screenshots/plugin-studio.png)
+
+**The preset browser** drops down from the preset name — 695 factory presets in 13 banks plus your
+own, with search, favourites, categories, notes and reordering:
+
+![The preset browser](docs/screenshots/plugin-presets.png)
+
+**The keyboard drawer** (⌘K, or Ctrl+K) — hold, octave, the wheels, and musical typing on the
+computer's keys:
+
+![The keyboard drawer](docs/screenshots/plugin-keyboard.png)
+
+**On Windows**, the standalone — captured from a real machine:
+
+![Arcade Ruins on Windows](docs/screenshots/plugin-windows.png)
+
+**On Linux**, drawn by the same code in Barlow Condensed (the typeface it carries for systems
+without Avenir Next Condensed). *This and the macOS pictures above are rendered by the plugin's own
+snapshot tool rather than captured from a DAW.*
+
+![Arcade Ruins on Linux](docs/screenshots/plugin-cabinet-linux.png)
+
+### Arcade Ruins Classic
 
 **The classic interface**, Synth One's own iPad layout, is what a fresh install opens with. Settings
 ▸ Layout switches to the desktop one, and back.
@@ -103,11 +177,14 @@ and in Cabinet, where the lists and the XY pads are framed as screens:
 
 ![Layout and skin in Settings](docs/screenshots/settings-pickers.png)
 
-The plugin in Logic Pro (this capture is from 0.1.0 and shows the classic layout):
+Classic in Logic Pro (this capture is from 0.1.0):
 
-![Arcade Ruins as an AUv3 instrument in Logic Pro](docs/screenshots/logic-plugin.png)
+![Arcade Ruins Classic as an AUv3 instrument in Logic Pro](docs/screenshots/logic-plugin.png)
 
-## The interface
+## The interface (Classic)
+
+Arcade Ruins has the desktop layout below and both skins, with three differences: the skin changes
+at once, the window scales, and the keyboard is a drawer rather than gone. It has no classic layout.
 
 **Desktop layout** (Settings ▸ Layout ▸ Desktop). One screen, no tabs: oscillators, mix, filter and voice
 across the top; the two envelopes and the LFOs; the effects and master; the arpeggiator/sequencer
@@ -148,6 +225,28 @@ The two layouts share every control, binding and preset: nothing is lost by swit
 
 ## Building
 
+### Arcade Ruins (Windows, macOS, Linux)
+
+CMake 3.22 or later and a C++17 compiler — Xcode's Clang, GCC 11+, or Visual Studio 2022+. JUCE is
+fetched at a pinned commit when the build is configured; it is not in this repository. On Linux,
+JUCE's usual packages (`libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev
+libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev …` — [`Scripts/linux/Dockerfile.release`](Scripts/linux/Dockerfile.release)
+is the exact list).
+
+```bash
+cmake -S . -B build/plugin -DS1_BUILD_PLUGIN=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/plugin --config Release --parallel
+ctest --test-dir build/plugin -C Release        # the engine's tests, the golden renders, the plugin's
+```
+
+The products are under `build/plugin/Sources/S1Plugin/ArcadeRuins_artefacts/Release/` — `VST3/`,
+`Standalone/`, and on macOS `AU/`. [`Sources/S1Plugin/README.md`](Sources/S1Plugin/README.md) is
+the guide to that code; `Scripts/validate-plugin.sh`, `Scripts/validate-linux.sh` and
+`Scripts\validate-windows.ps1` run the validators, and `Scripts/release-plugin.sh`,
+`Scripts/release-linux.sh` and `Scripts\release-windows.ps1` build what is released.
+
+### Arcade Ruins Classic (macOS)
+
 Requires Xcode 26 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 (`brew install xcodegen`).
 
@@ -165,10 +264,10 @@ xcodebuild -project SynthOne.xcodeproj -scheme SynthOne \
     -destination 'platform=macOS,variant=Mac Catalyst' -derivedDataPath ./DerivedData test
 ```
 
-The suite includes golden renders of 20 shipped presets, so a change that alters the sound fails
+Both suites include golden renders of 20 shipped presets, so a change that alters the sound fails
 immediately rather than at the end of a phase.
 
-### Installing the plugin
+### Installing Classic's plugin
 
 macOS registers an AUv3 from the containing app, so the app has to live in `/Applications` — there
 is no `.component` file to copy. This installs it and validates it:
@@ -188,8 +287,10 @@ STATE.md       Live status and session log
 CLAUDE.md      Standing rules for the port
 docs/          Architecture, the ADR log, the API surface, build notes
 upstream/      AudioKitSynthOne @ 6466a37, read-only — fetched by Scripts/fetch-references.sh
-project.yml    XcodeGen spec — the source of truth for targets and build settings
-Sources/       Soundpipe · S1Support · SynthOneCore · SynthOne · SynthOneAU
+project.yml    XcodeGen spec — Classic's targets and build settings
+CMakeLists.txt The portable build — the engine and Arcade Ruins
+Sources/       S1Engine (the portable engine, in both) · S1Plugin (Arcade Ruins, JUCE)
+               Soundpipe · S1Support · SynthOneCore · SynthOne · SynthOneAU (Classic)
 Tests/ Scripts/
 ```
 
@@ -198,7 +299,9 @@ there as a numbered ADR, including the ones that were wrong first.
 
 ## How it differs from Synth One
 
-- **macOS, not iOS.** Mac Catalyst, at the Mac idiom's native 100% rather than the 77% an iPad app
+- **Windows, macOS and Linux, not iOS.** A VST3 everywhere, an Audio Unit on the Mac, a
+  standalone on all three, from one portable engine.
+- **Classic is Mac Catalyst,** at the Mac idiom's native 100% rather than the 77% an iPad app
   gets by default.
 - **An AUv3 plugin**, which upstream listed as a "major update we intend" and never shipped. The
   AU parameter tree, host tempo and transport, and session state are all new work — upstream's

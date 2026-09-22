@@ -13,7 +13,7 @@ import json
 import os
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import appicon
@@ -153,6 +153,30 @@ def fitted_logo(imageset, filename, size):
     return path, size
 
 
+# The JUCE plugin's wordmark (2026-09-21). The Mac's header uses `s1_logo`, a 196 x 28 box made for
+# the iPhone in which the letters are 13 pixels tall; stretched to the 240 pixels a Retina window
+# gives the wordmark's 120 points, their edges fall between pixels and the owner saw the text as
+# "misaligned". So the plugin gets the artwork cut at the sizes it is SHOWN at — 180 points (the
+# Mac's 120 and half as much again: "a little bigger … it looks tiny", the owner, the same day) at
+# 1x, 1.5x, 2x, 3x and 4x, each reduced from the source by Lanczos here — and draws the nearest one
+# above what it needs, because each platform's own resampler is a different one (ADR-089).
+PLUGIN_ART = os.path.join(ROOT, "Sources", "S1Plugin", "Art")
+PLUGIN_WORDMARK_POINTS = 180                   # = the specification's 120 x S1PluginEditor's kWordmarkScale
+PLUGIN_WORDMARK_WIDTHS = (180, 270, 360, 540, 720)
+
+
+def plugin_wordmarks():
+    os.makedirs(PLUGIN_ART, exist_ok=True)
+    mark = source_wordmark()
+    for stale in os.listdir(PLUGIN_ART):
+        if stale.startswith("wordmark-"): os.remove(os.path.join(PLUGIN_ART, stale))
+    for width in PLUGIN_WORDMARK_WIDTHS:
+        height = round(mark.size[1] * width / mark.size[0])
+        out = mark.convert("RGBa").resize((width, height), Image.LANCZOS).convert("RGBA")
+        out.save(os.path.join(PLUGIN_ART, "wordmark-%d.png" % width))
+    return os.path.join(PLUGIN_ART, "wordmark-*.png"), PLUGIN_WORDMARK_WIDTHS
+
+
 def feather_mask(w,h,f=5):
     m=Image.new('L',(w,h),0)
     ImageDraw.Draw(m).rectangle([f,f,w-f-1,h-f-1],fill=255)
@@ -182,6 +206,39 @@ def clean_template(im):
     bar=im.crop((1010,950,1560,992))
     im.paste(bar,(6,950)); im.paste(ImageOps.mirror(bar),(556,950),feather_mask(550,42,4))
     clone(im,(980,950,1106,992),(1300,950),8)
+    return im
+
+
+# The console without the buttons that did nothing (the owner, 2026-09-21). `source/cabinet-fix.jpg`
+# is THEIR repaint of the small cabinet — the three yellow buttons and the small red one gone, the
+# console's own texture in their place — at 4.154 times the painting's size. Where it sits was
+# measured, not judged: a search over scale and offset for the least difference from the painting
+# (mean 6 of 255 at the best fit, 8 a hundredth of the scale either side).
+CONSOLE_FIX_SCALE = 4.154
+CONSOLE_FIX_ORIGIN = (7.642, 624.537)          # the repaint's top-left corner, in the painting's pixels
+CONSOLE_FIX_BOX = (112, 834, 196, 886)         # where to look for what changed: the console above the red buttons
+
+
+def clear_console(im):
+    """Takes the four idle buttons off the console, from the owner's own repaint. ONLY where the
+    repaint differs from the painting is taken — the mask is that difference, grown a little and
+    feathered — so the two power buttons, the joystick and everything else stay the painting's
+    pixels. An inpaint was tried first and refused ("black spots are left"): this is artwork."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "cabinet-fix.jpg")
+    repaint = Image.open(path).convert("RGB")
+    x0, y0, x1, y1 = CONSOLE_FIX_BOX
+    w, h = x1 - x0, y1 - y0
+    s, (ox, oy) = CONSOLE_FIX_SCALE, CONSOLE_FIX_ORIGIN
+    # four times over, then reduced: a straight 4x reduction by bicubic would alias the speckle
+    patch = repaint.transform((w * 4, h * 4), Image.AFFINE, (s / 4, 0, (x0 - ox) * s, 0, s / 4, (y0 - oy) * s),
+                              Image.BICUBIC).resize((w, h), Image.LANCZOS)
+    changed = ImageChops.difference(patch, im.crop(CONSOLE_FIX_BOX)).convert("L").filter(ImageFilter.GaussianBlur(1.0))
+    mask = changed.point(lambda v: 255 if v > 38 else 0).filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.GaussianBlur(1.2))
+    # nothing at the box's own edge, so a stray difference there cannot leave a seam
+    edge = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(edge).rectangle([3, 3, w - 4, h - 4], fill=255)
+    mask = ImageChops.multiply(mask, edge.filter(ImageFilter.GaussianBlur(1.0)))
+    im.paste(patch, (x0, y0), mask)
     return im
 
 
@@ -283,7 +340,7 @@ def cabinet_template():
     source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "ar-template.png")
     original = Image.open(source).convert("RGB")
     print("%-52s %s" % cabinet_joystick(original))
-    image = lift_joystick(clean_template(original.copy()))
+    image = lift_joystick(clear_console(clean_template(original.copy())))
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     # P7-12 (ADR-062): the same window with the power out — grey, and dimmer
     dark = ImageOps.grayscale(image).point(lambda v: int(v * 0.62))
@@ -337,6 +394,7 @@ if __name__ == "__main__":
     print("%-52s %s" % fitted_logo("s1_logo.imageset", "s1_logo.png", (196, 28)))
     # P7-4 (ADR-048): the Neon Ruins skin's wordmark, a 220×24-point frame (@2x)
     print("%-52s %s" % cabinet_template())
+    print("%-52s %s" % plugin_wordmarks())
     for filename, pixels in app_icon():
         print(f"  SynthOneCore AppIcon.appiconset/{filename:22} {pixels}x{pixels}")
     path, pixels = icon_bundle_art()

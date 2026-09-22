@@ -1,9 +1,55 @@
 # Release notes
 
-Versions are `MARKETING_VERSION` in `project.yml`; both products carry the same number.
+There are two products since 2026-09-21. **Arcade Ruins** is the cross-platform instrument — VST3,
+Audio Unit and standalone, on Windows, macOS and Linux (its version is `project(… VERSION …)` in
+`CMakeLists.txt`). **Arcade Ruins Classic** is the Mac app and its AUv3, with Synth One's own iPad
+interface (`MARKETING_VERSION` in `project.yml`). Same engine, same 150 parameters, same presets.
 
-## Unreleased
+## Arcade Ruins 1.0.0 (Windows · macOS · Linux) — unreleased
 
+The first release of the cross-platform instrument. The sound is Classic's exactly: twenty factory
+presets render bit for bit the same on Apple Silicon, and within a measured tolerance under GCC
+and MSVC, where the arithmetic differs in its last digit.
+
+- **VST3 on Windows, macOS and Linux; an Audio Unit on macOS** (`aumu` / `ArRu` / `BP03`, beside
+  Classic's, not instead of it); **a standalone application on all three**.
+- **The desktop interface**, under both skins — Cabinet, the painted arcade cabinet, and Studio —
+  chosen in Settings and changed at once, without reopening. Classic's iPad layout is Classic's.
+- **The window scales**, from 75% to 150%, uniformly and sharply; a 1280 × 800 laptop shows the
+  whole interface. (Classic's desktop layout needs 1440 × 900.)
+- **The preset browser**: the 695 factory presets in 13 banks, your own banks as files, search,
+  favourites, categories, notes, reordering. A bank exported from Classic opens unchanged.
+- **Tunings**: the three tuning banks, Scala import, a preset's own scale, and a master A4 that works.
+- **A keyboard drawer** (⌘K / Ctrl+K) with hold, octave and the wheels, and musical typing on the
+  computer's keys. Notes played there take the same path as the host's MIDI.
+- **Every parameter automatable**, with sample-accurate events; tempo-synced rates keep their NOTE
+  VALUE when the host's tempo changes; the arpeggiator and sequencer follow the host's transport.
+- **The same render at every buffer size.** Classic's depends slightly on the host's block size
+  (as Synth One's did); this does not.
+- The XY pads throw small bright sparks that follow the touch.
+- Not in this release: MIDI learn, and a recorder (a host records).
+- **Intel Macs: built and signed, not heard.** The universal build carries both halves and the
+  Apple-silicon half is what has been tested; no Intel Mac was available. Please report anything
+  odd on one.
+- **Windows: the installer is not signed** (ADR-097). SmartScreen shows "Windows protected your
+  PC" — choose More info → Run anyway — and the permission prompt says *unknown publisher*. The
+  SHA-256 published with the release is the check. The macOS package is signed and notarised.
+
+Checked with Steinberg's VST3 validator (537 of 537), pluginval at strictness 10, Apple's `auval`,
+and a RealtimeSanitizer build that proves nothing allocates on the audio thread.
+
+## Arcade Ruins Classic 0.5.x — unreleased
+
+*Classic keeps its own version. 0.5.0 is released; these changes are for the next one.*
+
+
+- **Renamed "Arcade Ruins Classic"** (ADR-092), in the Dock, the Finder and a host's plugin list —
+  so that it and the cross-platform Arcade Ruins can be told apart. The name only: a session
+  that used the plugin still opens, because a host finds it by its code (`aumu` / `ruin` / `BP03`),
+  which did not change. 0.5.0 and earlier appear as "Arcade Ruins".
+- The Cabinet painting was retouched.
+- The Japanese and Turkish systems showed upstream's translated name for the app; they show
+  Arcade Ruins Classic now.
 - **Cabinet is the default skin** (ADR-064) for anyone who has not chosen one. A Studio choice stays.
 - **Plugin: the Cutoff knob follows the mod wheel exactly** (ADR-063). It trailed the wheel by one step,
   and on rare timing the wheel itself could be put back where it started. The standalone was

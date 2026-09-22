@@ -61,3 +61,22 @@ use, arp and sequencer, mono and legato, glide, detune, FM, sub, noise, bitcrush
 reverb, autopan and widen.
 
 The list lives in `GoldenRenderTests.goldens`. Adding to it is fine; changing an entry orphans a file.
+
+## Two readers (X1-7, ADR-071)
+
+`GoldenRenderTests` (Xcode) renders through `AKSynthOne`, `S1AudioUnit` and `AVAudioEngine`.
+`Tests/Engine/GoldenHarness.cpp` (CMake, three OSes) renders the same twenty through
+`Sources/S1Engine` alone, by the same recipe, and reads the same files — so **a golden rewritten
+for one is rewritten for both**, and the list of twenty lives in both (`kGoldens` there). On Apple
+Silicon the harness must reproduce every file bit for bit; elsewhere it has a measured tolerance.
+
+## What the goldens are a recording of (X2-3, ADR-074)
+
+A render in **512-frame buffers**, notes between buffers. Upstream's engine frees released voices
+once per buffer, so the same performance in other buffer sizes is different audio — for the
+arpeggiated presets here, very different (`GoldenHarness --block-size 64`: 16 of 20 within
+tolerance). These files are therefore the proof of the engine *as the Mac products run it*. The
+JUCE plugin frees voices every frame (`freeReleasedVoicesEveryFrame`), which equals upstream in
+one-frame buffers; `GoldenHarness --check-block-independence` proves that chain on all twenty.
+If the Mac products ever take the option too, 12 of these 20 files are rewritten — an owner's
+decision, recorded in ADR-074.

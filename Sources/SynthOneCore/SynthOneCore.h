@@ -12,5 +12,10 @@ FOUNDATION_EXPORT const unsigned char SynthOneCoreVersionString[];
 
 // P1-6: S1AudioUnit is the synth. It has to be in the umbrella for Swift to see
 // it at all — the headless render harness, and later AKSynthOne.swift (P2-1) and
-// the AUv3 view controller (P4-6). It drags in S1Parameter.h, hence AKInterop.h.
+// the AUv3 view controller (P4-6). X1-3: S1Parameter.h and S1EngineTypes.h are the engine's
+// public headers, imported here so the module knows them; AKInterop.h no longer rides in on
+// S1Parameter.h, so it is imported on its own.
+#import <SynthOneCore/AKInterop.h>
+#import <SynthOneCore/S1Parameter.h>
+#import <SynthOneCore/S1EngineTypes.h>
 #import <SynthOneCore/S1AudioUnit.h>

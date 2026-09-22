@@ -16,6 +16,13 @@ xcuserdata/
 Pods/
 .build/
 
+# Visual Studio's own, made just by opening the folder — they are not ours and they made a
+# Windows validation run report "+ uncommitted changes" on an otherwise clean tree (2026-09-20)
+.vs/
+CMakeUserPresets.json
+CMakeSettings.json
+/out/
+
 # Scratch
 *.wav.actual
 DerivedDataRelease/

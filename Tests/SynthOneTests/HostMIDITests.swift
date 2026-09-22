@@ -54,6 +54,16 @@ enum HostMIDINote: Equatable, CustomStringConvertible {
     }
 }
 
+extension HostMIDINote {
+    /// As `Tests/Engine/Fixtures/host-midi.txt` spells a note call.
+    var fixtureWord: String {
+        switch self {
+        case let .on(note, velocity): return "+\(note):\(velocity)"
+        case let .off(note): return "-\(note)"
+        }
+    }
+}
+
 /// One entry of `S1HostMIDITrace`.
 struct HostMIDITraceEntry: Equatable {
     enum Op: UInt32 {
@@ -462,6 +472,18 @@ final class HostMIDIParityTests: XCTestCase {
         case toggleHold
         case toggleMono
 
+        /// As `Tests/Engine/Fixtures/host-midi.txt` spells an event.
+        var fixtureLine: String {
+            switch self {
+            case let .noteOn(note, velocity, channel): return "on \(note) \(velocity) \(channel)"
+            case let .noteOff(note, velocity, channel): return "off \(note) \(velocity) \(channel)"
+            case let .pedal(value, channel): return "pedal \(value) \(channel)"
+            case let .octave(octave): return "octave \(octave)"
+            case .toggleHold: return "hold"
+            case .toggleMono: return "mono"
+            }
+        }
+
         var description: String {
             switch self {
             case let .noteOn(note, velocity, channel): return "noteOn(\(note), \(velocity), ch \(channel))"
@@ -573,8 +595,13 @@ final class HostMIDIParityTests: XCTestCase {
                               file: StaticString = #filePath, line: UInt = #line) throws {
         let host = try begin(settings)
         var state = settings
+        transcript.append("scenario \(label)")
+        transcript.append("settings \(settings.octave) \(settings.channel.map { Int($0) } ?? -1) "
+                          + "\(settings.whiteKeysOnly ? 1 : 0) \(settings.hold ? 1 : 0) \(settings.mono ? 1 : 0)")
         for (index, event) in events.enumerated() {
             let (standalone, plugin) = perform(event, host: host, state: &state)
+            transcript.append("\(event.fixtureLine) => "
+                              + HostMIDINote.normalised(standalone).map(\.fixtureWord).joined(separator: " "))
             guard HostMIDINote.normalised(standalone) == HostMIDINote.normalised(plugin) else {
                 let recent = events.prefix(index + 1).suffix(12).map { "  \($0)" }.joined(separator: "\n")
                 XCTFail("""
@@ -588,57 +615,102 @@ final class HostMIDIParityTests: XCTestCase {
         }
     }
 
-    func testScriptedScenariosMatchTheStandalone() throws {
+    /// The scripted scenarios, as data: the parity test and the engine's fixture both run them.
+    private func scriptedScenarios() -> [(label: String, settings: Settings, events: [Event])] {
         let chord: [Event] = [.noteOn(60, 90, 0), .noteOn(64, 70, 0), .noteOff(60, 0, 0),
                               .noteOn(60, 0, 0), .noteOff(64, 30, 0)]
-        try assertParity(chord, settings: Settings(), "poly")
-        try assertParity(chord, settings: Settings(mono: true), "mono")
-
-        try assertParity([.noteOn(60, 100, 0), .pedal(127, 0), .noteOff(60, 0, 0), .noteOn(60, 100, 0),
-                          .pedal(64, 0), .noteOff(60, 0, 0), .pedal(0, 0)],
-                         settings: Settings(), "sustain, including a second non-zero value lifting the pedal")
-
-        try assertParity([.toggleHold, .noteOn(60, 100, 0), .noteOff(60, 0, 0), .noteOn(62, 100, 0),
-                          .noteOn(60, 100, 0), .toggleHold],
-                         settings: Settings(), "hold")
-
-        try assertParity([.noteOn(60, 100, 0), .octave(-1), .noteOff(60, 0, 0), .noteOff(61, 0, 0)],
-                         settings: Settings(octave: 1), "octave moved while a key is down")
-
-        try assertParity([.noteOn(61, 100, 2), .noteOn(61, 100, 5), .noteOff(61, 0, 5), .noteOff(61, 0, 2)],
-                         settings: Settings(channel: 2, whiteKeysOnly: true), "channel and white keys")
-
-        try assertParity([.noteOn(60, 100, 0), .noteOn(64, 100, 0), .toggleMono, .noteOn(62, 100, 0),
-                          .toggleMono, .noteOff(62, 0, 0)],
-                         settings: Settings(), "mono switched with keys down")
+        return [
+            ("poly", Settings(), chord),
+            ("mono", Settings(mono: true), chord),
+            ("sustain, including a second non-zero value lifting the pedal", Settings(),
+             [.noteOn(60, 100, 0), .pedal(127, 0), .noteOff(60, 0, 0), .noteOn(60, 100, 0),
+              .pedal(64, 0), .noteOff(60, 0, 0), .pedal(0, 0)]),
+            ("hold", Settings(),
+             [.toggleHold, .noteOn(60, 100, 0), .noteOff(60, 0, 0), .noteOn(62, 100, 0),
+              .noteOn(60, 100, 0), .toggleHold]),
+            ("octave moved while a key is down", Settings(octave: 1),
+             [.noteOn(60, 100, 0), .octave(-1), .noteOff(60, 0, 0), .noteOff(61, 0, 0)]),
+            ("channel and white keys", Settings(channel: 2, whiteKeysOnly: true),
+             [.noteOn(61, 100, 2), .noteOn(61, 100, 5), .noteOff(61, 0, 5), .noteOff(61, 0, 2)]),
+            ("mono switched with keys down", Settings(),
+             [.noteOn(60, 100, 0), .noteOn(64, 100, 0), .toggleMono, .noteOn(62, 100, 0),
+              .toggleMono, .noteOff(62, 0, 0)])
+        ]
     }
 
     /// Seeded random MIDI over a narrow range of notes, so that keys collide, with every setting
     /// in play and changing underneath.
+    private func randomScenario(seed: UInt64) -> (label: String, settings: Settings, events: [Event]) {
+        var random = SeededRandom(seed: seed)
+        var settings = Settings()
+        settings.octave = Int.random(in: -2...2, using: &random)
+        settings.channel = Bool.random(using: &random) ? nil : 2
+        settings.whiteKeysOnly = Bool.random(using: &random)
+        settings.mono = Bool.random(using: &random)
+
+        var events: [Event] = []
+        for _ in 0..<150 {
+            let channel: MIDIChannel = settings.channel == nil ? 0 : [2, 2, 5].randomElement(using: &random)!
+            let note = MIDINoteNumber.random(in: 58...66, using: &random)
+            switch Int.random(in: 0..<100, using: &random) {
+            case 0..<40:  events.append(.noteOn(note, [0, 1, 64, 127].randomElement(using: &random)!, channel))
+            case 40..<75: events.append(.noteOff(note, [0, 40, 127].randomElement(using: &random)!, channel))
+            case 75..<87: events.append(.pedal([0, 64, 127].randomElement(using: &random)!, channel))
+            case 87..<92: events.append(.octave(Int.random(in: -2...2, using: &random)))
+            case 92..<96: events.append(.toggleHold)
+            default:      events.append(.toggleMono)
+            }
+        }
+        return ("seed \(seed)", settings, events)
+    }
+
+    func testScriptedScenariosMatchTheStandalone() throws {
+        for scenario in scriptedScenarios() {
+            try assertParity(scenario.events, settings: scenario.settings, scenario.label)
+        }
+    }
+
     func testRandomMIDIMatchesTheStandalone() throws {
         for seed in UInt64(1)...8 {
-            var random = SeededRandom(seed: seed)
-            var settings = Settings()
-            settings.octave = Int.random(in: -2...2, using: &random)
-            settings.channel = Bool.random(using: &random) ? nil : 2
-            settings.whiteKeysOnly = Bool.random(using: &random)
-            settings.mono = Bool.random(using: &random)
-
-            var events: [Event] = []
-            for _ in 0..<150 {
-                let channel: MIDIChannel = settings.channel == nil ? 0 : [2, 2, 5].randomElement(using: &random)!
-                let note = MIDINoteNumber.random(in: 58...66, using: &random)
-                switch Int.random(in: 0..<100, using: &random) {
-                case 0..<40:  events.append(.noteOn(note, [0, 1, 64, 127].randomElement(using: &random)!, channel))
-                case 40..<75: events.append(.noteOff(note, [0, 40, 127].randomElement(using: &random)!, channel))
-                case 75..<87: events.append(.pedal([0, 64, 127].randomElement(using: &random)!, channel))
-                case 87..<92: events.append(.octave(Int.random(in: -2...2, using: &random)))
-                case 92..<96: events.append(.toggleHold)
-                default:      events.append(.toggleMono)
-                }
-            }
-            try assertParity(events, settings: settings, "seed \(seed)")
+            let scenario = randomScenario(seed: seed)
+            try assertParity(scenario.events, settings: scenario.settings, scenario.label)
         }
+    }
+
+    // MARK: The engine's fixture (X2-4, ADR-075)
+
+    /// What `assertParity` saw the STANDALONE play, event by event. `Tests/Engine/HostMIDITests.cpp`
+    /// replays the same MIDI through `S1HostMIDI` on macOS, Linux and Windows and requires these
+    /// notes — the parity proved here, carried to the machines Swift does not run on.
+    private var transcript: [String] = []
+
+    private var fixtureURL: URL {
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Engine/Fixtures/host-midi.txt")
+    }
+
+    /// check (the normal suite): fails when the committed fixture is not what this build plays.
+    /// write: `Scripts/write-host-midi-fixtures.sh` (SYNTHONE_WRITE_HOST_MIDI_FIXTURES=1).
+    func testTheEngineFixtureIsWhatTheStandalonePlays() throws {
+        transcript = ["# GENERATED by HostMIDIParityTests (Scripts/write-host-midi-fixtures.sh). Do not edit.",
+                      "# What the STANDALONE's Swift MIDI chain plays, event by event (ADR-031, ADR-075).",
+                      "# settings: octave channel(-1 = omni) whiteKeysOnly hold mono",
+                      "# events:   on note velocity channel | off note velocity channel | pedal value channel | octave n | hold | mono",
+                      "# notes:    +note:velocity  -note   (a run of stops is sorted: HostMIDINote.normalised)"]
+        for scenario in scriptedScenarios() + (UInt64(1)...8).map(randomScenario(seed:)) {
+            try assertParity(scenario.events, settings: scenario.settings, scenario.label)
+        }
+        _ = try begin(Settings())
+        transcript.append("whitekeys " + (0..<128).map { String(manager.whiteKeysOnlyMap[$0]) }.joined(separator: " "))
+        let fixture = transcript.joined(separator: "\n") + "\n"
+
+        if ProcessInfo.processInfo.environment["SYNTHONE_WRITE_HOST_MIDI_FIXTURES"] == "1" {
+            try fixture.write(to: fixtureURL, atomically: true, encoding: .utf8)
+            print("SYNTHONE_WRITE_HOST_MIDI_FIXTURES: wrote \(fixtureURL.path)")
+            return
+        }
+        let onDisk = try String(contentsOf: fixtureURL, encoding: .utf8)
+        XCTAssertEqual(onDisk, fixture, "Tests/Engine/Fixtures/host-midi.txt is stale: run Scripts/write-host-midi-fixtures.sh")
     }
 
     /// **The standalone always plays the velocity it receives too** (ADR-032), whatever the old

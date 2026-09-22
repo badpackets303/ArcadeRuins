@@ -11,10 +11,14 @@
 #import <AudioToolbox/AudioToolbox.h>
 #import <algorithm>
 
+// X1-3 (ADR-067): the engine's S1KernelBase.hpp defines the same helper; whichever header a
+// translation unit meets first defines it and the other steps aside.
+#ifndef S1_KERNEL_HELPERS_DEFINED
 template <typename T>
 T clamp(T input, T low, T high) {
     return std::min(std::max(input, low), high);
 }
+#endif
 
 // Put your DSP code into a subclass of DSPKernel.
 class DSPKernel {

@@ -51,6 +51,9 @@ public:
 // From AudioKit's AKBankDSPKernel.hpp. NOTE: this SQUARES its argument — it is
 // not 2^x, despite the name. Synth One uses it as a velocity curve, so reading
 // it as an exponential would change how the instrument responds to touch.
+// X1-3 (ADR-067): see DSPKernel.hpp — S1KernelBase.hpp defines these too.
+#ifndef S1_KERNEL_HELPERS_DEFINED
+#define S1_KERNEL_HELPERS_DEFINED
 static inline double pow2(double x) {
     return x * x;
 }
@@ -59,5 +62,6 @@ static inline double noteToHz(int noteNumber)
 {
     return 440. * exp2((noteNumber - 69)/12.);
 }
+#endif
 
 #endif

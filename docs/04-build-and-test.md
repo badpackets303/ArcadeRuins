@@ -95,6 +95,22 @@ to open it. Until P5-2 (Developer ID plus notarisation), anyone installing a dow
 3. Launch the app once, so the system registers the plugin.
 4. Quit and relaunch the host.
 
+## Arcade Ruins (the JUCE build): validating and releasing
+
+This file is Classic's — the Catalyst app and its AUv3. The cross-platform product is built by
+CMake ([`Sources/S1Plugin/README.md`](../Sources/S1Plugin/README.md) is its guide), and **there is
+no CI** (ADR-079): these scripts are the verification.
+
+| | macOS | Linux (Docker, on the Mac) | Windows (the owner's machine) |
+|---|---|---|---|
+| **Validate** | `ctest` in `build/plugin`, `Scripts/validate-plugin.sh` (`--au` adds `auval`) | `Scripts/validate-linux.sh` (GCC, validators, RealtimeSanitizer) | `Scripts\validate-windows.ps1` — paste its block back |
+| **Release** (ADR-094) | `Scripts/release-plugin.sh` — universal, Developer ID, one notarised `.pkg` | `Scripts/release-linux.sh` — a tarball built on Ubuntu 22.04 | `Scripts\release-windows.ps1` — Inno Setup, the C runtime linked in |
+
+Every release script runs the whole suite on the binaries it packages and refuses a dirty tree.
+Three things a release must not forget: the macOS package needs a **Developer ID Installer**
+certificate (not the Application one); a Linux binary needs the glibc it was **built** on or newer;
+and a Windows plugin that cannot find `VCRUNTIME140.dll` fails silently, so the runtime is linked in.
+
 ## ⚠️ Build settings that are load-bearing
 
 Do not "tidy" these. Each was needed to make something work.

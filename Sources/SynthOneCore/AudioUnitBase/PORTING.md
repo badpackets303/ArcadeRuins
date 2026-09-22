@@ -88,3 +88,16 @@ like a bug when the real 150-parameter tree is wired up at P4-3.
 - frequency is settable (220 Hz verified)
 - survives three allocate/deallocate cycles — `sp_data` teardown and rebuild does not leak or crash
 - sample-rate regression test for PORT FIX 1
+
+## X1-3 (ADR-067) — the kernel no longer inherits these
+
+`S1DSPKernel` used to derive from `AKSoundpipeKernel` → `AKDSPKernel` → `DSPKernel` and
+`AKOutputBuffered`. It derives from the engine's own `S1SoundpipeKernel` and `S1OutputBuffered`
+(`Sources/S1Engine/Kernel/S1KernelBase.hpp`) now, which keep exactly what it used. These
+headers stay for `S1TestToneKernel` and for `S1KernelAUAdapter` (`S1AudioUnit.mm`), which is
+a `DSPKernel` + `AKOutputBuffered` wrapping the engine kernel: Apple's event splitter, unchanged
+(P4-2 fix included), forwarding `process` / `startRamp` / `handleMIDIEvent` and pointing the
+kernel's output at the buffer list. The three helpers `clamp`, `pow2` and `noteToHz` are
+defined here and in `S1KernelBase.hpp` under one guard, `S1_KERNEL_HELPERS_DEFINED`, so a
+translation unit that meets both keeps the first.
+

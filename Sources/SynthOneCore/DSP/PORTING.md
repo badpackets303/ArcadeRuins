@@ -1,3 +1,10 @@
+> **X1-3 (2026-09-17, ADR-067): the kernel, note state, sequencer, rate and `S1Parameter.h` now
+> live in `Sources/S1Engine/` as plain C++, compiled by both the Xcode target and CMake. The
+> records below describe them at their old paths; the paths moved, the code and its history did
+> not. New engine notes go in `Sources/S1Engine/PORTING.md`. What stays here: `Audio Unit/`
+> (`S1AudioUnit`, the Apple adapter), the Swift model (`Conductor`, `AKSynthOne`, tunings,
+> wavetables, presets) and TAAE.
+
 # DSP — porting record (P1-5)
 
 Synth One's synthesis engine, ported out of `upstream/AudioKitSynthOne/DSP/` into
@@ -144,3 +151,29 @@ no host calls `handleMIDIEvent` there. The golden renders do not move.
 
 **Test host MIDI through `renderBlock`, as with parameters (P4-3).** `scheduleMIDIEventBlock` hands
 the event to the framework, and only `AUAudioUnit.renderBlock` delivers it.
+
+## X1-2 (ADR-066) — the kernel's Objective-C plumbing becomes C++
+
+The cross-platform plan (PORT_PLAN.md §6) moves the kernel into `Sources/S1Engine`, where nothing
+Apple can follow it. Upstream's kernel leaned on Objective-C in two places: the held keys
+(an `NSMutableArray<NSValue *>` of `NoteNumber`, mirrored into an `AEArray` for the render thread)
+and its messages to the interface (`AEMessageQueuePerformSelectorOnMainThread` to the audio unit's
+relay). Both are plain C++ now; every product renders the same bytes.
+
+| Change | File | Why |
+|---|---|---|
+| `S1HeldNotes` (`PORT`): a fixed array of 128 `NoteNumber`, most recent first, published through a seqlock; readers take `snapshot()` | `Kernel/S1HeldNotes.hpp` | Replaces `heldNoteNumbers` + `heldNoteNumbersAE`. Same order (insert at the front, a re-press moves to the front), same one-writer discipline (main thread in the standalone, render thread in the plugin). No allocation: upstream's `NSValue` + `AEArray` update allocated on whichever thread called `startNote`, which in the plugin is the render thread |
+| `S1KernelListener` (`PORT`): a pure-virtual C++ interface for the seven outbound messages | `Kernel/S1KernelListener.hpp` | The kernel no longer knows about queues, selectors or `S1AudioUnit`. `S1AudioUnitKernelListener` in `S1AudioUnit.mm` implements it with exactly the calls the kernel used to make, relay and all (P4-5) |
+| `__weak S1AudioUnit *audioUnit` → `S1KernelListener *listener` | `Kernel/S1DSPKernel.hpp` | Its only use was posting messages |
+| `S1Sequencer::process(DSPParameters &, const S1HeldNoteList &)` | `Sequencer/S1Sequencer.hpp`, `.mm` | Takes one snapshot per render cycle where `AEArray` gave a fresh token per macro; the count and the enumeration now agree with each other. `Foundation` import gone |
+| `AEArrayEnumeratePointers` → range-for over the snapshot; `AEArrayGetItem(token, 0)` → `held.notes[0]` | `Kernel/S1DSPKernel+didChanges.mm`, `+toggleKeys.mm`, `Sequencer/S1Sequencer.mm` | Same iteration order: index 0 is the most recent key |
+| The two `AEMessageQueue` posts go through `kernel.listener` | `Kernel/S1HostMIDI.mm` | `postKeysIfChanged` keeps its "remembered only once queued" rule through the listener's `bool` |
+
+**Verified.** 74 tests across the DSP, host-MIDI, plugin-render, transport and state suites, 0
+failures; `GoldenRenderTests` reports **20 of 20 goldens bit-exact** (the test now prints that
+count); signed build installed, `auval` passed. Not yet: a real-time-safety pass with
+`-fsanitize=realtime` — that is X1-7's harness, under Clang in CI.
+
+**Still Apple in the kernel after this:** `AUParameterAddress`/`AUValue`/`AUAudioFrameCount` in
+its interface, `S1AudioUnit.h` for the message structs and `S1_NUM_MIDI_NOTES`, `AudioToolbox` in
+`S1HostMIDI.hpp`, and the `.mm` extensions themselves. That is X1-3.

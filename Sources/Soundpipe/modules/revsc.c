@@ -72,7 +72,10 @@ int sp_revsc_init(sp_data *sp, sp_revsc *p)
     sp_auxdata_alloc(&p->aux, nBytes);
     nBytes = 0;
     for (i = 0; i < 8; i++) {
-        p->delayLines[i].buf = (p->aux.ptr) + nBytes;
+        /* PORT FIX (X1-1, ADR-065): arithmetic on `void *` is a GNU extension that MSVC
+           rejects (C2036). GCC and Clang already step it in bytes, so this is the same
+           address on every compiler. */
+        p->delayLines[i].buf = (void *)((char *)(p->aux.ptr) + nBytes);
         init_delay_line(p, &p->delayLines[i], i);
         nBytes += delay_line_bytes_alloc(sp->sr, 1, i);
     }

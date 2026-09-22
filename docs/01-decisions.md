@@ -3537,3 +3537,2464 @@ test suite **sets** Studio in its scratch preferences, because the desktop tests
 it — set, not registered as the classic layout is: a registered default is process-wide and would
 answer for the empty suite on which `SkinTests` checks the real default.
 
+
+## ADR-065 — The cross-platform plan is rebased on 0.5.0, and X1-1 lands the portable build
+
+**Date:** 2026-09-17 · **Status:** Accepted · **Cross-platform plan, X1-1** · Amends the plan
+behind ADR-054–058; follows ADR-059, ADR-060, ADR-064
+
+**Context.** The plan was written against 0.3.0 on 2026-09-16. A day later the product is 0.5.0:
+the Cabinet skin (ADR-059) replaced Neon Ruins (ADR-060) and is the default (ADR-064), and 0.4.0
+and 0.5.0 are released. The owner: "I have uploaded a newer version of the code… Proceed with
+that. Same strategy."
+
+**What changed for the plan, measured.** `git diff ac79ef3..4dd7e79` touches nothing in
+`Sources/Soundpipe`, `Sources/SynthOneCore/AudioUnitBase`, `Sources/S1Support` or `Tests/Goldens`,
+and in `Sources/SynthOneCore/DSP` only `S1SynthControlling.swift` (ADR-063, the plugin's
+read-after-write — an AUv3 concern with no JUCE counterpart). So X1 and X2 stand as written. What
+moves is X3's reference and one version number:
+
+1. **X3 is drawn from 0.5.0: the desktop layout under the Cabinet skin, with Studio as the
+   second skin.** Neon Ruins no longer exists. Cabinet is not only a palette: it carries an
+   `S1SkinTemplate` — the owner's painting (`ar-template`, 1585×992, shipped at 2×) and a rectangle
+   per section and toolbar control — and places the sections over it (ADR-059). For the JUCE
+   interface that is *easier* than the row layout, not harder: X3-1's layout specification for
+   Cabinet is that rectangle table, already data, and the painting is an image asset. X3-6 becomes
+   "Studio and Cabinet, Cabinet the default". The Cabinet extras (ADR-061, ADR-062) are scoped
+   when X3 starts, from `docs/private/cabinet-extras.md`.
+2. **X2's public release is not "0.4.0".** That number shipped. It takes the next free minor
+   version when it is ready.
+
+**X1-1 as built.** A root `CMakeLists.txt`; `Sources/S1Engine/` with two targets — `soundpipe`,
+which compiles the twenty modules of `Sources/Soundpipe` in place with the same `NO_LIBSNDFILE=1`
+the Xcode target uses, and `s1engine` (C++17, warnings as errors, `-ffp-contract=off` /
+`/fp:precise`, never fast-math); `Tests/Engine/` with behaviour tests and the Apple-header guard;
+`.github/workflows/engine.yml` building and testing on macOS, Linux and Windows. XcodeGen and
+`Scripts/build.sh` are untouched: no Xcode target's sources include the new directories.
+
+The behaviour tests measure rather than link (CLAUDE.md): `sp_osc` at 440 Hz plays 439.5–440.5 Hz
+and peaks at its amplitude; `sp_moogladder` at a 500 Hz cutoff passes 100 Hz (−2.9 dB) and stops
+8 kHz (−97 dB); `sp_revsc` stays finite and its tail decays; and **`sp_rand` from seed 0 yields
+12345, 1406932606, 654583775, 1449466924 and `sp_noise`'s first sample is bit-exact** — the claim
+that noise renders identically on every OS, now a test on every OS.
+
+**Verification.** Locally (Apple clang 21, arm64): 2/2 CTest tests, 12/12 checks. Revert check: a
+header containing `#include <AudioToolbox/AudioToolbox.h>` dropped into `Sources/S1Engine/src`
+fails `NoAppleHeaders`; removed, it passes. GCC and MSVC: the `engine` workflow. Its first run
+passed on macOS and Linux and **failed on Windows** — `revsc.c(75): error C2036: 'void *': unknown
+size`, arithmetic on `void *` being a GNU extension. Fixed as a `PORT FIX` (`char *`; the same
+address under GCC and Clang) and recorded in `Sources/Soundpipe/VENDORING.md`. Second run
+(35284384744): green on all three, the bit-exact `sp_noise` check included under MSVC.
+`GoldenRenderTests` 4/4 in the Xcode build after the change, so the reverb renders as before. Found on the way: CMake cannot link against the Command Line Tools SDK
+on this machine (`tapi error: malformed file`, `arm64e.x1-macos`); `SDKROOT` must point at Xcode's
+SDK. Recorded in `Sources/S1Engine/PORTING.md` and CLAUDE.md.
+
+## ADR-066 — The kernel's held keys and outbound messages are plain C++ (X1-2)
+
+**Date:** 2026-09-17 · **Status:** Accepted · **Cross-platform plan, X1-2** · Follows ADR-065
+
+**Context.** The kernel is C++ in form but reached for Objective-C in two places: the held keys
+(`NSMutableArray<NSValue *>` mirrored into TAAE's `AEArray` for the render thread) and its seven
+messages to the interface (`AEMessageQueuePerformSelectorOnMainThread` to `audioUnit.messageRelay`,
+the P4-5 fix). Neither exists off Apple platforms; both had to go before the kernel can move to
+`Sources/S1Engine` (ADR-057).
+
+**Decision.**
+1. **`S1HeldNotes`**: a fixed array of 128 `NoteNumber`, most recent first — the order the
+   `NSMutableArray` kept (insert at index 0; a re-press is removed and re-inserted at the front) —
+   with a working copy for the one writer and a published copy readers take a `snapshot()` of
+   through a seqlock, the pattern ADR-028's waveform ring uses. Same threading as upstream: the
+   writer is the main thread in the standalone and the render thread in the plugin; readers are
+   either. **No allocation on any path.** Upstream allocated an `NSValue` and rebuilt the
+   `AEArray` (a `malloc` per note in its mapping block) on whichever thread called `startNote` —
+   in the plugin, the render thread, every note.
+2. **`S1KernelListener`**: a pure-virtual interface with the seven messages (tempo, dependent
+   parameter, beat counter, playing notes, held notes, host control, host keys). The kernel holds a
+   pointer and null-checks it. `S1AudioUnit.mm` implements it as `S1AudioUnitKernelListener`,
+   making exactly the queue-to-relay calls the kernel made, so the products behave as before.
+   The JUCE build implements it its own way (X2).
+3. `__weak S1AudioUnit *audioUnit` leaves the kernel; the listener was its only use.
+4. `S1Sequencer::process` takes a `const S1HeldNoteList &`. One snapshot per render cycle, where
+   `AEArray` fetched a token per macro — the count and the enumeration now describe the same
+   moment, which they did not before.
+
+**Not changed.** The kernel still says `AUParameterAddress`, includes `S1AudioUnit.h` for the
+message structs, and is compiled as `.mm`; `S1HostMIDI.hpp` still includes `AudioToolbox`. X1-3.
+`S1HeldNotes` and `S1KernelListener` include `S1AudioUnit.h` for the same reason and so cannot join
+the CMake tree yet; their own behaviour test arrives with X1-3, in `Tests/Engine`.
+
+**Verification.** Xcode: 74 tests over `GoldenRenderTests`, `HostMIDITests`, `HostedSynthTests`,
+`S1AudioUnitRenderTests`, `PluginRenderTests`, `PluginTransportTests`, `PluginStateTests`,
+`AudioUnitBaseTests`, `ModWheelEchoTests`, `S1MIDITests` — 0 failures. **`GoldenRenderTests` now
+prints how many goldens reproduced bit-exactly: 20 of 20.** The random-MIDI parity test
+(`testRandomMIDIMatchesTheStandalone`) is the note-order check: plugin and standalone agree note
+for note with the new list. Signed build installed, `auval` passed (`AU VALIDATION SUCCEEDED`).
+A real-time-safety pass with `-fsanitize=realtime` waits for X1-7's harness under Clang in CI.
+
+## ADR-067 — The kernel is plain C++ in `Sources/S1Engine`, compiled by Xcode and by CMake (X1-3)
+
+**Date:** 2026-09-17 · **Status:** Accepted · **Cross-platform plan, X1-3** · Follows ADR-057,
+ADR-065, ADR-066
+
+**Context.** After X1-2 the kernel had no Objective-C left in its logic but still wore Apple's
+clothes: `AUParameterAddress`/`AUValue`/`AUAudioFrameCount` in its interface, `AUMIDIEvent` in
+`handleMIDIEvent` and `S1HostMIDI`, `AudioUnitParameterUnit` in the 150-row parameter table,
+AudioKit's `AKSoundpipeKernel`/`DSPKernel`/`AKOutputBuffered` as bases, the message structs in
+`S1AudioUnit.h`, `AK_ENUM` from `AKInterop.h`, and `.mm` extensions. None of that compiles under
+GCC or MSVC.
+
+**Decision.**
+1. **The kernel moves to `Sources/S1Engine`** — `Kernel/`, `Note State/`, `Sequencer/`, `Rate/`
+   and `S1Parameter.h` — with `git mv`, so history follows the files, and as `.cpp`. **Both
+   builds compile the same files**: `project.yml` adds the directory to `SynthOneCore` and the
+   engine's search paths; `CMakeLists.txt` lists the sources. Neither build system drives the other.
+2. **`S1EngineTypes.h`** is the engine's vocabulary: `S1ParameterAddress`, `S1ParameterValue`,
+   `S1FrameCount` (the AudioToolbox widths), `S1MIDIEvent` (length and three bytes),
+   `S1ParameterUnit` (AudioToolbox's values), `S1Event`, and the message structs from
+   `S1AudioUnit.h`, unchanged. Plain C; public in the framework; includes `S1Parameter.h` by bare
+   name because the two are siblings in both trees (ADR-012's flattened `Headers/`).
+3. **`S1Parameter.h` is self-contained.** `S1_PARAMETER_ENUM` is `enum_extensibility(open)` under
+   Clang — the open enum Swift has always imported — and an int-backed enum elsewhere. `AKInterop.h`
+   is imported by the umbrella on its own now.
+4. **`S1KernelBase.hpp`** keeps what the kernel used of AudioKit's bases (`sp_data`, channels,
+   sample rate, `init`, the three helpers) plus `S1OutputBuffered`: two float pointers the host
+   adapter sets. The helpers are guarded by name against AudioKit's copies, which stay for the
+   test-tone kernel.
+5. **`S1KernelAUAdapter`** (`S1AudioUnit.mm`) is a `DSPKernel` + `AKOutputBuffered` over the engine
+   kernel: Apple's event splitter, unchanged, forwarding to `process`/`startRamp`/`handleMIDIEvent`.
+   **The AU's render path is what it was**, which the 20 exact goldens confirm.
+6. **`S1DSPKernel::processWithEvents(frames, S1Event[], count)`** is the same split over `S1Event`
+   for hosts that speak it (JUCE, X2-3): render to the next offset, apply everything at it, carry
+   on; an event past the end applies after the last frame. The plan's "both hosts cut the buffer in
+   the same places" criterion has its engine half; X2-3 measures the equivalence.
+
+**Compilers as reviewers.** Clang passed everything; the first GCC and MSVC runs did not, and each
+failure was a real portability fact hidden by libc++: `nil`, `BOOL`, `UInt32`, transitive
+`<memory>`/`<functional>`/`<cmath>`/`<algorithm>`/`<cfloat>`, a missing include guard, `M_PI` on
+MSVC. Each fix is a marked `PORT` line and is tabled in `Sources/S1Engine/PORTING.md`. Three CI
+rounds; the third is green on all three OSes.
+
+**Consequences.**
+- `Tests/Engine` gains `HeldNotesTests` (order, re-press, ceiling, no torn snapshot under a
+  concurrent reader) and `KernelEventTests` (the splitter; a note from a MIDI event at sample 128
+  of 256 — silent before, sounding after). The kernel cannot render without its 52 wavetables, so
+  the test fills them with sines; `NoAppleHeaders` now strips comments before matching.
+- `Sources/SynthOneCore/DSP/` keeps `Audio Unit/` (the Apple adapter), the Swift model and TAAE;
+  its PORTING.md points here.
+- What is still Apple-only and belongs to X1-4 … X1-6: tunings (Swift), the preset model (Swift),
+  the wavetable loader (Swift). `S1HostMIDI` is in the engine already.
+
+**Verification.** Xcode: 94 tests over the DSP, host-MIDI, hosted-synth, plugin render/transport/
+state/scope/preset, Soundpipe and core suites, 0 failures; `GoldenRenderTests`: **20 of 20 bit-
+exact**. CMake: 4 tests, 25 checks, green on macOS/Clang, Linux/GCC and Windows/MSVC (run
+35292166584, third of three). Signed build installed, `auval` passed.
+
+## ADR-068 — The tuning table, the Scala parser and the factory tunings in the engine (X1-4)
+
+**Date:** 2026-09-17 · **Status:** Accepted · **Cross-platform plan, X1-4** · Follows ADR-067
+
+**Context.** The instrument plays through a 128-entry tuning table the Swift `Tunings` model
+computes — `AKTuningTable` (S1Support/Microtonality) turns a master set of octave-reduced ratios
+into frequencies around middle C — and pushes into the kernel one note at a time. Presets carry a
+`tuningMasterSet`; the Tunings panel offers 194 factory tunings, most as literal master sets and
+the rest built at launch by Wilson's MOS, CPS, harmonic-series and North Indian builders
+(≈1,100 lines of Swift across `AKTuningTable+*` and `Tunings+Math`); users import `.scl` files.
+None of it exists in C++.
+
+**Decision.**
+1. **`S1TuningTable`** is `AKTuningTable`'s table, ported line for line: octave reduction and
+   sort into the master set, the middle-C reference, the Nyquist clamp, `equalTemperament`,
+   `masterSetInCents`. Not ported: the ETNN / delta-12ET dictionaries, which nothing in the product
+   reads.
+2. **`S1Scala`** is the parser the product actually uses — `frequencies2(fromScalaString:)` in
+   `Tunings+TuneUp.swift`, AudioKit's parser as Synth One carries it — quirks kept: a cents line
+   with trailing text is skipped rather than parsed, `1/1` and `2/1` are dropped, a count of 0
+   is rejected. `std::regex` stands in for `NSRegularExpression`.
+3. **The factory tunings are data, not builders.** `S1FactoryTunings.cpp` holds the 194 tunings
+   (name, bank, master set as the Swift builder returned it, 17 significant digits) and is
+   **generated from the Swift** by `TuningFixtureTests` in write mode
+   (`Scripts/write-tuning-fixtures.sh`). The same test in check mode — part of the normal suite —
+   regenerates it in memory and fails if the file on disk differs, so the Swift list remains the
+   single source and cannot drift from the engine unnoticed. The builders are not ported because
+   nothing in the product builds a tuning at run time; they only ever produced this list.
+4. **The fixture is the proof.** The same test writes `Tests/Engine/Fixtures/factory-tunings.txt`:
+   every factory tuning's 128 frequencies from the Swift table, plus six Scala cases (cents,
+   ratios, whole numbers, CRLF, comments, the quirks, two rejections). `TuningTableTests` in CMake
+   reads it and compares.
+
+**Found on the way: `pow(2, x)` is not `pow(2, x)`.** LLVM rewrites a call to `pow` with a
+literal base of 2 into `exp2(x)`, which differs from libm's `pow` in the last bit for some
+exponents — 1100 cents came out `1.8877486253633871` against the Swift's `1.8877486253633868`.
+The Swift, being the reference, gets libm's `pow`. `s1::powerOfTwo` loads the base through a
+`volatile` so the rewrite cannot apply, and every compiler computes what the Swift computes.
+
+**Consequences.**
+- The engine can turn a preset's `tuningMasterSet` or a `.scl` file into the kernel's table
+  without Swift (X1-5 will call it; X2 the JUCE build).
+- After editing `Tunings+DefaultTunings.swift` or the table code, run
+  `Scripts/write-tuning-fixtures.sh` and commit both generated files; the suite says so when it
+  is needed.
+- The CI workflow runs `ctest --verbose` now, so the measured counts are in the log.
+
+**Verification.** `TuningTableTests` on macOS: **194 of 194 tables bit-exact**, every note within
+1e-9 relative (measured 0), the generated list equal to the fixture in order, six Scala cases
+equal; the 12-ET defaults (A4 = 440, middle C = 261.6255653006) and the rejections. Revert checks:
+a changed entry in `S1FactoryTunings.cpp` fails the Swift check-mode test and passes when
+restored. `engine` workflow run 35293220508 green on macOS, Linux and Windows.
+
+## ADR-069 — The preset model in the engine, transcribed from the Swift and proved against it (X1-5)
+
+**Date:** 2026-09-17 · **Status:** Accepted · **Cross-platform plan, X1-5** · Follows ADR-068
+
+**Context.** A preset is a JSON dictionary of 114 keys that `Preset.swift` decodes with
+`as? … ?? default` bridging (a missing or mistyped key takes the DSP's default for that
+parameter), `Preset+Synth.apply` writes to the synth in a fixed order — order matters, because
+`arpRate` and `tempoSyncToArpRate` re-drive four other parameters — and
+`PresetDataManager.saveValuesToPreset` reads back with a handful of renames (`delayToggled` ←
+`delayOn`, `widen` stored as 0 or 1 …). Upstream's comment on the field list: "You MUST match
+these property names with the dictionary key used by init or you will forever lose the original
+preset." 695 factory presets across 13 banks depend on all of it.
+
+**Decision.**
+1. **`s1::Preset`** (`Sources/S1Engine/Presets/`) is a transcription, not a rewrite: a script
+   read `Preset.swift`, `Preset+Synth.swift` and `saveValuesToPreset` and emitted the field list
+   with its defaults, `fromJSON` with the same fallback per key, `toJSON`, `apply` in upstream's
+   order, and `capture`. The bridging rules are spelled out as functions (`asDouble`, `asInt` —
+   an integer or an integral float, never 3.5 —, `asBool` — a bool or exactly 0/1 —, arrays whose
+   every element bridges, sequencer arrays of exactly 16).
+2. **JSON for Modern C++ 3.11.3** (MIT) is vendored as the single header under
+   `Sources/S1Engine/third_party/nlohmann/`, unmodified, with its licence; `NOTICE.md` names it.
+   The Catalyst products keep Foundation's JSON.
+3. **The proof is a fixture the Swift wrote.** `PresetFixtureTests` (Xcode) applies every factory
+   preset to one synth in bank order and records the decoded fields and the 150 values after
+   `apply`, plus the key sets `JSONEncoder` writes with and without a tuning; in check mode it
+   fails when the file is stale. `PresetTests` (CMake) decodes the same bank files with
+   `s1::Preset`, applies them to the C++ kernel in the same order, and compares.
+
+**Found on the way: `abs(float)` is not `fabs` everywhere.** The first Linux run reported 2,513
+mismatching values, all in the tempo-synced parameters. `S1Rate.hpp`'s three nearest-rate
+searches said `abs(difference)` on floats: libc++ and MSVC find a float overload, libstdc++
+finds C's `abs(int)` and truncates the difference to a whole number, so the wrong rate wins.
+`std::fabs` now, marked `PORT FIX` — the Mac has always computed `fabs`, so nothing changes there
+(goldens 20 of 20 exact after the edit).
+
+**Consequences.**
+- The engine reads a bank, decodes a preset, applies it and writes it back without Swift. X1-7's
+  harness can load the golden presets from the bank files; X2-5 can save and restore state as
+  preset JSON the Mac app also reads.
+- After editing `Preset.swift`, `Preset+Synth.swift`, `saveValuesToPreset` or a factory bank:
+  `Scripts/write-preset-fixtures.sh`, commit the fixture. The suite says when.
+- The transcription script is not kept; the fixture is the contract. A field added to the Swift
+  fails `PresetTests`'s key check until `S1Preset` carries it too.
+
+**Verification.** `PresetTests` on macOS, Linux and Windows (run green on all three after the
+fabs fix): 695 of 695 presets decode to the Swift's fields; **695 of 695 apply to the same 150
+values, bit-exact**; every preset survives `toJSON → fromJSON`; the writer's key set equals
+`JSONEncoder`'s (112 keys, 114 with a tuning); the bridging rules on a sparse, mistyped preset.
+Revert check: an off-by-one in `apply` shows as 608 mismatches. Xcode after the edit: 23 tests
+green across the golden, fixture, hosted-synth and plugin-state suites, 20 of 20 goldens exact.
+
+---
+
+## ADR-070 — The wavetable loader in the engine, and a kernel that frees what it allocates (X1-6)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X1-6** · Follows ADR-069
+
+**Context.** The kernel cannot render a frame without its 52 oscillator tables (4 waveforms × 13
+band-limited versions, 4,096 samples each) and the 13 band frequencies that choose between them:
+`S1NoteState::init` hands `ft_array` to `sp_oscmorph2d_init`, and a missing table is a crash, not
+a silence. `S1Wavetables.swift` decodes them from `AKTable`'s Codable JSON in the framework bundle
+and pushes them in through `setBandlimitFrequency`, `setupWaveform` and `setWaveform`. It was the
+last Swift the engine needed before it could make a sound on its own. The plan's acceptance:
+table floats equal exactly; tables survive ten engine create/destroy cycles.
+
+**Decision.**
+1. **`s1::Wavetables`** (`Sources/S1Engine/Wavetables/`) ports the Swift loader: `load(Source)`
+   reads `bandlimitedWaveforms` (the 52 names, in kernel order), each named table and
+   `bandlimitedWaveformFrequencies`; `apply(kernel)` makes the same three calls in the same order.
+   A `Source` is a callback from a resource name to its JSON text, so the loader does not care
+   where the data lives: `loadFromDirectory` indexes every `*.json` under a directory by file stem
+   (the repository keeps per-waveform folders, the Mac bundle is flat), and X2 can hand it data
+   linked into the plugin. One `Wavetables` value serves any number of kernels; `apply` copies.
+2. **Stricter than the Swift.** A short index, a table that is not 4,096 samples or a frequency
+   list that is not 13 throws a `std::runtime_error` naming the resource. The Swift checks only
+   the index; the rest would have reached the kernel's fixed arrays.
+3. **The JSON stays where it is** (`Sources/SynthOneCore/DSP/BandlimitedWavetables`, 5.5 MB of
+   text for 852 KB of floats) and stays the only copy. How the plugin carries it — the JSON, or a
+   binary blob generated from it — is X2's packaging decision; the `Source` callback leaves it open.
+4. **The proof is a fixture the Swift wrote**, as for tunings and presets.
+   `WavetableFixtureTests` records, per table, its name, size, an FNV-1a 64 over the samples' bit
+   patterns and the first eight samples, and the 13 frequencies whole
+   (`Tests/Engine/Fixtures/wavetables.txt`, 9 KB; `Scripts/write-wavetable-fixtures.sh`; check mode
+   fails when stale). `WavetableTests` (CMake) loads the same JSON with the C++ loader and compares.
+
+**Found on the way: the kernel never freed anything.** The ten-cycle test was run under macOS's
+`leaks`: **79.6 MB leaked over eleven kernels.** Three separate causes, all upstream's:
+- `~S1DSPKernel` was `= default`. A kernel destroyed while initialised kept everything `init()`
+  had created — 7.2 MB, most of it the four delay lines. The AU calls `destroy()` from
+  `deallocateRenderResources`, so the Mac products only paid this when a host freed a plugin it
+  had not deallocated.
+- `init()` replaces the seven note-state objects, and their 84 Soundpipe modules went with them
+  unfreed — on every `allocateRenderResources`.
+- Nothing freed the oscillator tables (852 KB). `destroy()` rightly leaves them alone — they are
+  loaded once and outlive the allocate/deallocate cycle — so nobody did.
+
+One synth for the life of an app hides all three. A host that opens and closes plugins all day
+does not. `PORT FIX`: the destructor calls `destroy()` if initialised, frees the note states, then
+the tables (last: the note states borrow the pointers); `init()` frees the note states' modules
+where it replaces the objects; a second `setupWaveform` of one table frees the first. No memory
+is freed earlier than the object holding it was already going away, so no pointer that was valid
+before is dangling now. **0 leaks** after. Nothing on the render path changed.
+
+**Consequences.**
+- With kernel, tunings, presets and wavetables in C++, the engine can load a factory preset and
+  play it with no Swift and no Apple code. X1-7's golden harness is now only a harness.
+- After editing `S1Wavetables.swift`, `AKTable`'s coding or a table JSON:
+  `Scripts/write-wavetable-fixtures.sh`, commit the fixture. The suite says when.
+- `KernelEventTests` keeps its sine tables: it tests event timing, not timbre.
+- `leaks --atExit -- <test>` is a cheap local check for any engine test that makes kernels
+  (it needs no special build). CI does not run it; Linux ASan/LSan belongs with X1-7's harness,
+  alongside the deferred RTSan pass.
+
+**Verification.** `WavetableTests`: 13 of 13 frequencies and **52 of 52 tables (212,992 floats)
+bit-exact** against the Swift loader; ten kernels made and destroyed from one `Wavetables` each
+hold 52 exact tables — after a `destroy()`/`init()` cycle too — and render the same samples from
+a real A3; a second `apply` leaves the tables exact; an in-memory `Source` loads; four malformed
+inputs are refused by name. Revert check: scaling the decoded value by 1.0000001 shows as 0 of 52.
+Xcode: 336 tests green, **20 of 20 goldens bit-exact** after the kernel edits. Signed build
+installed 2026-09-18; `auval` (which opens, initialises and uninitialises the plugin repeatedly)
+passed. CI run 35344520512: green on macOS, Linux and Windows, 52 of 52 on each.
+
+---
+
+## ADR-071 — The golden harness: twenty goldens through the engine alone, exact where the arithmetic is the same, measured where it is not (X1-7)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X1-7** · Follows ADR-070 · Amends ADR-065 (the `-ffp-contract` setting)
+
+**Context.** X1's claim is that `Sources/S1Engine` *is* Synth One's sound, with no Swift,
+Objective-C or Apple framework under it. The Mac products' proof of their sound is
+`GoldenRenderTests`: twenty factory presets rendered through `AKSynthOne`, `S1AudioUnit` and
+`AVAudioEngine`, compared with `Tests/Goldens/*.wav`. The plan asked for the same twenty through
+the engine alone, on three OSes, within 1e-4 per sample and 1e-5 relative RMS, exact expected on
+macOS.
+
+**Decision.**
+1. **`Tests/Engine/GoldenHarness.cpp`** renders by `GoldenRenderTests`' recipe (44.1 kHz,
+   512-frame blocks, preset applied, 0.75 s to settle, A3, E4 at +0.4 s, both released at 1.0 s,
+   1.5 s captured; notes through `startNote`/`stopNote` between blocks, as `AKSynthOne.play`
+   reaches them) from a new engine per render, prepared step for step as the Mac product
+   prepares one: construct, `s1::Wavetables::apply`, the parameter read-and-write-back
+   `AKSynthOne.init` does, `prepareToRender`, `s1::Preset::apply` from the bank JSON.
+   `Tests/Engine/WavFile.hpp` reads the goldens (RIFF chunks walked: AVAudioFile pads with `JUNK`
+   and `FLLR`) and can write renders (`--write-renders`); `--list-differences` shows where.
+2. **`S1DSPKernel::prepareToRender(channels, sampleRate)`** is what `S1AudioUnit
+   allocateRenderResources` did inline — save parameters and tuning table, `init`, `reset`,
+   restore, NPO, wavetable increments — moved statement for statement, and the AU calls it. One
+   way to prepare the kernel, for the AU, the harness and JUCE's `prepareToPlay`.
+3. **`-ffp-contract=on`, spelled out, for the engine and Soundpipe** (`S1_FP_CONTRACT`, a cache
+   variable so `off` can be studied). X1-1 chose `off` on the theory that it keeps builds alike.
+   The harness measured the opposite: `on` is Clang's default, so it is what the Xcode build —
+   the shipped product and the goldens — has always had, and on arm64 it means fused
+   multiply-add. With `off` this Mac reproduced **3 of 20** goldens; with `on`, **20 of 20, bit
+   for bit** — through no AVAudioEngine, at `-O2` against goldens written at `-O0`.
+4. **Two criteria, because there are two situations.**
+   - *The arithmetic that wrote the goldens* (Apple Silicon): **bit-exact or fail**
+     (`--require-exact`, which CMake passes on Apple arm64).
+   - *Any other arithmetic* (x86-64 has no FMA in its baseline; glibc and the UCRT are other
+     libms): the difference's RMS at least **50 dB under the golden's** (relative RMS ≤ 3.16e-3)
+     **and** no more than **1 sample in 200** further than 0.001 from the golden.
+5. **The criterion is itself tested.** Three self-checks render the twenty with one small
+   deliberate fault and pass only if the tolerance criterion *rejects* them: the filter 1% sharp
+   (19 of 20 rejected), the tuning 1 cent sharp (20 of 20), the second note one block late (7 of
+   20 — the arpeggiated and sequenced presets only hold the note; its timing is not in their sound).
+6. **A sanitizer job** (`engine.yml`, Clang on Linux): every engine test under ASan with LSan
+   (fatal) and UBSan (reported). The harness alone makes and destroys some eighty engines.
+
+**Why the plan's tolerance was wrong.** Measured on Linux and Windows (identical to each other
+to three figures): 17 presets differ from the goldens by a relative RMS of 1e-7 to 5e-4 — rounding
+carried through filters, delay and reverb, 66 dB or more under the signal. Three had one-sample
+differences of 0.01 to 0.0255 with nothing either side. Reproduced on this Mac with
+`-DS1_FP_CONTRACT=off` and read sample by sample: **the bit-crusher's sample-and-hold**. It is a
+float counter compared with `<=` (`S1DSPKernel+process.cpp`), its step comes from
+`exp2(log2(rate))`, and one bit of rounding now and then makes it take its new sample one sample
+earlier or later: one sample off by as much as neighbouring samples differ, 101 of 133,120 at
+worst. Both versions are the algorithm working; neither is more right. A per-sample maximum
+cannot tell that from a fault, so the criterion is an RMS plus a bound on how many samples may
+stray. 1e-5 relative RMS was never measured against anything: `GoldenRenderTests` has only ever run
+on arm64, where the answer is 0. (The Mac products' x86_64 slice has the same no-FMA arithmetic
+as the Linux job; it could not be run here — no Rosetta — but there is no reason to expect it to
+differ from what Linux measured.)
+
+**What this does not catch off the Mac:** a fault smaller than −50 dB — a gain wrong by 0.3%.
+The exact criterion on Apple Silicon catches any such thing in the shared source; a fault that
+exists *only* in another compiler's arithmetic and is that small is, by construction, inaudible.
+
+**Consequences.**
+- The answer to "will it sound the same?" is now measured: on Apple Silicon the engine is the
+  AUv3's sound sample for sample; on Intel/AMD under Linux and Windows it is the same sound to
+  within −63 dB, with the bit-crusher's steps landing a sample apart here and there.
+- A golden rewritten for the Xcode test is rewritten for the harness (same files); the list of
+  twenty lives in both (`Tests/Goldens/README.md`).
+- **RTSan is deferred again, with a reason:** `-fsanitize=realtime` needs Clang 20 and
+  `[[clang::nonblocking]]` on the render entry point; neither Xcode's Clang nor the CI images
+  have it, and the realtime boundary that matters is JUCE's `processBlock` with our own
+  `S1KernelListener` behind it. It belongs to X2 (with the harness's renderer as the driver).
+- X1-8 is smaller than planned: the Mac app and AUv3 have run on `Sources/S1Engine` since X1-3,
+  and the AU now prepares the kernel through the engine's own call. What is left is the owner's
+  gate.
+
+**Verification.** CI run 35347661117, four jobs green. macOS (arm64): **20 of 20 bit-exact**.
+Linux (GCC) and Windows (MSVC): **20 of 20 within tolerance**, worst relative RMS 6.93e-4
+(−63 dB), worst outlier count 101 of 133,120, 0 exact. Sanitizers: no ASan, LSan or UBSan report
+in 11 tests. Determinism: two renders of one preset from two new engines identical on every OS.
+Self-checks as in (5), same counts on every OS. Locally: `leaks` on the harness 0; 336 Xcode
+tests green with the AU on `prepareToRender`, `GoldenRenderTests` 20 of 20 exact; signed build
+installed 2026-09-18, `auval` passed.
+
+---
+
+## ADR-072 — The JUCE project: fetched JUCE, VST3 + Standalone, a processor held to the bare engine sample for sample (X2-1)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-1** · Follows ADR-054, ADR-055,
+ADR-057, ADR-058, ADR-070, ADR-071 · Amends ADR-058 (one bundle ID; the VST3 class ID recorded)
+
+**Context.** X1 left a portable engine proved against the goldens and a reference host for it
+(`GoldenHarness`'s `makeEngine`). X2-1 is the first JUCE build: a project, the formats and identity
+the X0 decisions fixed, a processor that makes sound with Init, and CI on three OSes. ADR-054
+asked for the licence to be read again before the first CI build.
+
+**The licence, re-read 2026-09-18** at tag 9.0.2 (`LICENSE.md`, `JUCE.spdx.json`) and
+<https://juce.com/legal/juce-9-licence/> (EULA dated 2026-06-17): unchanged from ADR-054. AGPLv3
+or the JUCE 9 EULA; Starter is free up to $20,000 a year; **no splash-screen, logo or attribution
+clause** in any tier. Two clauses shape the build: §1.17, the framework may not be distributed on
+its own — so JUCE is fetched, never vendored, and the public mirror never carries it (ADR-057 had
+this right); §2.3, the framework must not be made subject to a copyleft licence — Arcade Ruins is
+MIT, which asks nothing of JUCE. The bundled VST 3 SDK is 3.8.0, **MIT** (no Steinberg agreement to
+sign); ASIO and AAX are not enabled. `NOTICE.md` has the entry.
+
+**Decision.**
+1. **`Sources/S1Plugin/`, behind `-DS1_BUILD_PLUGIN=ON` (default OFF).** The `engine` workflow
+   stays a one-minute build; a new `plugin` workflow turns the option on. JUCE by `FetchContent`,
+   pinned to 9.0.2's **commit** (`7278278…`), not the tag name: a tag can be moved.
+2. **`juce_add_plugin`: VST3 + Standalone, no AU** (ADR-055). `BP03` / `Ruin`, product "Arcade
+   Ruins", company "BadPackets" (the AUv3's manufacturer name), version from the root `project()`.
+   **VST3 class ID `ABCDEF019182FAEB425030335275696E`** (controller
+   `ABCDEF011234ABCD425030335275696E`) — JUCE's hash of the two codes, read from the built
+   `moduleinfo.json`; permanent from the first release. **Amending ADR-058:** JUCE has one
+   `BUNDLE_ID` per plugin, not one per format, so the `.vst3` carries
+   `com.badpackets303.ArcadeRuinsStandalone` as well. It clashes with nothing (the Catalyst app
+   and appex own `com.badpackets303.ArcadeRuins…`), and a VST3's bundle ID identifies it to no host.
+3. **`S1PluginProcessor` hosts the engine in `makeEngine`'s order**: kernel constructed,
+   `s1::Wavetables::apply`, every parameter read and written back (constructor);
+   `prepareToRender` then `s1::Preset().apply` — Init — in `prepareToPlay`; `setOutput` +
+   `processWithEvents` in `processBlock`. Stereo out, no input, no mono layout (the engine has
+   none). MIDI of 1–3 bytes becomes `S1Event`s at its sample position in a fixed
+   `std::array<S1Event, 512>`; a block with more is rendered in pieces, so nothing is dropped and
+   nothing allocates. A note-on with velocity 0 is turned into a note-off (the kernel's plain MIDI
+   path would start a silent voice; `S1HostMIDI` is X2-4). The host's generic editor. No
+   parameters (X2-2), state (X2-5), tempo (X2-6) or denormal handling (X2-7, which must be
+   *measured* against the goldens, not switched on in passing).
+4. **Wavetables: the 54 JSON files as JUCE binary data**, read through
+   `s1::Wavetables::load(Source)`, decoded once per process in a `juce::SharedResourcePointer`.
+   Measured: 31 ms on this Mac, 5.5 MB in each binary. The 852 KB float blob ADR-070 mentioned
+   needs a generator, an endianness rule and its own proof; 31 ms once per process does not pay
+   for that. Revisit at X4 if installer size matters.
+5. **The acceptance test is equality, not "is not silent".** `Tests/Plugin/PluginRenderTests`
+   links the plugin's shared-code library and renders GoldenHarness's recipe twice — through
+   `processBlock` with MIDI, tables from the binary; and through a bare kernel in the same blocks
+   cut at the same notes, tables from the repository. Same compiler and machine, so the two must
+   be **equal sample for sample on every OS**: block sizes 512, 64, 1024, 441, 37 and 1, notes at
+   the start of their block and 129 samples into it.
+
+**Found on the way: the engine's render depends on where `process()` calls are cut.** The first
+version of the test compared every block size with the 512-block render and failed: 94–1,024
+samples differ, by at most 0.0019 (Init peaks at 0.177). Upstream frees a released voice at the
+top of a `process()` call once its envelope is under `S1_RELEASE_AMPLITUDE_THRESHOLD` (0.01), not
+on the sample it gets there, so the end of a release tail is up to a block longer or shorter. It
+is upstream's behaviour, it is in the goldens (written at 512), and the Mac AU has always had it
+with whatever block size a host used. X2-1 does not change it; the test measures it (limit 5e-3,
+"a tail's end, nothing more") and holds the *wrapper* to exactness with equal cuts. **The X2 gate —
+goldens at odd block sizes — must reckon with it**: bit-exactness on Apple Silicon can only be
+asked at 512-frame blocks. Against ADR-071's tolerance it is small for Init — at 1,024-frame
+blocks 206 of 266,240 samples are over 0.001 (1 in 1,290; the limit is 1 in 200), at 64, 37 and 1
+it is 68 — but a preset with many voices releasing, or a long release, has not been measured.
+Either the gate's criterion is shown to cover tail ends on all twenty, or the voice is freed on
+its sample (a `PORT FIX` that would rewrite goldens); that is the gate's decision, with this
+measurement in hand.
+
+**Consequences.**
+- `Sources/S1Plugin/README.md` carries the rules: JUCE fetched not vendored, hosting order,
+  nothing allocating on the audio thread, no fast-math/LTO flags from JUCE, permanent identity.
+- The engine's headers are SYSTEM includes for the plugin target: JUCE's recommended warnings
+  are for the plugin's code, the ported kernel keeps upstream's (ADR-065).
+- CI artefacts (VST3 + Standalone per OS, 7 days) exist on the private repository for trying a
+  build; they are unsigned and nothing is released from them (X4).
+- macOS builds are arm64-only and take the SDK's deployment target for now; universal binaries
+  and a deployment target are X4's.
+
+**Verification.** Locally (arm64, AppleClang 21): 12 of 12 CTest tests; `PluginRender` — tables
+52 of 52 equal, 12 of 12 processor-versus-engine renders with 0 differing samples, Init peak
+0.177; the standalone launches and stays up; VST3 bundle and `moduleinfo.json` inspected.
+CI: `plugin` run 35350332737 green on Clang/macOS, GCC/Linux and MSVC/Windows — on each, 12 of 12
+tests, 52 of 52 tables equal, **12 of 12 processor-versus-engine renders with 0 differing
+samples**, the block-cut measurement identical to the Mac's (1,024 samples, 0.00162833, at
+1,024-frame blocks); tables decode in 34 / 64 / 99 ms. Its first run (35350012387) failed on
+Linux as it should have: JUCE 9 needs `libxi-dev` (XInput2), which JUCE 8's list did not have.
+`engine` run 35350012098 green, unchanged. The Mac products are untouched: no Xcode source
+changed, nothing reinstalled.
+
+---
+
+## ADR-073 — The 150 parameters in JUCE: generated IDs, the kernel's ranges, values in as events, the engine's own changes reported back (X2-2)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-2** · Follows ADR-022, ADR-058,
+ADR-072 · Contains a `PORT FIX` to `S1DSPKernel::prepareToRender`
+
+**Context.** ADR-058 fixed a parameter's ID as the name of its `S1Parameter` enum case,
+"generated, never typed". The Catalyst AUv3 does something else: its identifiers are the kernel
+table's `presetKey`s, and X2-2's first act was to compare the two — 19 of 150 differ
+(`filterAttack` for `filterAttackDuration`, the fifteen compressor keys are phrases with spaces,
+and `compressorMasterMakeupGain` appears **twice**, once for `compressorReverbWetMakeupGain`). So
+the IDs cannot be read from the kernel at run time; they have to come from the header. The
+kernel's table does own the ranges and defaults. It owns no tapers and few names: the tapers are
+the classic panels' (`knob.taper = 2`), the names and readouts the desktop layout's (P6-2).
+
+**Decision.**
+1. **IDs: CMake reads `S1Parameter.h`** and writes `S1_PARAMETER_NAME(name, number)` lines to
+   `generated/S1ParameterNames.inc` (150 or the configure fails). `S1ParameterCatalog.cpp` expands
+   them into the ID table and `static_assert`s every number against the enum. Version hint 1.
+   **`Tests/Plugin/Fixtures/parameter-ids.txt` freezes index, ID and hint**; the test demands that
+   every frozen line is still there unchanged, and allows new lines after them
+   (`PluginParameterTests <fixture> --write-fixture` adds them). Revert-checked: one renamed line fails it.
+2. **`S1ParameterCatalog` (no JUCE)**: per parameter — ID, name, kind (continuous / integer /
+   toggle / choice), readout format, taper, choice names, and minimum/default/maximum **read from a
+   kernel**. X3's interface will read the same list. Names are the desktop layout's with the
+   section in front ("Filter Cutoff", "Amp Env Attack", "Seq Step 7 Pitch"), because a host shows one
+   flat list; readouts are `S1ValueFormat`'s (kHz/Hz, s/ms, %, st, dB) plus note values for the
+   rates under tempo sync and for the sequencer's step length, from `S1Rate`. Stepped parameters
+   name their steps from the kernel's code (LFO waveforms and routing, filter type, arp direction).
+   `frequencyA4` is stepped because the kernel truncates it to whole Hz — found by the test.
+   Presentation may change in any release; identity may not.
+3. **`S1HostParameter` holds the plain value**, the number the kernel takes, in an atomic; hosts
+   get 0…1 through a `NormalisableRange` skewed to the Mac knob's taper. Flat list, enum order, no
+   groups (VST3 units can be added later without touching identity).
+4. **The kernel is only touched from `processBlock`** (and from `prepareToPlay`, when nothing
+   renders). Each block, every parameter whose value differs from what the kernel was last given
+   becomes an `S1EventKind_Parameter` event at the block's first sample — **the sync switch and
+   the tempo first**, so a rate written in the same block is read under the sync written with it
+   (the kernel quantises a rate as it arrives). JUCE gives a plugin one value per parameter per
+   block; sample-accurate automation and ramps are X2-3.
+5. **The engine's own changes (ADR-022) are read back after the render** for the five parameters
+   the kernel rewrites — `lfo1Rate`, `lfo2Rate`, `autoPanFrequency`, `delayTime` (re-driven by
+   tempo and sync; quantised under sync) and `arpSeqTempoMultiplier` (always a note value). Where
+   the kernel's value differs, the host parameter takes it by compare-and-swap (a host write that
+   landed meanwhile wins and goes out next block) and its listeners are told **from the audio
+   thread**. In JUCE's VST3 wrapper that path ends in `outputParameterChanges` — the processor
+   *reporting* a value — where the same call from the message thread is `performEdit`, which a
+   host in write mode records. It is the path JUCE itself uses for incoming automation. No gesture
+   is ever begun. This is the AUv3's `dependentParameters` + `implementorValueProvider` in VST3's terms.
+6. **The parameters start as Init**: `s1::Preset().apply` in the constructor, then every host
+   parameter takes the kernel's value. `prepareToPlay` first writes whatever the host has set
+   since (a session's whole state) straight into the kernel, then prepares it. Init is no longer
+   re-applied; the parameters are the state.
+7. **`getTailLengthSeconds`** is computed: release + delay repeats down to −60 dB + an estimate of
+   `sp_revsc`'s RT60, capped at 60 s. An estimate, and said to be one.
+
+**`PORT FIX`: `prepareToRender` carries what each parameter was *set* to.** Upstream's allocate
+sequence saved `parameters`, re-initialised, and restored. For the 45 *smoothed* parameters
+that array is the glide's current position, which only reaches a newly set value as frames
+render. Set a value, allocate with no render in between — a host restoring a session — and every
+smoothed parameter (cutoff, the envelopes, the mix) came back as the *old* value while the stepped
+ones kept the new. It was invisible in the render test (plugin and reference lost Init
+identically) and was caught by `PluginParameterTests` reading the kernel: cutoff written as 777
+came back 20,000. Now `getSynthParameter` — the target for a smoothed parameter — is what is
+saved. Where nothing is gliding the two arrays are equal, which is every path the goldens and
+the Mac tests take. **The Catalyst AUv3 has had this since upstream**; whether Logic ever hit it
+depends on whether it restores state before or after allocating, and the interface re-applying
+its preset would have hidden it. **Not changed:** after any `init` every smoothed parameter glides
+up from 0 for about a second (upstream hands `sp_port_init` the value where it takes a half-time;
+`sp_port` starts at 0). That is ADR-013's sweep, it is in the goldens, and it stays.
+
+**Consequences.**
+- `PluginRenderTests`' reference engine now applies Init *before* `prepareToRender`, as the plugin
+  does; still 12 of 12 renders equal sample for sample.
+- The AUv3's parameter identifiers and the JUCE IDs differ for 19 parameters. Nothing shares them
+  (different plugins, ADR-058), but anything that ever maps one to the other must go through
+  `S1Parameter`, never through the strings.
+- `sendValueChangedMessageToListeners` takes JUCE's listener lock on the audio thread — as JUCE's
+  own wrappers do for every automated parameter. RTSan (carried into X2) will name it; the answer
+  is this paragraph.
+- Still to come: X2-3 ramps and sample accuracy; X2-5 state (the preset JSON, not an APVTS);
+  X2-6 host tempo driving `arpRate`, which will make `arpRate` engine-driven too.
+
+**Verification.** `PluginParameterTests`, 51 checks: 150 parameters in enum order, 150 distinct
+IDs, hint 1, the frozen list unchanged; ranges and defaults equal to a kernel's; host and kernel
+equal at birth; a value written before `prepareToPlay` in the kernel after it and after a second
+one at 48 kHz; each of the other 149 parameters written and found in the kernel one block later;
+under sync 3.1 Hz becomes 3 Hz ("1/4 triplet" at 120 BPM), the host told once with no gesture; a
+tempo of 90 re-drives the delay time, reported once, and the same 3 Hz now reads "1/8 note" (the
+engine re-quantises by frequency, not by name); eight idle blocks move nothing; sync off and a
+rate in one block keeps the rate; readouts, typed text, the cutoff taper, step counts, 0…1 round
+trips, the tail. Revert-checked: without the `prepareToRender` fix the cutoff reads 20,000 and the
+engine's own `KernelEvents` check fails too; a renamed line in the frozen list fails identity.
+`PluginRenderTests` 12 of 12 exact. CI: `plugin` run 35354695631 and `engine` run 35354695677
+green on macOS, Linux and Windows (13 tests each in `plugin`). The run before it failed on Windows
+in `HeldNotes` — X1-2's thread test, whose writer finished before the reader thread was ever
+scheduled; it now writes until the reader has read a thousand snapshots. Mac products, because
+engine code changed: 336 Xcode tests green, `GoldenRenderTests` 20 of 20 bit-exact, signed build
+installed 2026-09-18, `auval` passed.
+
+---
+
+## ADR-074 — The plugin's render does not depend on the host's buffer size: released voices are freed every frame, as a kernel option; ramps are the engine's own smoothing (X2-3)
+
+**Date:** 2026-09-18 · **Status:** Accepted for the JUCE plugin · **the same switch for the Mac products is
+the owner's, at the X2 gate** · **Cross-platform plan, X2-3** · Follows ADR-071, ADR-072, ADR-073 · Settles
+ADR-072's open finding
+
+**Context.** X2-3's acceptance asks for the goldens at other block sizes. ADR-072 had found that
+the engine's render depends on where `process()` calls are cut, and read it as "the end of a
+release tail, a block early or late". X2-3 measured it properly: `GoldenHarness --block-size N`
+renders the twenty golden presets in N-frame blocks with every note on the sample the goldens have
+it on. **Upstream's path, against the goldens (Apple Silicon, where 512 is bit-exact):**
+
+| Block size | bit-exact | within ADR-071's tolerance | worst relative RMS |
+|---|---|---|---|
+| 512 (the goldens') | 20 | 20 | 0 |
+| 64 | 9 | 16 | 0.73 |
+| 480 | 8 | 16 | 0.89 |
+| 1,024 | 16 | 17 | 0.77 |
+| 37 | 8 | 16 | 0.65 |
+| 2,048 | 11 | 14 | 0.92 |
+
+A relative RMS of 0.7–0.9 is not a tail's end; it is a different waveform. The cause is one line
+of upstream's and one of its consequences. `process()` frees released voices (envelope under
+0.01) **once, at the top of the call**. `turnOnKey` gives a note that is *already sounding* its old
+voice back — oscillator phase, filter state and all — and gives any other note a fresh one. An
+arpeggio with a short release retriggers the same key again and again, and whether the last
+instance has been freed yet depends on where the host's buffer boundary fell. Missing Time
+(release 24 ms, arp on) parts from its golden 11,904 samples in and never returns; SubSonic Pad,
+Let's Play and Forth of Bass follow. It is two legitimate performances of the same patch, not a
+fault anyone would name by ear — but it means an offline bounce (large buffers) and the live
+session it came from (small ones) are different audio, and that no tolerance can make "goldens at
+odd block sizes" pass. The Catalyst AUv3 has always behaved this way in every host.
+
+**Decision.**
+1. **`S1DSPKernel::freeReleasedVoicesEveryFrame`** (default `false`). Off: upstream's path,
+   untouched — the Mac products and the goldens. On: the same check (`freeReleasedVoices()`, the
+   code moved into a function, not changed) runs at the top of every frame instead. **The JUCE
+   plugin sets it.** It is not a new behaviour: it is *exactly what upstream's path renders in
+   one-frame buffers*, made independent of the host.
+2. **Proved, not argued** — `GoldenHarness --check-block-independence`, a CTest on every OS: with
+   the option on, each of the twenty presets renders the **same samples** in blocks of 512, 64,
+   480, 1,024 and 37, and they **equal upstream's path rendered in 1-frame blocks**; and the option
+   is needed (upstream's path at 64 differs from itself at 512 for 11 of 20).
+3. **What the plugin's sound is, then, against the goldens:** at any block size, 8 of 20 bit-exact,
+   16 of 20 within ADR-071's tolerance, and the four arpeggiated presets above outside it (relative
+   RMS 0.0076, 0.030, 0.22, 0.79) — the same four, by much the same amounts, that upstream's own
+   path misses at a 64-frame buffer. The goldens remain the proof of the *engine* (option off, 512: 20
+   of 20 exact, enforced). The plugin's proof is the chain: goldens → upstream's path → the same
+   path in 1-frame blocks → the option, at any block size → `processBlock` (ADR-072's equality).
+4. **Ramps are the engine's smoothing; `startRamp` still ignores its duration.** The 45 parameters
+   where a step would be heard (cutoff, resonance, levels, envelope times, mixes, detune…) already
+   glide through `sp_port` with `portamentoHalfTime` (0.1 s). Measured through `processBlock`: a
+   500 → 5,000 Hz cutoff change moves the filter by at most 0.7073 Hz in any sample — the
+   smoothing's own bound, 4,500 × (1 − 0.5^(1/4,410)) — rising every sample. The continuous
+   parameters that do not glide (the two LFO rates, the tempo, the step length, fifteen compressor
+   settings, the delay input's two) take their value at the block's first sample; none of them is
+   in the signal path as a gain or a filter coefficient. A second, linear ramp on top of `sp_port`
+   would change how every automated parameter moves compared with the Mac products, for nothing
+   audible.
+5. **One value per parameter per block** is what JUCE hands a plugin (its VST3 wrapper keeps the
+   last point of a sample-accurate automation queue). At 2,048 frames that is 46 ms of
+   quantisation ahead of a 100 ms smoothing. Accepted and recorded; MIDI *is* sample-accurate.
+6. **48 and 96 kHz.** There are no goldens there and resampling them would prove the resampler. The
+   checks are: `processBlock` equals the bare engine sample for sample at both rates (blocks of
+   512, 480, 37) — which also shows a kernel constructed at 44.1 kHz and prepared at another rate
+   equals one constructed at that rate; Init's A3 measures 219.67 Hz at all three rates (autocorrelation);
+   the level agrees within 0.16 dB.
+
+**For the owner, at the X2 gate — not blocking anything.** The Mac app and AUv3 could set the same
+option. Logic users would then get the same audio from a bounce as from playback, at every buffer
+size. The price is that 12 of the 20 goldens would be rewritten (8 stay bit-identical), four of them
+audibly-different-on-paper arpeggios — different in the way the AUv3 already differs from itself
+between two buffer sizes. Until that is decided the Mac products are byte-for-byte what they were:
+336 tests, 20 of 20 goldens exact.
+
+**Found on the way.** `sp_port` never quite arrives: at 500 Hz its last step falls under a float's
+resolution and the glide stops 0.135 Hz short. Upstream's, in the goldens, left alone.
+
+**Verification.** `GoldensBlockIndependence`: 20 of 20 same at five block sizes, 20 of 20 equal to
+upstream's path in 1-frame blocks, upstream's path moves for 11 of 20. `Goldens` (option off):
+20 of 20 bit-exact on Apple Silicon. `PluginRenderTests`: 12 of 12 processor-versus-engine renders
+exact, the engine identical across six block sizes (was: up to 1,024 samples of Init differing),
+6 more exact at 48/96 kHz, pitch and level as above, a note-on at sample 300 of 512 first sounds at
+sample 300, the cutoff ramp bound, an unsmoothed rate in use from the block's first sample. 14 of 14
+CTest tests locally. Mac products: 336 Xcode tests green, `GoldenRenderTests` 20 of 20 bit-exact,
+signed build installed 2026-09-18, `auval` passed.
+CI: `engine` run 35356759979 (three OSes and the sanitizer job) and `plugin` run 35356759865 (three OSes)
+green; `GoldensBlockIndependence` reads 20 of 20 / 20 of 20 / 11 of 20 on Linux and Windows as on the Mac.
+
+---
+
+## ADR-075 — Host MIDI in the JUCE plugin goes through `S1HostMIDI`; the mod wheel runs on the render thread; the router is held to the standalone's notes on every OS (X2-4)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-4** · Follows ADR-031, ADR-032,
+ADR-063, ADR-073
+
+**Context.** Since X2-1 the processor fed raw MIDI to the kernel with the router off: upstream's
+handler, which plays note on and off and CC 123 and nothing else. The Catalyst AUv3 routes host
+MIDI through `S1HostMIDI` (ADR-031), the render-thread port of the standalone's main-thread
+chain — channel and omni, octave shift, white-keys-only, hold, the sustain pedal, mono's return to
+the highest held key, pitch bend — proved equal to that chain by `HostMIDIParityTests`, which
+runs only where Swift and UIKit do. What the router calls "the interface's" — the mod wheel,
+program change, bank select, MIDI learn — it forwards to a listener, and on the Mac the wheel is
+an on-screen control whose callback writes a parameter chosen by the preset's `modWheelRouting`.
+
+**Decision.**
+1. **The processor turns the router on** (`hostMIDI.enabled`), calls `beginRenderCycle` at the top
+   of every `processBlock` as the AUv3's render block does, and is the kernel's `S1KernelListener`.
+   Its own velocity-0 conversion is gone: the router has the rule. The router's settings keep the
+   standalone's out-of-the-box values (omni, no shift, no hold) until an interface exists (X3-8).
+2. **The mod wheel runs where the controller arrives** — `S1ModWheel.hpp`, no JUCE:
+   `value = cc / 127`; routing 0 → cutoff `3 × scaleRangeLog2(1 − value, 120…7600)` (360 Hz at the
+   top, the range's maximum at the bottom), 1 and 2 → `setDependentParameter` on an LFO rate. Each
+   line names the Swift it mirrors. A trip to a message thread and back is not available: an
+   offline bounce renders faster than any other thread answers (ADR-031's own reason), and there
+   is no interface until X3. `modWheelRouting` is preset state, not one of the 150 parameters; the
+   processor holds it (`setModWheelRouting`) for X2-5 to save and X2-9 to load.
+3. **`pitchbend` and `cutoff` join the parameters read back after every render** (ADR-073's
+   `engineDriven`), because MIDI now moves them in the engine. The host's parameter follows the
+   wheel and is told as a report, no gesture — what the AUv3's `implementorValueProvider` gives a
+   host that asks. Program change and bank select wait for the preset library (X2-9); MIDI learn is
+   out of scope (ADR-056).
+4. **Parity, carried to the OSes Swift does not run on.** `HostMIDIParityTests`' scenarios became
+   data (7 scripted, 8 seeded random of 150 events), and a new test there writes down **what the
+   standalone played**, event by event — `Tests/Engine/Fixtures/host-midi.txt`, with the 128-entry
+   white-keys map — in check mode in the normal suite, written by
+   `Scripts/write-host-midi-fixtures.sh` (the pattern of ADR-068–070). `Tests/Engine/HostMIDITests.cpp`
+   replays the file's MIDI through the router alone, hosted as the plugin hosts it (settings in
+   the atomics, `beginRenderCycle`, MIDI as `S1Event`s), and requires the file's notes. It is an
+   *engine* test: the router is engine code and runs in the fast `engine` workflow.
+5. **`Tests/Plugin/PluginMIDITests`** is the plugin around it: one key plays once at its velocity;
+   velocity 0 releases; omni; the pedal holds a released key (still sounding a second later) and
+   lifting it stops it; mono switched by a *host parameter* returns to the highest held key; pitch
+   bend is **heard** (A3 measured 219.9 Hz, 11.9997 semitones up with a 12-semitone range) and
+   reported once with no gesture; the mod wheel sets 360 Hz / the maximum, is reported, leaves the
+   host able to write the cutoff afterwards, and follows the routing; CC 123.
+
+**Found on the way.**
+- **Init's bend range is 0.** Upstream's `Preset()` and the Starter Bank's Init both say so, as do
+  230 of the 695 factory presets (386 have ±12): the pitch wheel does nothing on Init, by the
+  preset's choice. Faithful, so kept; the test sets a range before it bends.
+- The mono return re-presses the held key **with the released key's note-off velocity** — often 0
+  (`+62:0` in the fixture). The standalone does it, so the router does.
+- A mono or hold switch is noticed at the next block's `beginRenderCycle`, so *when* the held keys
+  are released depends on the buffer size. It is a person's switch, quantised like every parameter
+  (ADR-074 §5), not a performance's timing; recorded, not changed.
+- `make` kept a stale engine object twice after a revert-check restored a source file within the
+  same second as the mutated build. Rebuild the library target explicitly after restoring.
+
+**Verification.** `HostMIDI` (engine): 15 scenarios, **1,237 events, the router plays the
+standalone's notes for every one**; 128 of 128 white keys; pitch wheel, CC 123, a note shifted out
+of range, router off. Revert-checked both ways: mono returning to the *lowest* held key fails 104
+events; one changed fixture line fails the Swift check-mode test. `PluginMIDI`: 21 checks.
+`PluginRender` still 12 + 6 exact — the router makes the same `startNote`/`stopNote` calls the
+reference engine makes directly. 16 of 16 CTest tests locally; 337 Xcode tests green (one new),
+goldens 20 of 20 exact. No product source of the Mac app or AUv3 changed, so nothing was reinstalled.
+CI: `engine` run 35358886298 (three OSes and the sanitizer job) and `plugin` run 35358886322 (three OSes)
+green; on Linux and Windows the router plays the standalone's notes for all 1,237 events, as on the Mac.
+
+---
+
+## ADR-076 — Plugin state: JSON text holding the 150 parameters by ID, the engine's preset, the tuning table and the router's settings; built off the audio thread, delivered on it (X2-5)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-5** · Follows ADR-069, ADR-073, ADR-075;
+the AUv3's counterpart is P4-4's `fullState`
+
+**Context.** A host saves a plugin's state into its session file — while audio runs, from a
+thread of its choosing — and hands it back on another machine, possibly another OS, possibly to
+a later or an earlier build. The AUv3's `fullState` is the parameter tree plus 128 tuning
+frequencies and the notes-per-octave (P4-4). The engine has a preset model that reads and writes
+the Mac app's own JSON (ADR-069).
+
+**Decision.**
+1. **The format is JSON text**, UTF-8: `{"format": "ArcadeRuins.state", "version": 1, "plugin": …,
+   "parameters", "preset", "tuning", "midi"}` (`S1PluginState.hpp`, no JUCE). No byte order, no
+   struct layout, no float format: a `float` goes out as the `double` it equals and comes back
+   the same `float`. 12 KB.
+2. **`parameters` — every parameter by its permanent ID (ADR-073) — is the authority for the
+   sound.** Unknown IDs are ignored and missing ones keep their value, so states move between
+   builds in both directions; values are clamped to the kernel's range and stepped ones land on a
+   step; a value of the wrong type is as good as missing. **`pitchbend` is never written and always
+   comes back centred**: it is a wheel's position, and a session reopened with the wheel at rest
+   must not play bent (the host parameter follows the wheel since ADR-075, so it *would* be saved).
+3. **`preset` is the engine's preset JSON** with the parameters captured into its fields
+   (`s1::Preset::capture` gained a form that reads from a function instead of a kernel; the
+   sequencer rows, which upstream's capture leaves to the interface, are filled in here) — so a
+   session holds a preset the Mac app can read, with its identity: name, bank, uid, author, text,
+   `tuningName`, `tuningMasterSet`, `modWheelRouting`. The processor keeps that identity under a lock
+   the audio thread never takes.
+4. **When `parameters` does not name every parameter the sound comes from `preset`, through a
+   scratch kernel.** A bank file's preset wrapped as a state, or a state from a build with fewer
+   parameters. It cannot be done field by field, because **upstream's apply order decides some
+   values**: `delayTime` is written early, while the *previous* tempo-sync setting still stands, and
+   is quantised to a note value by it before the preset's own switch arrives — Cool Beans Epic Mega
+   Pad's 0.599 s delay plays as 0.667 s on a new Mac engine, sync off or not. So the preset is
+   applied, in upstream's order, to an `S1DSPKernel` made for the purpose — new, as the goldens'
+   kernels are — and the 150 values read back. Never the rendering kernel. X2-9's preset loading
+   will go the same way. (Upstream's result depends on the preset loaded *before*; from a new
+   kernel is the only reproducible choice, and the goldens'.)
+5. **`tuning` is the table itself**, 128 frequencies and the notes-per-octave, as `fullState` has
+   it; all 128 or none. `frequencyA4` is a parameter and is saved, but it is **inert in the engine
+   upstream** — nothing reads it; on the Mac only the Tunings code writes it — so the table is
+   what makes the pitch, and X3-5 owns rebuilding it.
+6. **Threads.** `getStateInformation` reads the *host parameters'* atomics and the processor's own
+   copies (tuning, routing, identity, the router's atomics) — never the kernel, which is
+   rendering. `setStateInformation` writes the host parameters' plain values exactly (no trip
+   through 0…1) and notifies listeners — inside the wrapper's `setState` a VST3 host is not sent an
+   edit (JUCE's `inSetState`) — stores the tuning in the processor's copy and raises two flags;
+   **`deliverPendingToKernel`, at the top of `processBlock` and of `prepareToPlay`, writes the
+   table and owes the kernel `Preset::apply`'s `resetSequencer`.** The parameters follow by
+   ADR-073's path, sync switch and tempo first. The processor's copies are the authority, as the
+   host parameters are: a state read back before a single block has run is already right.
+7. **What is not a state changes nothing**: empty, garbage, another plugin's chunk, an array, half
+   a file. Better the sound that was there than half of another.
+
+**Found on the way.** `s1::Preset()` — Swift's `Preset()` — has compressor ratios of 0 and the
+like, which the kernel clamps on arrival; Init is what the *kernel* makes of it, which is why the
+plugin reads its starting values back from the kernel (ADR-073) rather than from the struct. One
+factory preset has `arpInterval` 8.04; a host's stepped parameter makes it 8.
+
+**Consequences.**
+- `Tests/Plugin/Fixtures/state-v1.json` is a released format's witness: **never rewritten**. A
+  version 2 adds `state-v2.json` and keeps reading this one.
+- `currentState()` / `applyState()` are the processor's state API for X2-9 (preset library) and
+  X3 — but a preset chosen by a person in an editor is an *edit*, and must tell the host so
+  (gestures), which `applyState` from inside `setStateInformation` rightly does not.
+- The router's settings ride in the state now; `preset.isHoldMode` is still nobody's (X2-9/X3-8).
+
+**Verification.** `PluginState`, 25 checks: a recipe that moves 126 parameters, a 19-EDO table at
+A4 = 432, UTF-8 name, routing and router settings, saved in one instance and reopened in another
+at another sample rate — 149 parameters equal to the bit, the wheel centred, tuning, identity,
+routing, settings; saved again before any audio: the same text byte for byte; after
+`prepareToPlay` and a block the kernel holds all 150 and A4 = 432 Hz, 19 steps up = 864 Hz, and
+the text is unchanged; a state loaded between blocks is not in the kernel until the next block;
+five kinds of non-state change nothing; a "version 7" state with unknown keys, an unknown
+parameter, 1.4 for a stepped one, a string for a number, 99 for a volume; **18 factory presets from
+three banks, each as a state's `preset`: the plugin's kernel equals the engine's own apply**; the
+committed version-1 state loads to the recipe's 150 values, saves as the same JSON, and this build
+writes the same JSON for the recipe. `PluginStateFixtureTests` (Swift): the Mac app's dictionary
+initialiser and `JSONDecoder` both read the fixture's preset — name, uid, tuning, routing, five
+values, 48 sequencer cells. 17 of 17 CTest tests; 338 Xcode tests green, goldens 20 of 20
+bit-exact; signed build installed 2026-09-18, `auval` passed (the engine's preset file changed).
+CI: `plugin` run 35362783123 green on macOS, Linux and Windows — the Mac-written state loads to the
+recipe's values and is written back as the same JSON on each. **Its first run (35361346383) failed
+on Linux and Windows, and the fault was the test's:** the recipe computed `min + range × fraction`
+in `float`, one fused multiply-add on Apple Silicon and two operations elsewhere, so 13 of its
+"expected" values existed only on a Mac (ADR-071's lesson, met again). The file itself had loaded
+and re-saved identically. The recipe's numbers are exact decimals now, and the fixture — not yet
+merged — was written again from them; from here on it is fixed.
+
+---
+
+## ADR-077 — Host tempo and transport in the JUCE plugin: the play head into the kernel's own two handlers; the host's tempo wins over the tempo parameter; a transport stop is an all-notes-off (X2-6)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-6** · Follows ADR-025
+(the AUv3's tempo and transport), ADR-022, ADR-073, ADR-075; amends ADR-025's stop handler
+
+**Context.** The kernel has had `handleTempoSetting(float)` and `handleTransportState(bool)` since
+P4-5; the AUv3's render block calls them every cycle from the host's two blocks. JUCE gives a
+processor an `AudioPlayHead`, valid only inside `processBlock`; a standalone has none, and a host
+need not fill in the tempo or the playing flag.
+
+**Decision.**
+1. **No transport struct.** At the top of every `processBlock` the processor reads
+   `getPlayHead()->getPosition()` and calls the kernel's two handlers — tempo, then transport,
+   before anything of the block is rendered, as the AUv3 does. Each acts on a difference only:
+   the tempo against `arpRate` *as the kernel holds it* (ADR-025), the transport on the edge to
+   stopped. A tempo that is missing, not finite or not positive is no tempo; a missing position
+   is no transport. Then nothing is called, and the plugin's own tempo applies — the standalone.
+2. **While the host has a tempo it is the tempo; the tempo parameter is reported, not obeyed.**
+   `arpRate` is skipped when changed host parameters are turned into events, and joins the
+   parameters read back after the render: whatever was written to it — automation, an editor, a
+   restored session — it is put back to the host's tempo within the block and the host is told
+   (off the message thread: a VST3 output parameter change, no gesture, ADR-073). The AUv3 behaves
+   the same way by construction. **A saved tempo cannot override a live one:** a session saved
+   at 90 BPM restores the parameter as 90, and the first block in a 120 BPM project is already
+   rendered at 120 — the handler runs before the block's first sample. When a host's tempo goes
+   away the last one stays and the parameter is obeyed again.
+   `S1PluginProcessor::isUsingHostTempo()` tells an interface which it is (X3); `arpBeatCounter()`
+   is the sequencer's step count for its step lights.
+3. **A transport stop is an all-notes-off** (`PORT FIX`, both products). P4-5's handler released
+   the sounding voices and rewound the sequencer, and deliberately left the keys alone because
+   `heldNoteNumbers` was then a main-thread array. Two defects followed, both found by
+   `PluginTransportTests` and both present in the Mac AUv3:
+   - **Every key stayed down.** In `heldNotes`, so an arpeggio went on after the stop; and in the
+     host MIDI router, which does not press a key that is already down (`pressAdded`, the
+     on-screen keyboard's rule): a host that stopped without note-offs — the very case the
+     handler exists for — had its next note-on of the same key swallowed. The stop now does what
+     CC123 does (`S1HostMIDI::transportDidStop`: the router's `allNotesOff`, then
+     `stopAllNotes`); without the router, `stopAllNotes`. `heldNotes` has been render-thread safe
+     since X1-2.
+   - **The envelopes never saw the gate fall.** ADR-025 says the stop uses "the two lines
+     `turnOffKey` uses"; for a polyphonic voice `turnOffKey` uses four — the other two run each
+     envelope once with the gate down. Without them, a voice that had already decayed under the
+     release threshold (any sound with no sustain) is freed before it runs again, its envelope
+     stays where a held key left it, and the voice's next note — gate still high, no attack — is
+     **silent**: after a stop, the first note of the next phrase was missing. The two lines are
+     added. (Mono is left as `turnOffKey` has it: its next `turnOnKey` drops the gate itself
+     unless legato, where not retriggering is upstream's meaning.)
+   Still not done, as ADR-025 decided: locking the sequencer to the host's beat position. The
+   arpeggiator starts when keys arrive, on their sample.
+
+**Found, and kept.**
+- **Upstream's sequencer counts beats and steps every `arpSeqTempoMultiplier` of one, while its
+  readout names that value as a fraction of a bar.** A sixteenth-note step — 125 ms at 120 BPM — is
+  0.25, and reads "1/4 note", in the Mac app too ("Divisions: 1/4 note"). The plan's acceptance
+  ("a 1/16 arp step is 125 ms") is met with that value; the label is the Mac's and is pinned in
+  the test. Whether the readout should say what is heard is an interface question for the owner
+  (X3).
+- **A tempo change re-quantises the synced values by their time, not by their name** (ADR-022;
+  the AUv3 the same). Small moves keep the note value — a quarter-note delay at 120 is 0.48 s and
+  still a quarter note at 125 — but a jump far enough lands on a neighbour: 125 → 90 BPM turns that
+  quarter note into a "1/4 triplet" (0.444 s). The same happens when a preset made at one tempo is
+  loaded into a project at another. Measured and printed by the test, not required by it.
+  **Open for the owner at the X2 gate, with the voice-freeing question:** keep the note value
+  across tempo changes instead (both products; an engine change).
+
+**Consequences.**
+- The Mac AUv3 changes in one respect: keys still down when the transport stops are released
+  (an arpeggio no longer goes on under held keys after a stop), and the first note after a stop
+  is no longer lost on sounds without sustain. The standalone Mac app has no transport. Goldens
+  do not involve the transport.
+- `arpRate` is now among the parameters the plugin reports to the host; a host's automation lane
+  for it is ignored while the host has a tempo, which is every DAW.
+- X3's tempo control should show itself as the host's when `isUsingHostTempo()`.
+
+**Verification.** `PluginTransport` (new CTest, a play head the test controls): at 120 BPM from the
+host — with the tempo parameter written to 90 — 25 arpeggio steps are heard, **mean step 124.999
+ms measured from the rendered output, no step off by 0.5 ms**; 100 ms at 150 BPM; 125 ms at blocks
+of 64, 1,024 and 37; no play head, no position, no bpm: the parameter's 90 BPM, 166.667 ms; a
+steady tempo reports nothing, a new one once with no gesture; a value written under a host tempo
+does not reach the kernel and is put back; 5,000 and 0.25 BPM settle at the range's ends without
+further reports, NaN is no tempo; synced delay and LFO follow 120 → 125 as quarter notes, each
+reported once; a session saved at 90 plays at the host's 120 from its first block; a held note is
+released by the stop with no note-off and the same key sounds when played again; the stop's block
+puts the step count to 0; after it nothing plays; keys arriving at sample 200 of a block start
+the arpeggio on that sample with step 0 (C3, then G3); keys the host never released play again;
+eight notes after stops that caught decayed voices are all heard; a transport that never moves
+disturbs nothing. **Revert-checked four ways:** without the envelope lines 5 checks fail (the
+first step after a stop arrives one step late, as G3); without the key release 3; with the tempo
+parameter obeyed 2; without the put-back 5.
+`PluginTransportTests.testAPhraseAfterAStopBeginsWithItsFirstNote` (Swift) holds the AUv3 to the
+same: with the envelope lines removed the first click after a stop measures 4e-05 against 0.22.
+18 of 18 CTest tests; 339 Xcode tests green, goldens 20 of 20 bit-exact; signed build installed
+2026-09-18, `auval` passed (the kernel's stop handler and the router changed).
+CI: `plugin` run 35366014956 and `engine` run 35366014961 green on macOS, Linux and Windows
+(and the sanitizers job) on their first run — the step times hold to the same 0.02 ms there.
+
+---
+
+## ADR-078 — Denormal protection: every render call runs with subnormals flushed to zero, in the JUCE plugin and in the Mac products (X2-7)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-7** · Follows ADR-071,
+ADR-074
+
+**Context.** The engine had only ever run under Clang on Macs. Its effects — phaser, delay,
+reverb, their filters, the compressors — run whether or not a note sounds, and after the last
+voice is freed their state decays from a real signal towards nothing: through the subnormal
+range, where x86 processors do arithmetic slowly. Nothing in the engine or upstream guards
+against it (no flush-to-zero, no DC offset).
+
+**Measured first** (`Tests/Plugin/PluginDenormalTests`: a five-note chord held 4 s, then a tail,
+timed per 512-frame block, per-second medians; the same performance through the plugin, the bare
+engine, and the bare engine under the guard):
+- **The engine reaches subnormals and never leaves.** With short effects its output is subnormal
+  for 1.89 million samples of a minute's tail and ends parked at 1.4e-45 — the smallest subnormal,
+  which a feedback path rounds back to itself and never to zero. Same count on all three OSes.
+- **What that costs, unprotected:** on the CI's x86 machines a silent instrument is 1.25–1.5×
+  dearer per block on Linux (540–800 µs against 420–510) and 1.15–1.8× on Windows; a long
+  release on Windows costs 1.39× the held chord (the voices' own envelopes and filters). On Apple
+  Silicon about 5%. Nothing catastrophic on today's processors — and permanent, for every idle
+  instance in a session.
+- **Protected:** no second of the tail above 1.01× the sounding part on either x86 machine, the
+  silence flat to its end, and the guard costs nothing while notes sound.
+- **It is not heard.** `GoldenHarness --flush-to-zero`: 20 of 20 goldens still bit-exact on Apple
+  Silicon; `PluginRender` (guarded plugin against the unguarded bare engine) still exact.
+- **CoreAudio does not do it for us.** A probe on this Mac (macOS 27, arm64): on an
+  `AVAudioEngine` render thread two 1e-20 floats multiply to 1e-40, as on the main thread.
+
+**Decision.**
+1. **The JUCE plugin:** `juce::ScopedNoDenormals` is the first statement of `processBlock` —
+   flush-to-zero and denormals-are-zero on x86, FZ on arm64, the caller's mode restored on the
+   way out. `prepareToPlay` renders nothing and needs none. The standalone renders through the
+   same call.
+2. **The Mac products too** (`S1ScopedFlushToZero` in `S1AudioUnit.mm`, first statement of the
+   render block: `fegetenv` / `fesetenv(FE_DFL_DISABLE_DENORMS_ENV)` / restore — Apple's
+   `<fenv.h>` has the mode on both its architectures). The app and the AUv3 both render through
+   that block. For Intel Macs chiefly; bit-exact, so nothing to hear and no golden to rewrite.
+3. **Not in the engine itself.** The mode is per thread and belongs to whoever owns the render
+   call; a host of the engine wraps its call (PORTING.md says so). No DC offset or noise is added
+   anywhere: it would be heard by the goldens, and the mode makes it unnecessary.
+
+**The plan's acceptance, as met.** "A 30-second silent tail after a reverb-heavy preset uses no
+more CPU than the sounding part, measured on x86": for three sounds (a long wet reverb fed by a
+delay; short effects, the case that reaches subnormals soonest; dry) the plugin's dearest tail
+second over 40 s is ≤ 1.01× a sounding block on Linux and Windows x86-64. The assertion allows
+1.25×, on the quickest of three performances per second — the first CI run read 1.48× for one
+second on a busy machine, and a neighbour can only add time.
+
+**Verification.** `PluginDenormals` (new CTest): a play head — called only inside `processBlock`
+— sees 1e-20 × 1e-20 = 0 there, and the test's thread computes 1e-40 before, after
+`prepareToPlay` and after `processBlock`; zero subnormal samples out of the plugin in 3 × 40 s ×
+three sounds; the timing criterion; the unprotected engine's numbers printed beside it on every
+OS. Revert-checked: without the guard the mode check fails and 3.6 million subnormal samples come
+out. `GoldensFlushToZero` (new CTest, Apple only): 20 of 20 exact. Swift:
+`PluginTransportTests.testTheRenderFlushesSubnormalsAndHandsTheModeBack` sees the same from the
+AU's tempo block (revert-checked). 20 of 20 CTest tests; 340 Xcode tests green, goldens 20 of 20
+bit-exact; signed build installed 2026-09-18, `auval` passed. CI: `plugin` run 35372776286 and
+`engine` run 35372776297 green on macOS, Linux and Windows; the measurements above are from
+`plugin` runs 35370147959 and 35371606536 on the same branch.
+
+---
+
+## ADR-079 — Validation: pluginval at strictness 10 with Steinberg's validator handed to it, both pinned; a RealtimeSanitizer build (X2-8)
+
+**Date:** 2026-09-18 · **Status:** Accepted — **CI verification of the last three commits is
+owed** (see Verification) · **Cross-platform plan, X2-8** · Follows ADR-072, ADR-073, ADR-076
+
+**Context.** `auval` holds the Catalyst AUv3 to Apple's rules (`Scripts/validate-au.sh`). The JUCE
+build has no AU (ADR-055/058); what holds a VST3 to its hosts' expectations is Tracktion's
+`pluginval` — which opens, fuzzes, saves, restores and renders a plugin the way careless hosts do —
+and Steinberg's own `validator`. The plan's row also lists `auval -v aumu <subtype> BP03`: that
+line is the AUv3's and is already run; there is nothing for it in the JUCE build.
+
+**Decision.**
+1. **pluginval `v1.0.4` at `--strictness-level 10`, in process, on the built `.vst3`, in the
+   `plugin` workflow on macOS, Linux (under `xvfb-run`) and Windows.** Tracktion's release
+   archives, pinned by version **and SHA-256** (recorded from the first run; the release carries
+   no digests): Linux `c01c49d8…5352`, macOS `3c4c533b…b29f`, Windows `c08e61ce…15ab`. Its log is
+   kept as an artefact for 14 days, pass or fail.
+2. **Steinberg's `validator -e`, built in the workflow from the SDK** at `v3.8.0_build_66`
+   (commit `9fad9770…`) — the SDK version JUCE 9.0.2 bundles, MIT — only the `validator` target,
+   no VSTGUI, no examples; run by itself and **handed to pluginval with `--vst3validator`.**
+3. **A skipped test fails the step.** Found on the first run: without a validator path pluginval
+   prints `Skipping vst3 validator as validator path hasn't been set`, carries on, and ends with
+   `SUCCESS`. 1.x does not carry the validator inside it, whatever one remembers.
+4. **`Scripts/validate-plugin.sh`** does the same on a developer's machine, and builds BOTH tools
+   from their authors' repositories pinned by tag and commit (pluginval `ed19c2c1…`) into
+   `build/validation` — nothing precompiled is downloaded and run locally.
+5. **RealtimeSanitizer:** `-DS1_RTSAN=ON` (Clang 20+) adds `-fsanitize=realtime` and defines
+   `S1_NONBLOCKING` as `[[clang::nonblocking]]` on `S1DSPKernel::process`, `processWithEvents`
+   and `S1PluginProcessor::processBlock`; the `realtime-sanitizer` job runs every test under it.
+   In every other build the macro is empty — the attribute wants its functions `noexcept`, and
+   no product build changes for a check one CI job makes.
+
+**Found.**
+- **pluginval at strictness 10 passed on all three OSes on its first run** — every test, the
+  parameter fuzzing, state from a background thread, editor automation, bus layouts — with the
+  plugin as X2-7 left it. X2-2's and X2-5's thread rules were written for exactly these tests.
+- **Steinberg's validator: 536 of 537.** `Programlist 000->Program 000: has no name!!!` —
+  `getProgramName` returned an empty string for the one program a host is shown.
+  **Fixed:** the program is the sound by its name (`identity.name`, under its lock), `"Init"` when
+  that is blank; `PluginState` checks it. 537 of 537, no warnings. pluginval alone would never
+  have said so (3).
+
+**Verification.** Local, macOS arm64, `Scripts/validate-plugin.sh`: validator 537 of 537;
+pluginval strictness 10 `SUCCESS` with the validator run inside it (369 ms, exit 0), nothing
+skipped. CI `plugin` run 35381919830 (pluginval alone, before 2–3 existed): `SUCCESS` on macOS,
+Linux and Windows. 20 of 20 CTest tests locally. **Owed:** GitHub stopped starting this
+repository's jobs on 2026-09-18 19:00 UTC — *"recent account payments have failed or your spending
+limit needs to be increased"* — so the validator build on Linux and Windows, the skipped-test
+guard and the `realtime-sanitizer` job (whose first attempt failed only at linking the `.vst3`, a
+shared library, with the sanitizer's runtime: it builds the tests alone now) **have not run.**
+The branch `x2-validation` is not merged until they have. RTSan is expected to find things — JUCE's
+listener lock under `sendValueChangedMessageToListeners` on the audio thread (ADR-073) first of
+all — and each gets a decision here.
+
+**Amendment, 2026-09-18 — macOS leaves the CI matrix (owner's decision).** Both workflows run on
+Linux and Windows only. On a private repository macOS minutes bill tenfold (Windows twice), a
+`plugin` run is about 14 minutes per OS, and the day's runs spent the account's allowance — which
+is what stopped the jobs. Making the repository public was considered and rejected: it would
+publish the history (the owner's email), `upstream/` (AudioKit's Audiobus key), AudioKit's App
+Store screenshots and `docs/private/`, none of which can be taken back. What macOS CI gave is
+given locally before every merge, on the only machine that can show the goldens bit-exact: the
+full CTest run in `build/plugin`, the Xcode suite, `Scripts/validate-plugin.sh`, and for engine
+or Mac-source changes `Scripts/build.sh` + `Scripts/validate-au.sh`. "CI on three OSes" in the
+working pattern now reads: Linux and Windows in CI, macOS here. A run costs about a quarter of
+what it did. The macOS branches of the workflow steps are kept, so adding `macos-latest` back to
+the matrix is one word.
+
+**Second amendment, 2026-09-18 — CI moves to the developer's machines (owner's decision: GitHub's
+billing is not going to change).** The workflows stay in the repository, pinned and correct as
+far as they could be checked, for the day jobs start again; nothing waits on them any more.
+- **Linux: `Scripts/validate-linux.sh [all|tests|validate|rtsan] [--x86]`**, in Docker on the Mac —
+  `Scripts/linux/Dockerfile` (Ubuntu 24.04, GCC 13, JUCE's packages, xvfb, gtkmm, Clang 20) and
+  `Scripts/linux/run.sh`; the repository mounted read-only, build trees in a Docker volume. Native
+  arm64 by default (GCC, libstdc++, glibc and X11 are where Linux differs from the Mac); `--x86` is
+  an emulated x86-64 container for arithmetic without fused multiply-add (ADR-071), slow.
+- **Windows: `Scripts\validate-windows.ps1`**, run by the owner on their Windows machine (Visual
+  Studio 2022 C++, CMake, Git): MSVC build, every CTest test, the validator built from the pinned
+  SDK, pluginval from the archive pinned by SHA-256 with the validator handed to it. It prints a
+  block to paste back. Syntax-checked with PowerShell's own parser (in Microsoft's container);
+  **it has not run on Windows yet**, and until its block comes back for a commit, Windows is owed
+  for that commit and STATE.md says so.
+- **macOS:** as the first amendment has it.
+The working pattern's "CI on three OSes" now reads: macOS here, Linux here in Docker, Windows on
+the owner's machine — a task merges when the first two are green and says plainly whether
+Windows has been run.
+
+**What the Linux runs found (2026-09-18).**
+- **Steinberg's SDK will not configure on Linux without `gtkmm-3.0`** — its hosting samples
+  (the validator among them) include an editor host that asks pkg-config for it. Added to the image
+  and to the workflow. It would have failed in CI the same way.
+- **pluginval 1.0.4 cannot run Steinberg's validator on Linux**: it hands it the `.so` inside the
+  bundle, and SDK 3.8's validator answers "is not a module directory" — for any plugin. On Linux
+  the validator is run by itself (**537 of 537**) and pluginval without it (**strictness 10:
+  SUCCESS**, under xvfb); the skipped-test guard allows exactly that one skip there. On macOS and
+  Windows pluginval runs the validator itself.
+- **The RealtimeSanitizer, on its first run, found two allocations on the audio thread — both
+  upstream's, both in the Mac products, both fixed (`PORT FIX`), the goldens bit-exact after each:**
+  1. **The voices were made in the first render call.** `init` ends with "initializeNoteStates()
+     must be called AFTER init returns, BEFORE process", and upstream left it to the first
+     `process` or the first key: seven note states, a dozen Soundpipe modules each, every one a
+     `malloc`, in the first cycle of every host. `prepareToRender` makes them now — after `init`,
+     before any render, where the oscillator tables are already required; the lazy calls find the
+     work done.
+  2. **Every arpeggio step allocated and freed.** `S1Sequencer::sequencerLastNotes` was a
+     `std::list<int>`: a node per note turned on, freed when it is turned off. It is a
+     `std::vector<int>` at the capacity `reserveNotes` gives it. (`reserveNotes` *resizes* it, so
+     it starts as 1,024 zeros that the first step boundary "turns off" — upstream's oddity, in the
+     goldens, kept.)
+  After both: every test under `-fsanitize=realtime` with no finding — the kernel's render calls
+  and the plugin's `processBlock`, parameter reports to listeners from the audio thread included
+  (ADR-073's worry: JUCE 9 takes no lock there that the sanitizer sees).
+- The sanitizer stage leaves the test `Goldens` out: Clang 20 on arm64 Linux reproduces 10 of 20
+  goldens bit-exactly and puts one (Soi Ok Balagan) at relative RMS 0.0042 against the 0.0032
+  limit. Not a toolchain the product is built with; GCC on the same machine is 20 of 20 within
+  tolerance. The twenty presets still render under the sanitizer in the other golden tests.
+
+**Verification, final tree (2026-09-18).** macOS arm64: 20 of 20 CTest tests (goldens bit-exact),
+`Scripts/validate-plugin.sh` — validator 537 of 537, pluginval strictness 10 `SUCCESS` with the
+validator inside it; 340 Xcode tests green, signed build installed, `auval` passed. Linux arm64 in
+Docker: 19 of 19 CTest under GCC 13, validator 537 of 537, pluginval `SUCCESS`, the
+RealtimeSanitizer stage clean (18 tests). Linux x86-64, emulated: 19 of 19 CTest. **Windows: owed**
+— pluginval alone passed there in CI run 35381919830, before the validator, the program name and
+the two engine fixes; `Scripts\validate-windows.ps1` has not been run.
+
+**Windows, 2026-09-18 20:28 — run by the owner, `main` @ `9cb5531`.** `Scripts\validate-windows.ps1`
+on Windows 11 Home, Visual Studio 2026 Community 18.10.1 with its own CMake 4.3.1, Intel Core
+i7-6700HQ: configured and built with MSVC, **19 of 19 CTest tests, Steinberg's validator 537 of
+537, pluginval strictness 10 `SUCCESS`** with the validator inside it. The script ran unchanged on
+its first real Windows run. It is also the first build with Visual Studio 2026's compiler (CI had
+2022's): nothing new from it. The denormal test on that 2015 laptop processor: a sounding block
+of five voices with every effect on costs 1.5–1.6 ms of the 11.6 ms a 512-frame block lasts, and
+no second of the 40 s tail costs more than 0.96× that. With this, X2-8's verification is complete
+on all three OSes.
+
+---
+
+## ADR-080 — The preset library: the Mac app's factory banks linked into the plugin, user banks as files in a per-user folder, a host's programs the AUv3's 695; and the plugin starts with the SHIPPED Init (X2-9)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-9** · Follows ADR-069,
+ADR-076, ADR-079; P4-4's `S1FactoryPresets` is the AUv3's counterpart
+
+**Context.** The Mac app keeps its banks as `<name>.json` files — a JSON array of presets — in its
+App Group container, seeded from thirteen bundled files, and offers a host all 695 as AU factory
+presets named `Bank: Preset` in a fixed order (a host stores the number). The JUCE plugin had one
+unnamed-then-named program and no presets.
+
+**Decision.**
+1. **`S1PresetLibrary` (no JUCE).** *Factory banks:* the Mac app's thirteen files linked in as
+   JUCE binary data (`S1PresetData`), byte for byte — read-only because they are the binary;
+   parsed on first use, never when a host merely scans the plugin; in `S1FactoryPresets.bankOrder`.
+   *User banks:* `<name>.json` in a folder the library is GIVEN — the Mac app's bank file format,
+   so a bank from either product opens in the other; a single exported preset is a bank of one.
+   The folder is read at every listing (another instance, the standalone, may have written);
+   a bank is written whole, beside itself, then renamed into place; last writer wins. What is not
+   a bank is left out and named as a problem. Bank names become file names no filesystem here or
+   on the next machine refuses.
+2. **Where:** `<user application data>/BadPackets/Arcade Ruins/Banks` — `~/Library/Application
+   Support/…` on macOS, `%APPDATA%\…` on Windows, `~/.config/…` on Linux. **Not the Catalyst
+   products' App Group container:** the two libraries sit side by side and neither writes in the
+   other's (whether they ever share is X0-2's question at the X3 gate; the files are compatible
+   whenever it is asked). Making a plugin touches no disk; nothing is created until a save.
+3. **A host's programs are the 695 factory presets, numbered and named as the Mac AUv3's** — held
+   to `S1FactoryPresets` itself by a Swift-written fixture (`FactoryProgramFixtureTests` →
+   `Tests/Plugin/Fixtures/factory-programs.txt`), names exact (four end in a space). JUCE's VST3
+   wrapper changes programs on the controller's thread, never in `process`, so loading may
+   allocate. User presets are not programs: the list a host numbers must not move.
+4. **Loading a preset** (`loadPreset`): its 150 values as a NEW engine plays them — applied to a
+   scratch kernel in upstream's order and read back (ADR-076; 0.11 ms) — the wheel centred, name
+   and mod-wheel routing taken, the sequencer reset, **the tuning table left alone** (a preset's
+   tuning is X3-5's; the identity keeps the tuning names that describe the table that stays).
+   From a host's program change: reported without gestures. **From a person (`asEdit`): every
+   changed parameter inside its own gesture, so a host records it** — X3-8's browser will use
+   that. `saveCurrentPreset(bank, name)` captures the 150 values into the identity
+   (`PluginState::capturedPreset`) and writes the bank. A session saved on a factory preset
+   reopens showing that program (same uid and name — 23 uids are shared in the banks).
+5. **MIDI program change stays unhandled until X3-8:** it arrives on the render thread, and what
+   it should select ("preset N of the current bank", as the Mac app has it) needs the browser's
+   notion of a current bank.
+
+**Found, and changed.**
+- **The plugin did not start with Init.** Since X2-2 it started with `s1::Preset()` — the preset
+  MODEL's bare field defaults — which differ from the shipped "Init" (factory bank `User`, the
+  Mac app's Init and one of the twenty goldens) in **28 parameters**: bend range 0 instead of
+  ±12 (X2-4's "Init's bend range is 0"), the three compressors at their stops, cutoff 4 kHz for
+  2 kHz, tempo sync on. It starts with the shipped Init now — read from that one small file — and
+  shows it to a host as what it is, the list's last program, "User: Init".
+- **`PORT FIX`: the compressors were made for the wrong sample rate.** Upstream makes the three
+  `S1Compressor`s once, in the kernel's CONSTRUCTOR, and `sp_compressor_init` takes its time
+  constants from the rate of that moment; `S1DSPKernel::init`, which every host calls afterwards
+  with the real rate, never touched them. Every host constructs at 44.1 kHz first — the AU too —
+  so in a 48 kHz project the compressors attacked and released 9% too fast, at 96 kHz 2.2×.
+  Found because the shipped Init, unlike the bare defaults, actually compresses: `PluginRender`'s
+  plugin (constructed at 44.1 kHz, prepared at 96) stopped equalling its reference (constructed
+  at 96) once a second note pushed the level over the threshold. `init` makes them again
+  (`S1Compressor::prepare`). Goldens bit-exact: they are rendered at the rate they are
+  constructed at.
+
+**Verification.** `PluginPresets` (new CTest): the default folder's path and that it is not a
+Group Container; making a plugin and listing banks touch no disk; the thirteen linked-in banks
+equal the repository's files byte for byte; 695 programs equal the AUv3's list name for name, none
+empty; a new instance shows "User: Init" and IS it (0 of 149 parameters differ); 31 programs
+across the banks land as the preset gives a new engine, reported with no gesture, the wheel
+centred, the tuning untouched; program 412 in the kernel after a block; a saved session reopens on
+program 412; a preset loaded as an edit: one gesture per changed parameter; a sound saved into a
+new user bank in a folder with a non-ASCII name, found by a second library object, the file a Mac
+bank (array, `bank`, `position`), **loaded again: all 150 parameters the same numbers**; replaced
+by name, added, removed by uid; saving into "BankA" makes a USER bank and leaves the factory's
+alone; two non-banks named as problems while three banks load; file-name rules. `PluginRender`
+at 96 kHz is the compressor fix's test (revert: 9,328 samples differ). `PluginState` and
+`PluginMIDI` updated for the list and for Init's octave of bend.
+
+---
+
+## ADR-081 — The standalone: JUCE's holder with our own application object — every MIDI input open, settings beside the banks — and an engine that survives its audio device changing (X2-10)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **Cross-platform plan, X2-10** · Follows ADR-043
+(the Catalyst standalone's silent engine after a hardware change), ADR-077, ADR-080
+
+**Context.** `juce_add_plugin … FORMATS VST3 Standalone` has built a standalone since X2-1:
+JUCE's `StandalonePluginHolder` (an `AudioDeviceManager`, an `AudioProcessorPlayer`, the
+processor) in a `StandaloneFilterWindow` showing the editor, with an Options menu for the
+audio/MIDI settings dialog. Nobody had run it to a purpose.
+
+**Decision.**
+1. **Keep the holder and the window; replace the application object**
+   (`Sources/S1Plugin/S1StandaloneApp.cpp`, `JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1`, compiled
+   into the Standalone target only — JUCE's `StandaloneFilterApp` is `final`, so it is that
+   class's text with two differences):
+   - **Every MIDI input is open, and one plugged in later opens by itself** (`autoOpenMidiDevices`
+     — the holder's half-second timer). JUCE opens none on a desktop: a keyboard is silent until
+     its box is ticked in a settings dialog. An instrument plays when it is played; the Mac app
+     listens to every source too.
+   - **The settings file is beside the banks**: `<application data>/BadPackets/Arcade Ruins/Arcade
+     Ruins.settings` (audio device, window position, and the plugin's own state — ADR-076 — so
+     the standalone reopens on the sound it was closed on).
+2. **No audio input.** The processor has no input bus, so the holder opens none, asks for no
+   microphone permission and shows no feedback-loop notice.
+3. **The internal tempo is the `arpRate` parameter** — there is no play head, so ADR-077's rule
+   applies by itself ("Tempo" in the generic view). Nothing to build.
+4. **An audio device change is JUCE's to handle, and the engine's to survive.** The player calls
+   `releaseResources`, then `prepareToPlay` at the new rate and buffer size. That path needs
+   X2-2's carried parameters and X2-9's compressors — and one more thing, found here:
+   **`PORT FIX`: `prepareToRender` tells the host-MIDI router (`S1HostMIDI::kernelWasPrepared`).**
+   `init` drops every voice and held note; the router kept its keys. A key held across a device
+   change — or across any host's re-prepare, the Mac AUv3's included — was still "down" in the
+   router and silent in the kernel, and its next note-on was swallowed (`pressAdded`): ADR-077's
+   fault through another door.
+
+**Verification.**
+- **Live, on this Mac (2026-09-18):** the standalone opened on the built-in device at 48 kHz; its
+  settings listed every MIDI input open without anyone opening them (an IAC bus and the owner's
+  three hardware ports); a virtual CoreMIDI source created AFTER launch was picked up within the
+  timer's half second — its mod wheel at 127 reached the render thread (the saved state's
+  `cutoff` went from Init's 2,000 to 360, `S1ModWheel`'s figure); quitting wrote the plugin's
+  version-1 state into the settings; relaunching and quitting with nothing played left `cutoff`
+  at 360 — the state is restored, not re-made. The file the check wrote was moved out of the
+  owner's folder afterwards.
+- **`PluginStandalone` (new CTest)** — the processor in a `juce::AudioProcessorPlayer` with a
+  stand-in device: started at 48 kHz/512, a key through the player's MIDI collector sounds at 220
+  Hz; the device stops and comes back at 96 kHz/256 with the key still held — the parameters are
+  kept in the host's list and in the kernel, the old note is silence (not a drone, not a crash),
+  **the same key played again without ever being released sounds** (failed before the fix: 0),
+  in tune, and stops when released; a third device at 44.1 kHz with callbacks of 1,024, 37 and
+  480 frames: 440 Hz, every sample finite; 25 more restarts and it still plays in tune.
+- **By hand, the owner's (macOS and Windows), because no test can plug in headphones:** open it;
+  play a hardware keyboard without touching any setting; change the output device or its sample
+  rate while it sounds (Options > Audio/MIDI Settings, or plug in headphones) — it must keep
+  playing; quit and reopen — the device and the sound come back.
+
+**Windows, by hand — confirmed by the owner, 2026-09-18** (Windows 11, the machine of ADR-079's
+run): the list above — the standalone opens, a hardware keyboard plays without any setting being
+touched, it keeps playing through an audio device change, and the device and the sound come back
+after a quit. Reported as "ADR-081 list is confirmed on my Windows machine"; the standalone they
+ran is the one `Scripts\validate-windows.ps1` builds. **Still to come for the X2 gate:** that
+script's printed block for `main` after X2-9/X2-10 (the automated half — it was not pasted), the
+same list on the Mac, and the gate's two questions.
+
+**Windows, the automated half — run by the owner 2026-09-18 22:31, `main` @ `a57f59b`** (X2-9 and
+X2-10 both in it): Windows 11 Home, Visual Studio 2026 Community 18.10.1, CMake 4.3.1, Intel Core
+i7-6700HQ — built with MSVC (the standalone's application object among it), **21 of 21 CTest
+tests** (`PluginPresets` with its non-ASCII folder and its renamed-over bank, `PluginStandalone`
+across its device changes), **Steinberg's validator 537 of 537, pluginval strictness 10
+`SUCCESS`**. `RESULT: PASSED`. A sounding block is 1.8–1.9 ms there now (1.5–1.6 ms at X2-8): the
+plugin starts with the shipped Init since X2-9, whose compressors and effects work; no second of
+the tail above 1.00×. With this and the hands-on list above, Windows owes nothing for X2.
+
+---
+
+## ADR-082 — A tempo change keeps the note value of what is synced to it (the owner's decision at the X2 gate)
+
+**Date:** 2026-09-18 · **Status:** Accepted · **The X2 gate** · Follows ADR-022, ADR-025, ADR-076,
+ADR-077 (which found it and put the question) · The owner: *"yes, the LFO and delay should match
+up with the tempo."*
+
+**Context.** With tempo sync on, the two LFO rates, the auto-pan rate and the delay time sit on
+note values. When the tempo changed, upstream re-quantised each by its TIME — the nearest note
+value at the new tempo to the seconds or hertz it had at the old one. Small changes keep the note
+(120 → 125: a quarter note stays one); a jump does not: 125 → 90 BPM turned a quarter-note delay
+(0.48 s) into a quarter triplet (0.444 s), and a 3 Hz quarter-triplet LFO at 120 became, silently,
+an eighth note at 90. Loading a preset made at one tempo into a project at another did the same.
+
+**Decision.**
+1. **`S1DSPKernel::_setTempoKeepingNoteValues`:** each synced parameter's note value is read at
+   the tempo it was quantised at — where it sits on one exactly — and it is given that note
+   value's frequency or time at the new tempo. A note value the new tempo cannot give within the
+   parameter's range (a half-note delay at 40 BPM is 3 s, over the 2.5 s maximum) falls back to
+   upstream's way: the nearest that fits.
+2. **A host's tempo always does this** (`handleTempoSetting`) — the JUCE plugin and the Mac AUv3.
+3. **The `arpRate` PARAMETER does it where its kernel's owner says so**
+   (`tempoParameterKeepsNoteValues`, default off): **on in the JUCE plugin** — its Tempo control,
+   the standalone's tempo. **`s1::Preset::apply` switches it off for its own duration, always:** a
+   preset writes `arpRate` in the middle of its other values, and there upstream's re-quantising
+   is what reads the preset's seconds back as the notes they were saved as (ADR-076). The goldens
+   are bit-exact.
+4. **A preset loaded under a host's tempo is translated by note value** (`loadPreset`): its own
+   tempo is not played, so its synced values are read at the PRESET's tempo and given at the
+   HOST's — a quarter-note delay saved at 100 BPM is a quarter note in a 140 BPM project (0.4286
+   s), not whatever lies nearest 0.6 s there.
+5. **Not in this step: the Mac standalone app's own tempo control** (the switch stays off in the
+   Mac products). Its interface writes `arpRate` through the same call its preset loading makes
+   from three places (`PresetDataManager.loadPreset`, with its freeze options, as well as
+   `Preset.apply(to:)`), so switching it on there needs those wrapped first. Turning that knob
+   moves through small steps, which keep the note anyway; typed jumps and tap tempo are where it
+   would show. Offered to the owner as a follow-up; in a host, the AUv3 follows the host (2).
+
+**Verification.** `PluginTransport`: the host 120 → 125 → 90 → 60 → 180 → 120 — a quarter-note delay
+and LFO are a quarter note throughout (0.667 s and 1.5 Hz at 90; 0.5 s and 2 Hz again at 120),
+each change reported once; the fallback case lands inside the range; with no host, the Tempo
+control 120 → 90 keeps a quarter-note delay a quarter note, and with sync off nothing moves; a
+preset saved at 100 BPM (quarter-note delay, half-note LFO) loaded in a 140 BPM project: a quarter
+note and a half note, in the host's list and in the kernel. `PluginParameters`: the check that
+pinned upstream's behaviour since X2-2 now pins this (a 1/4 triplet at 120 is 2.25 Hz and a 1/4
+triplet at 90). Swift `testAHostTempoJumpKeepsTheNoteValue` holds the AUv3 to (2); revert-checked
+there (in the JUCE plugin the switch of (3) masks a revert of (2), which is why). 22 of 22 CTest
+tests, the goldens bit-exact.
+
+**Windows — run by the owner 2026-09-19 09:31, `main` @ `ea8fd00`** (this change in it): Windows 11,
+Visual Studio 2026 Community 18.10.1, Intel Core i7-6700HQ — built with MSVC, 21 of 21 CTest tests
+(`PluginTransport`'s note-value checks and `PluginParameters`' rewritten one among them),
+Steinberg's validator 537 of 537, pluginval strictness 10 `SUCCESS`. `RESULT: PASSED`. Verified on
+all three OSes.
+
+---
+
+## ADR-083 — The layout specification is measured from the Mac layout, not typed (X3-1)
+
+**Date:** 2026-09-19 · **Status:** Accepted · **X3-1** · Follows ADR-045–048 (the desktop layout
+and its skins), ADR-059–064 (Cabinet), ADR-056 (X3's scope), ADR-073 (the parameter catalog)
+
+**Context.** X3 draws the interface again in JUCE, from "the 0.5.0 desktop layout, written down as
+data". The Mac layout is not a table: `S1DesktopLayout+Rows.swift` builds stack views, and Auto
+Layout decides where each control lands — `equalCentering`, three sections of a row tied by width
+multipliers, cells as wide as their widest line. Transcribing that by hand would be a second
+layout that agrees with the first until someone changes one of them; re-implementing the solver in
+JUCE is worse. And which parameter each control drives is not in the layout at all: it is in the
+four panel controllers' `conductor.bind` calls.
+
+**Decision.**
+1. **The specification is written by a Swift test from the layout itself.**
+   `Tests/SynthOneTests/LayoutSpecFixtureTests.swift` builds the desktop layout at the design size
+   (1440 × 900) under each skin, exactly as `DesktopLayoutTests` and `SkinTests` do, and writes
+   `Sources/S1Plugin/Layout/layout-spec.json`: the metrics, the type by role, and per skin the
+   whole palette (every `S1Palette` field, by reflection, so a new colour cannot be forgotten), the
+   dress, the regions, the fifteen sections (frame, header, body, accent), every control (id, the
+   parameter's `S1Parameter` case name — the JUCE parameter ID, ADR-058 — kind, Mac class, frame,
+   its title and readout lines), the envelope plots and XY pads with the parameters they show, the
+   toolbar / play-bar / status-bar items, and every free label with its font and colour.
+   `Scripts/write-layout-spec.sh` writes it; in the normal suite the same test CHECKS the
+   committed file and fails when it is stale — the pattern of the tuning, preset, wavetable,
+   host-MIDI and factory-program fixtures. **Never edit the JSON; never type a frame in C++.**
+2. **Bindings come from the conductor's own list** (`Conductor.bindings`), plus six controls the
+   panels wire by hand and the conductor never hears of: the five "dependent parameters" (LFO 1
+   and 2 rate, delay time, auto-pan rate, the sequencer's step length — marked `dependent`: their
+   Mac knobs hold a 0…1 position, ADR-022) and the play bar's Transpose. The filter-type picker
+   stands in for the hidden classic button that keeps the binding.
+3. **Cabinet's rectangle table is carried as it is** — `S1SkinTemplate`'s numbers, in the
+   painting's pixels — beside the frames the sections take from it at the design size. The
+   interface scales uniformly from the design size (X3-7), so nothing in the file is a fraction
+   or a constraint.
+4. **`s1plugin::LayoutSpec` reads it** (`S1LayoutSpec.hpp/.cpp`, no JUCE, nlohmann like the state
+   and the presets): strict — a missing field, a frame that is not four numbers, a parameter that
+   is not an `S1Parameter`, an id used twice, and the whole file is refused with the path of the
+   first fault; a half-read layout would be an interface with controls silently absent. The file
+   is linked in as JUCE binary data (`ArcadeRuinsLayout`; `S1LinkedLayoutSpec()`, parsed on first
+   use — never at a host's scan).
+5. **Left out on purpose:** the Cabinet extras (`docs/private/cabinet-extras.md`; X3-6 scopes
+   them — the test filters them by name), the preset browser (X3-4), the Tunings sheet (X3-5),
+   the classic layout (ADR-056).
+
+**Measured.** 125 controls under each skin, the same ids on the same parameters; **124 of the 150
+parameters have a control or a display. The other 26 are listed in `PluginLayoutSpecTests`:** 22
+live on the Dev panel (the three compressors' fifteen, `filterMix`, `detuningMultiplier`,
+`bitCrushDepth`, the delay input's two, `portamentoHalfTime`, `oscBandlimitIndexOverride`), three
+are the pitch wheel and the Wheels popover's bend range (X3-8), and `frequencyA4` is the Tunings
+panel's (X3-5). **This meets X3-3's acceptance line head on** — "all 150 parameters reachable from
+the interface" — because ADR-056 dropped the Dev panel: X3-3 has to put that to the owner (the 22
+stay reachable through the host's generic view and automation either way). Studio's rows are 158 /
+220 / 122 / 247; its knobs 30 / 40 / 44 / 46 / 48 / 52 / 68 (the plan named the five large sizes;
+40 is the LFOs', 30 the sequencer's). Cabinet's sections sit on the painted rectangles to 0.61
+point — Auto Layout puts each edge on the half-point grid.
+
+**The acceptance check, against the running app — not against the test that wrote the file.** The
+test bundle builds the layout with no window and in its own idiom, so agreement with itself proves
+nothing about the product. `Scripts/check-layout-spec.sh`, per skin: `desktop_render.py` (new
+`RENDER_FRAMES=1`) renders the Debug app's window and writes the frame of every visible view in
+it; `Scripts/debug/compare_layout_frames.py` requires every section, control and display of the
+specification to have a view of its Mac class within 1 point (2 px of the 2× render) on every
+edge, each view used once; and `Tests/Plugin/LayoutWireframe` — a JUCE console tool on the
+plugin's own reader — draws the wireframe over the render to look at. **Result, 2026-09-19:
+Studio 144 of 144 frames, worst 0.00 points; Cabinet 144 of 144, worst 0.00** — with the owner's
+library and a different preset loaded than the test's Init, so the frames do not depend on the
+sound.
+
+**Consequences.** A change to the Mac desktop layout now fails `LayoutSpecFixtureTests` until
+`Scripts/write-layout-spec.sh` is run, and the JUCE interface follows at its next build — for as
+long as the Mac layout is the design's source. If the X3 gate retires the Catalyst products
+(ADR-055), the JSON becomes the source and the Swift writer goes with them; the file's format does
+not change. A readout's width follows its text (`valueFrame` is the cell's full width for that
+reason), and `Interval` / `Div` cells are as wide as their readout at Init — X3-2's cells should
+centre text in the line, not size to it.
+
+**Verification, 2026-09-19.** macOS — 25 of 25 CTest tests (three new: `PluginLayoutSpec`,
+`LayoutWireframeStudio`, `LayoutWireframeCabinet`; the goldens bit-exact), Steinberg's validator
+537 of 537, pluginval strictness 10 `SUCCESS`, **343 Xcode tests green** with the specification's
+check mode among them. Revert-checked: a knob moved 3 points in the JSON fails the Swift check
+("is stale") and fails the comparison with the running app ("Filter.cutoff: 3.00 points off").
+No Mac product source changed — nothing rebuilt, reinstalled or `auval`ed. Linux arm64 in Docker —
+24 of 24 CTest tests under GCC 13 (the file read, both wireframes drawn), validator 537 of 537,
+pluginval `SUCCESS`, RealtimeSanitizer clean (23 of 23 under Clang 20). **Windows: owed** — asked
+of the owner at the merge.
+
+---
+
+## ADR-084 — The controls kit: the Mac drawing ported function for function, every edit a gesture, tested with no window (X3-2)
+
+**Date:** 2026-09-19 · **Status:** Accepted · **X3-2** · Follows ADR-083 (the layout specification),
+ADR-073 (what a parameter write means to a VST3 host), ADR-048 (one accent per section), ADR-077
+(the host's tempo is the tempo)
+
+**Context.** X3 draws every control again in JUCE. The Mac controls are UIKit views driven by raw
+touches, drawn — under the desktop layout — by one file, `S1DesktopStyle.swift`, from the skin's
+palette and the control's section accent; three classic drawings (the morph selector, the ADSR
+view, the touch point) ride along unchanged. X3-1 left all of that as data: every colour, the
+dress, each control's `kind`, frame and parameter.
+
+**Decision.**
+1. **Two layers, `Sources/S1Plugin/UI/`.** `s1ui::Style` (`S1KitStyle`) is drawing only: a port of
+   `S1DesktopStyle.swift` function for function (`drawKnob`, `drawSwitch`, `drawLFOChip`,
+   `drawWavePicker`, `drawStepper`, `drawTempoStepper`, `drawTwoWaySwitch`, `drawDirection`,
+   `drawFader`, `drawStepButton`) plus the number box, the segmented picker, the morph selector,
+   the envelope and the pad, onto `juce::Graphics`. It owns no colour and no size — the palette
+   by S1Palette's field names, the dress, the accent handed in. `S1KitControls` is the components:
+   `ParameterControl` and one class per `kind` — `Knob`, `Toggle` (pill and step bar),
+   `TwoWaySwitch`, `LFOChip`, `CellPicker` (waves, direction, segmented), `MorphSelector`,
+   `Stepper` (plain and tempo), `StepOctave`, `StepFader` — with `XYPad`, `EnvelopeView` and
+   `ValueReadout` for what spans several parameters; `makeControl` / `makeDisplay` build the right
+   one from a specification entry, named for accessibility ("Filter Cutoff").
+2. **Every edit is a gesture through `juce::ParameterAttachment`** on the `S1HostParameter`: a drag
+   is begin / values / end, a click one complete gesture, so a host in write mode records it, an
+   undo manager sees one step, and automation, the generic view and what the engine reports back
+   (ADR-073) all arrive through the same attachment. Nothing in the kit touches the processor.
+3. **What the plan asked of every control lives in the base class:** double-click puts the default
+   back; the wheel and the arrow keys nudge (whole steps for a stepped parameter — fractions add up
+   until they make one; shift is ×10); Alt makes a drag, the wheel and the keys fine (the Mac's ⌥,
+   ×0.2); a focus ring in the accent; an accessibility handler — a slider with the parameter's
+   plain range and the host's own text, or a checkable toggle button — and a name.
+4. **The Mac's behaviour is kept where it is a rule and not where it is a touch-screen accident.**
+   Kept: a knob's 0.005 of travel per point with right and up adding; the chip's halves (LFO 1 left,
+   LFO 2 right, value a bitmask); a click anywhere flips a switch, the Arp / Seq switch included;
+   the fader's cap goes where the pointer is, its travel 10 points inside each end (3 short of the
+   groove, as on the Mac); the envelope plot's three areas and rates (a point is a millisecond,
+   ten points one per cent of sustain). **Changed, each marked `PORT:`:** a click on the morph
+   selector goes where it is (the Mac ignores a touch's first point); the step's number box SHOWS
+   the pattern value an octave outward while boosted instead of mutating a stored number (the Mac
+   label adds 12 every time its setter runs); callbacks fire once per click, not on down and up;
+   the XY pad's snap-back restores the values held when grabbed, inside the same gesture.
+5. **The tempo under a host is shown, not edited:** `Stepper::setHostOwned` (X3-3 drives it from
+   `isUsingHostTempo()`).
+6. **Tested with no window and no desktop.** Mouse handlers only translate events into plain
+   methods (`grab`, `dragBy`, `letGo`, `pressAt`, `press`, `moveTo`, `nudge`, `resetToDefault`);
+   `Tests/Plugin/PluginControlsKitTests` calls those on the real processor's parameters with a
+   listener counting gestures, paints with `createComponentSnapshot` at 1× and 2×, and builds the
+   accessibility handler directly. On the test's thread the attachment calls back at once
+   (`ScopedJuceInitialiser_GUI` makes it the message thread), so nothing waits on a run loop.
+   `Tests/Plugin/ControlsKitSheet` paints the whole kit on the specification's frames — the
+   picture held beside the Mac render.
+7. **The specification grew three facts the kit needed** (the Swift writer, regenerated): a chip's
+   words (`title` from `buttonText`), the two-way switch as its own kind `twoWay` with its two
+   words, and each envelope plot's `curve` and `fill` as the Mac view has them under that skin —
+   measured, because my guess was wrong: the filter envelope is NOT unfilled, its fill is
+   `#2c2c2c` under an orange line, and the amplitude envelope's line is `#1a1a1a` over orange.
+
+**The type — open, the owner's.** The Mac interface is set in Avenir Next Condensed, a macOS
+system font that Windows and Linux do not have and that cannot be shipped. `Style::font` uses it
+where the system has it and otherwise the default sans narrowed to its width (×0.82), which keeps
+every label inside the frame the specification measured. A face that ships with the plugin means
+a font file in the repository and a NOTICE.md line — a download and a licence, so it was put to the
+owner rather than done (candidates under the SIL Open Font Licence: Barlow Condensed, Sofia Sans
+Condensed, Archivo Narrow). Until then macOS looks as the Mac app does and the other two look
+approximate. Nothing else in the kit depends on the answer.
+
+**Measured.** 125 of 125 controls and 4 of 4 displays built for each skin, each painting at 1× and
+2× (the 2× image exactly twice the 1×), named and focusable. 100 points of drag = 0.500 of a knob's
+travel, 0.100 with Alt, one gesture; reset = the default as one gesture; a key 0.010, shift 0.100;
+a stepped parameter one whole step per key and whole numbers under a one-point-at-a-time drag; a
+host's write moves knob, readout ("1.00 kHz") and pixels; a knob's arc is its section's accent
+(mint in Cabinet's Mix, orange under Studio); chip 1 → 3 → 2; pickers by cell and by key; stepper
+zones, clamping, "120 bpm", host-owned; number box 7 / 19 / −17 / −5; fader ends at 10 points;
+pad x / y-upward, a gesture on each parameter, snap-back; envelope areas and rates; a one-point
+border is one whole pixel row at 1× and two at 2×. Side by side with the Mac render
+(`Scripts/check-layout-spec.sh`'s images) the kit matches under both skins; Core Graphics' blur is
+softer than a JUCE drop shadow of the same radius, so glows use four fifths of it.
+**Revert-checked:** the drag's sensitivity at 0.004 fails two checks (0.4, 0.08); a border drawn
+off the half-point fails both edge checks (blue 97 and 12 against 212 and 183). The first edge
+check was worthless — Studio's border and well are six levels apart, so it passed whatever was
+drawn — and was rewritten on Cabinet's cyan border: **a revert-check that cannot fail is the
+finding.**
+
+**Known differences from the Mac, for X3-3's side-by-side.** The sequencer's Interval reads
+"+12 st" (the catalog's format since X2-2, ADR-073) where the Mac's cell reads "12". The morph
+selector's and the touch point's orange are the classic kits' own under every skin, as on the Mac.
+The segmented picker's cells are equal; UIKit sizes each to its word. The Cabinet pads have no CRT
+frame yet (decoration: X3-6). No editor exists: the processor still returns the generic one.
+
+**Verification, 2026-09-19.** macOS — 28 of 28 CTest tests (new: `PluginControlsKit`, 70 checks,
+`ControlsKitSheetStudio`, `ControlsKitSheetCabinet`; the goldens bit-exact), Steinberg's validator
+537 of 537, pluginval strictness 10 `SUCCESS`, 343 Xcode tests green with the regenerated
+specification's check mode. No Mac product source changed — nothing rebuilt, reinstalled or
+`auval`ed. Linux arm64 in Docker — 27 of 27 CTest tests under GCC 13 (the kit built, driven and
+painted with no window and no fonts installed), validator 537 of 537, pluginval `SUCCESS`,
+RealtimeSanitizer clean (26 of 26 under Clang 20). **Windows: owed**, with X3-1's (the owner's try
+of 2026-09-19 found "nothing new" after `git pull`; the block was not pasted, so which commit their
+clone holds is not known).
+
+
+---
+
+## ADR-085 — The editor: the specification's frames, the kit's controls, the painting under Cabinet; every parameter reachable (X3-3)
+
+**Date:** 2026-09-19 · **Status:** Accepted · **X3-3** · Follows ADR-083, ADR-084, ADR-056 (scope),
+ADR-059/064 (Cabinet, the default), ADR-077 (the host's tempo)
+
+**Context.** X3-1 left where everything sits and what it drives; X3-2 left every control. X3-3 is
+the window: toolbar, fifteen sections, play bar, status bar — and the plan's acceptance, "all 150
+parameters reachable from the interface; a test walks the component tree", against a desktop
+layout that gives 26 of them no control (ADR-083) and a scope decision that dropped the panel 22
+of those lived on (ADR-056).
+
+**Decision.**
+1. **`S1PluginEditor` (`Sources/S1Plugin/UI/`) is what `createEditor` returns**, at the design size
+   1440 × 900, not resizable (X3-7 scales it). It knows no frame, colour or binding: controls come
+   from `makeControl` on the specification's frames, a `ValueReadout` on every `valueFrame`, plots
+   and pads from `makeDisplay`, toolbar and play-bar pieces from the specification's `items`.
+   Everything that never moves — bars, section panels, titles, labels, the painting — is one
+   opaque, buffered `Backdrop`.
+2. **Both skins from one build; the constructor takes the skin's key, Cabinet by default.** Under
+   Cabinet the backdrop is the owner's painting (`s1_template_cabinet@2x.jpg`, the Mac app's own
+   file, linked in with the wordmark as `ArcadeRuinsArt`; 1.2 MB) and the header's buttons are
+   invisible hit areas over the painted ones; under Studio it draws `S1SectionView`'s panels and the
+   toolbar. Choosing a skin in the interface is X3-6.
+3. **Every parameter is reachable: Settings opens "Every parameter"** — JUCE's generic list of all
+   150 on a card over the sections. 124 have a control, plot or pad of their own; the other 26 —
+   the Dev panel's 22, the pitch wheel and its range, `frequencyA4` — are there. This keeps
+   ADR-056 (no Dev panel is rebuilt) and meets the plan's line as written; when X3-6 builds real
+   Settings the list becomes one entry in it. **Put to the owner as done, not asked**: it costs
+   nothing to remove.
+4. **The dependent parameters sit by note value, as on the Mac** (`s1ui::PositionMap`,
+   `dependentPositionMap`): found by the side-by-side, not by a test — with tempo sync on the Mac's
+   LFO-rate knob for "1/8 note" sat at 60% of its travel and the kit's, mapped through the host
+   parameter's Hz range, at 15%; pad 1's point likewise. The kit now uses the engine's own
+   arithmetic (`S1Rate`: `nearestFrequency` / `nearestTime` / `nearestFactor` for where a value
+   sits, `rateFrom…01` for what a position means, the 0.4 taper with sync off), reading the sync
+   switch and the tempo from their host parameters; the editor repaints those five knobs and the
+   pad when either moves. A drag steps through note values, as the Mac's does.
+5. **What spans controls is the editor's, on a 30 Hz timer** (`refreshLiveState`, callable without
+   one): the playing step's ring from `arpBeatCounter()` while the arpeggiator is on and the counter
+   is moving; the tempo shown as the host's (`Stepper::setHostOwned`, ADR-077); the rate readouts;
+   Mono lit from `isMono`; the preset's name; the scope.
+6. **Three small things were added to the processor, none touching the sound:**
+   `requestAllNotesOff()` — Panic: an atomic flag, consumed at the top of the next block as a CC
+   123 event through the router (never the kernel from the message thread; the router lets go of
+   its keys too, ADR-081's rule); a lock-free ring of the last 1,024 LEFT output samples for the
+   scope (left, as the Mac's plot: a widened sound's two sides cancel in a sum — measured, the
+   first version summed them); `currentPresetBank()` / `currentPresetName()`.
+7. **Working now:** every parameter control, plot and pad; previous / next through the 695 factory
+   presets in a host's program order, loaded as a person's choice (gestures, so a host records
+   them); Panic; Mono; Snap; the scope; About; Every parameter. **Says where it comes instead of
+   pretending:** the preset browser, Save and the dice (X3-4), Tuning (X3-5), Hold, Wheels and the
+   keyboard's octave (X3-8) — a press writes "… comes with X3-n of the plan." in the status bar.
+   **Left out on purpose:** MIDI Learn (deferred for 1.0, ADR-056) and the recorder (a host
+   records; the painted plate is About, as in the Mac plugin).
+
+**Measured against the Mac app, same preset in both** (`desktop_render.py` with `RENDER_SELECT`,
+`EditorSnapshot --program`, `Scripts/debug/compare_editor_render.py`): mean difference per colour
+channel (0–255) inside each section's frame — **Studio 1.4 to 6.1, 3.3 over the whole window;
+Cabinet 2.4 to 8.3, 5.9 over the window** (its glows are where a JUCE shadow and Core Graphics'
+differ most); Pads the outlier in both (10.6 / 11.3): the touch point's glow, and under Cabinet
+the CRT frame that is X3-6's. A number, not a verdict — it is there so a missing or misplaced
+control shows at once; the owner's eyes are the acceptance.
+
+**Known differences, for the owner's side-by-side** — none silently "fixed": the preset reads
+"Bank: Name" where the Mac reads "index: Name" (X3-4 settles it with the browser); Interval reads
+"+12 st" (ADR-084); the step length reads "1/4 note" where the Mac reads "1/2 note" for the same
+value (ADR-077's label question, still the owner's); the play bar's two steppers are the desktop
+stepper where the Mac keeps the classic arrows there; no MIDI Learn button; the hint says "Alt"
+for ⌥; Cabinet's pads have no CRT frame yet.
+
+**Tested with no window** (`Tests/Plugin/PluginEditorTests`, 37 checks): both skins at the design
+size; the tree walked — 125 parameter controls, each on its specified frame and parameter; 124
+parameters with a control of their own and the list of all 150 behind Settings (the 26 printed);
+the window opaque everywhere; every item pressable; previous / next / wrap with gestures counted;
+Mono; "comes with X3-4"; **Panic heard** — a held note silent eight seconds on with the key never
+lifted, and the same key playing again; the scope's ring holding the sound; the tempo under a host
+at 97 BPM reading "97 bpm" and refusing edits, then the plugin's own again; exactly one step ringed
+while the arpeggiator runs; five editors made and destroyed with parameters moving between.
+`EditorSnapshot` paints the whole window (about 85 ms at 2× here, once: the backdrop is buffered).
+pluginval opens the real editor at strictness 10.
+
+**Revert-checked, and the first try found the test, not the code.** With the panic event taken out
+the Panic check still PASSED: by then the test had stepped to a factory preset whose note dies
+away by itself, so "silence eight seconds on" was true whatever Panic did. The test now loads the
+shipped Init, shows the held note still sounding after eight seconds (0.387) and only then presses
+Panic: without the event it fails at 0.387, with it the output is 0. The fourth time this project
+has met the rule — **test with a sound that uses the thing** (ADR-077, ADR-078, ADR-080) — and the
+second revert-check in two tasks that did not fail (ADR-084).
+
+**Verification, 2026-09-19.** macOS — 31 of 31 CTest tests (the goldens bit-exact), Steinberg's
+validator 537 of 537, pluginval strictness 10 `SUCCESS` with its three editor tests run on the real
+window. Linux arm64 in Docker — 30 of 30 under GCC 13, validator 537 of 537, pluginval `SUCCESS`
+under xvfb, RealtimeSanitizer clean (29 of 29 under Clang 20): the panic event and the scope's ring
+allocate nothing on the audio thread. No Mac product source, Swift or specification change, so no
+Xcode run. **Windows: owed**, with X3-1's and X3-2's. **The owner's side-by-side sign-off: open.**
+
+
+## ADR-086 — The preset browser: the banks become the person's files, a model with no JUCE in it, the Mac's card over it (X3-4)
+
+**Date:** 2026-09-19 · **Status:** Accepted · **X3-4** · Follows ADR-080 (the library), ADR-085 (the
+editor), ADR-040 (Bonus into BankA), ADR-036 (a test must never write the owner's files),
+ADR-044 (never a modal panel from a plugin), ADR-047 (the Mac's drop-down)
+
+**Context.** X2-9 gave the plugin presets without an interface: the thirteen factory banks linked
+into the binary, read-only, plus user banks as files in a shared folder. X3-3 gave the window, and
+left the preset name, Presets, Save and the dice saying "comes with X3-4". The plan's acceptance
+for X3-4 is *every operation the Mac browser performs works in a host and in the standalone,
+including saving; import reads a bank exported by the Mac app unchanged.*
+
+That acceptance cannot be met with read-only factory banks. Starring a factory preset, reordering
+BankA, renaming a bank, deleting a preset — every one of them writes to a bank the binary holds.
+
+**Decision.**
+1. **The banks become files the person owns, on first use — what the Mac does on first launch.**
+   `PresetsViewController.loadBanks` writes the bundled bank files into Documents and never reads
+   the bundle again; `PresetBrowser::load()` does the same into
+   `<application data>/BadPackets/Arcade Ruins/Banks`, and from then on a file IS the bank. Twelve
+   banks, not thirteen: `Bonus.json`'s presets say `"bank": "BankA"` inside and the Mac appends them
+   to BankA (ADR-040), so BankA is written with all 135. The order is AppSettings.swift's
+   `initBanks`, transcribed into `PresetBrowser::initialBankOrder`. About 2 MB, written once, and
+   **only when a person asks for a preset** — never when a host scans the plugin or opens the
+   window: the editor makes the browser lazily, on the first press of the preset name, ▶, ◀, the
+   dice or Save.
+2. **What a HOST stores is untouched by any of it.** `PresetLibrary::factoryProgram` still reads the
+   banks linked into the binary, so program 137 is the same sound after the person has reordered
+   their copy of BankA, renamed it or thrown it away. A test holds program 0 to its name across the
+   whole session's editing.
+3. **The model is `s1plugin::PresetBrowser` — no JUCE in it**, a port of the Mac browser's own
+   logic file for file: `sortPresets` (All by bank, the six categories, Alphabetical, Favorites,
+   a bank's own order), the category row numbers (`bankStartingIndex` is 9 here because it is 9
+   there — the sorting is written against those integers), New, New Bank, duplicate " [copy]",
+   the star, save, delete, reorder, rename and delete a bank, import and export. It is driven and
+   measured with no window by `Tests/Plugin/PluginPresetBrowserTests` (101 checks).
+4. **The card is a thin view** (`s1ui::PresetPanel`): the Mac's 380 × 720 drop-down, hung under the
+   preset name, with PRESETS and "+", the search field, the categories and banks at 228 points, the
+   presets of the selection, the chosen preset's category and notes, and New / Import / Reorder /
+   Import Bank. Everything it does can be done without a mouse (`chooseRow`, `chooseCategory`,
+   `pressButton`, `pressRowButton`, `setSearch`, `editorCardSave`), which is how `PluginEditorTests`
+   works it. A click anywhere else puts it away, as the Mac's backdrop does.
+5. **Previous, next and the dice walk the list the browser is showing**, not the host's program
+   order — a bank, a category, or the search's matches. The browser opens on All, as
+   `PresetsViewController.viewDidLoad` does, so ▶ walks the whole library until a person picks a row.
+6. **Save is the Mac's Save**: `savePresetPressed` opens the preset editor on the sound as it stands
+   (`Manager+PresetsDelegate.saveEditedPreset`), so a name, a category and a bank are chosen before
+   anything is written. A sound that came from a host's session and is in no bank is offered as a
+   new preset.
+7. **A uid is how a row, a save and a deletion name a preset — and the shipped banks do not hold
+   695 different ones.** 670 uids for 695 presets: 23 are used twice, upstream copying a preset
+   between banks. Upstream never noticed because its tables hold object references; here a reorder
+   of Starter Bank moved a preset in another bank. `readFolder` gives the second of each pair a
+   fresh uid and writes that bank back once; after that the files hold what is read. **Found by a
+   test, not by a guess** — see the revert-check below.
+8. **Where the banks' order lives:** `banks.order` beside them, a JSON array of names, written on
+   every change. Deliberately **not** a `.json`, because `PresetLibrary::userBanks` reads every
+   `.json` in the folder as a bank and would have shown the order file as one. The Mac keeps the
+   same thing in its own `banks.json` in AppSettings' folder.
+
+**Where it differs from the Mac, on purpose.**
+- **Search filters the list in place** instead of opening the classic search screen over the
+  window; the rule it matches is the screen's own (the name or the notes, anywhere in the library,
+  sorted by name).
+- **Reorder gives each row two arrows** where the Mac gives drag handles: while Reorder is on, a
+  row carries ▴ and ▾ and nothing else, and Done puts the star, rename, duplicate and share back.
+- **The preset editor's category and bank are pop-up menus**, where the Mac uses two tables — it
+  uses tables only because a `UIPickerView` crashes under Optimize Interface for Mac (ADR-033),
+  which is no constraint here.
+- **Import and Export go through `juce::FileChooser::launchAsync`, never a modal call**: a plugin
+  does not own the host's event loop (ADR-044's lesson in JUCE's words).
+- **The toolbar still reads "Bank: Name" where the Mac reads "index: Name".** Decided here and
+  told, not asked: the Mac's number is the preset's place in its bank, which means nothing without
+  the bank beside it, and "Bank: Name" is what the host's own program menu shows. Say the word and
+  it becomes the Mac's.
+
+**Two small additions elsewhere:** `PresetLibrary::removeBank` (a bank's file taken away; one that
+is not there is not a failure) and `presetDefaults()` (what an imported file's missing keys take).
+
+**Tested.** `PluginPresetBrowserTests` (101 checks, in a folder of its own under the system's
+temporary folder — ADR-036's rule): the twelve banks written on first load and in AppSettings'
+order, BankA holding its 41 and Bonus's 94, every preset with a uid of its own; the category rows
+and their numbers; what each row shows; the search by name and by notes; stepping and wrapping;
+New, the star, duplicate, save (the name, the category, the sound's own values, a move between
+banks), delete and what plays afterwards, reorder; the order kept across a reopened browser;
+New Bank, rename and delete a bank; **a bank the Mac app exported read unchanged** — all 15 presets
+of `Starter Bank.json`, in the file's order, with the file's sounds, each under a uid of its own,
+and the Mac's own " [rename]" when the name is taken; one preset exported and imported back.
+`PluginEditorTests` adds 30 checks through the card itself (69 in all now): it drops down under the name and inside
+the window at 380 wide, a row chosen is the sound that plays (in gestures a host records), a bank
+row filters, the search narrows, New plays the new preset, the star stars, Save keeps the sound
+that was playing under the name and category it was given, the arrows move a row and put it back,
+duplicate plays the copy, the dice plays another, and the name puts the card away.
+`EditorSnapshot --presets` paints the card for both skins, so it is known to draw on every OS.
+
+**Revert-checked, three times, and one of them was the finding.**
+- Take the uid dedupe out and **two** checks fail — "every preset has a uid of its own" and "the row
+  moved down two, and the others came up". That is how the duplicate uids were found at all: the
+  reorder test failed before anyone suspected the data.
+- Drop the banks' order file and the reopened browser lists a later bank before an earlier one.
+  **The first version of that check could not fail**: it only asked whether the file existed, and
+  the twelve bundled names are enough to order themselves. It now makes a thirteenth bank, renames
+  it to sort first, and reads it back — and that one fails. The third check in three tasks that
+  did not fail as written (ADR-084, ADR-085).
+- Take the view's reorder guard out and four checks fail.
+
+**Also found: `juce::TextEditor::setText` POSTS its change message** (`postCommandMessage`), so a
+search set from code reaches the model only when the message loop runs — and in a test it never
+would. `PresetPanel::setSearch` tells the model itself.
+
+**Verification, 2026-09-19.** macOS — 34 of 34 CTest tests (the goldens bit-exact; new:
+`PluginPresetBrowser`, and the two `EditorSnapshotPresets…`), Steinberg's validator 537 of 537,
+pluginval strictness 10 `SUCCESS`. Linux arm64 in Docker — see STATE.md. No Mac product source,
+Swift or specification change, so no Xcode run. **Windows: owed**, with X3-1's, X3-2's and X3-3's.
+
+## ADR-087 — The tunings: the Mac's banks as a model, a preset's own scale played, and A4 made live (X3-5)
+
+**Date:** 2026-09-20 · **Status:** Accepted · **X3-5** · Follows ADR-068 (the tunings as engine
+data), ADR-086 (the model-and-view shape), ADR-076 (a preset's values), ADR-085 §"the tuning
+stays", ADR-056 (scope)
+
+**Context.** X1-4 put the 194 shipped tunings, the tuning table and the Scala parser in the engine
+as plain C++ and proved them bit-exact against the Swift. Nothing above them was built: X3-3's
+editor said "Tuning comes with X3-5", `loadPreset` deliberately left the tuning table alone, and
+the plan's acceptance for X3-5 is *a preset that carries a tuning plays in it, and the panel's
+tables match the Mac's*. **478 of the 695 factory presets carry a tuning; 11 of them carry one that
+is not twelve notes** — Wilson hexanies, two North Indian ragas, a 19-tone Narushima scale, harmonic
+dyads and triads. Until now the plugin played every one of them in 12 ET.
+
+**Decision.**
+1. **`s1plugin::TuningLibrary` is the model, with no JUCE in it** — a port of the Mac's `Tunings`,
+   `Tuning` and `TuningBank` operation for operation: three banks (Curated, User, "Hexanies With
+   Proportional Triads"), the sort that strips 12 ET and puts it back at row 0 of the two banks
+   that carry it, `nameForCell` and `encoding` (two tunings are the same tuning when name and
+   encoding match), selection, the user bank, and Scala import through the engine's own parser.
+   The 194 tunings are NOT rebuilt: they are already `s1::factoryTunings()`.
+2. **`tunings_v1.json`, the Mac app's own format and file name, in the folder ABOVE the banks.**
+   Not beside them: `PresetLibrary::userBanks` reads every `.json` there as a bank and would have
+   listed the tunings file as one — the same trap `banks.order` avoided in ADR-086.
+   One key is ours: `isSelected` on a bank, because upstream keeps the chosen bank in AppSettings,
+   which a plugin has none of. Swift's synthesised decoder ignores keys it does not know.
+3. **A preset's tuning is applied when it is loaded**, as `PresetDataManager` does under
+   `AppSettings.saveTuningWithPreset` — which is **true** on the Mac, so it is the default here.
+   A preset with no tuning of its own puts 12 ET back. `setSavesTuningWithPreset(false)` turns the
+   whole business off. A sound saved now names the tuning it is actually in.
+4. **The tuning library follows the banks' folder**, and is made only when something asks for a
+   preset or opens the card. That is a safety property, not a convenience: every test that can
+   reach a bank must already redirect the preset library, because the real folder is the owner's
+   (ADR-036), and this cannot be forgotten separately.
+5. **A4 is live here, and inert on the Mac.** `frequencyA4` is one of the 150 parameters; the
+   kernel's own comment says "special case for updating the tuning table based on frequency at A4"
+   and then only truncates the value — **nothing in the engine reads it**, on the Mac either
+   (`Sources/S1Engine/PORTING.md`: "`frequencyA4` is stored and read by nothing"). Here it moves
+   the table's reference, by the inverse of TuneUp's own arithmetic
+   (`middleC = A4 × 2^(-9/12)`), so the master-tuning knob does what it says.
+   **Decided and reported, not asked.** What it costs: **five of the 695 factory presets ask for an
+   A4 that is not 440** — "BB Synth Won Sign-off" (410), "JEC Rainbow Dome Synthi" (434), "JEC Soft
+   iVCS3" (432), "JEC Slow Lesley" (434), "Let's Play" (439) — and those five now play at the pitch
+   they ask for, where the Mac plays them at 440. The other 690 are unaffected.
+   **The goldens cannot move**: the change is in the plugin's tuning model, not in the engine, and
+   the Mac products are untouched (their A4 stays inert until the owner says otherwise).
+6. **The card is `s1ui::TuningsPanel`** (700 × 560, over the sections): the banks, the tunings of
+   the chosen bank with their note counts, the pitch wheel as a horagram — every degree at its
+   place round the octave, hue BY that place, which is `Tunings.color(forPitch:)` — the
+   master-tuning knob, and Reset / Random / Import a scale / Delete. It is a view: every operation
+   is the model's. **frequencyA4 has a control at last** — it was one of the 26 the desktop layout
+   gives none (ADR-083), and the editor now builds 126 parameter controls with the card open.
+7. **Left out on purpose:** TuneUp, Wilsonic and D1 — they hand a tuning to another iOS app by
+   URL, which ADR-056's scope does not rebuild.
+
+**Tested.** `PluginTuningsTests` (58 checks, in a folder of its own): the three banks under the
+Mac's names; 12 ET at row 0 of Curated and User and absent from the hexany bank; `nameForCell`'s
+padding and `encoding`'s indifference to order and octave; the 128 frequencies (note 69 at 440,
+middle C at 261.6255653006, a semitone at 100 cents); A4 432 moving the WHOLE table and not just
+the As; selection surviving a second library on the same folder, in the folder above the banks and
+not in it; the user bank refusing to lose 12 ET, taking a tuning once however often it is set,
+deleting and reordering; a Scala file read and nonsense refused; **the eleven microtonal presets
+each leaving the kernel in a scale of its own note count, under its own name, with all 128
+frequencies the scale's and not 12 ET's**; a 12 ET preset putting it back; the switch; a saved
+sound carrying its tuning into another instance. `PluginEditorTests` adds the card (80 checks in
+all now). `EditorSnapshot --tunings` paints it for both skins.
+
+**And it is heard, not just tabled.** Two keys are sounded and their interval measured from the
+audio: 100 cents in 12 ET, and with "5 Harmonic Series: Pentad" under the same sound, 315 cents —
+key 61 measured at **313.952 Hz against the scale's 313.951**. A4 at 432 puts the same key 31.8
+cents flat of where 440 puts it.
+
+**Three things the measurements taught, each after a check failed.**
+- **An interval is measurable; a pitch is not.** The first version asked for absolute frequencies
+  and got nonsense, because a preset is free to sound an octave below the key.
+- **Not with any sound, though.** Measuring the interval under the microtonal PRESET still failed:
+  "JEC Digiharp" runs two detuned oscillators, so autocorrelation reads the blend — 292 cents where
+  its scale says 315. The scale is applied to the shipped Init instead, and that the eleven presets
+  each put their own scale in the kernel is checked exactly, against all 128 frequencies.
+- **Autocorrelation locks to the octave below**, and a window at the start of a note catches the
+  glide. The measure takes the shortest tall peak, 0.6 s into the note.
+
+**Revert-checked.** Stop applying a preset's tuning and four checks fail, the eleven-preset
+acceptance among them. Stop A4 moving the table and four more fail, including the heard one.
+
+**Verification, 2026-09-20.** macOS — 37 of 37 CTest tests (the goldens bit-exact; new:
+`PluginTunings`, and the two `EditorSnapshotTunings…`), Steinberg's validator 537 of 537, pluginval
+strictness 10 `SUCCESS`. Linux arm64 in Docker — see STATE.md. No Mac product source, Swift or
+specification change, so no Xcode run. **Windows: owed.**
+
+## ADR-088 — The skins in the window, a typeface that ships, and the cabinet made whole (X3-6)
+
+**Date:** 2026-09-20 · **Status:** Accepted · **X3-6** · Follows ADR-084 (the kit and its open
+typeface question), ADR-085 (the editor; Settings), ADR-061 (the joystick), ADR-059/064 (Cabinet),
+ADR-083 (the specification is measured, never typed)
+
+**Context.** X3-6 is the plan's "Studio + Cabinet skins, Cabinet the default". Three more things
+were booked into it by the owner's own look at X3-3 — *"the joystick is missing from the arcade
+game and the x/y pads don't do the starfield effect"* — plus the CRT frame Cabinet's pads lacked.
+And ADR-084's open question, the typeface, was answered on 2026-09-20: **Barlow Condensed, yes.**
+
+**Decision.**
+1. **The typeface ships.** Three weights of Barlow Condensed (SIL OFL 1.1) are linked into the
+   plugin and used wherever the system has no Avenir Next Condensed — everywhere but macOS, which
+   keeps the Mac's own face. The old fallback squeezed the default sans to 0.82 of its width; this
+   face is condensed, so a label is its own shape. The licence travels with the files and is in
+   NOTICE.md. `Style::preferLinkedTypeface(true)` forces it, which is how a test on macOS sees
+   what Windows sees, and `EditorSnapshot --linked-face` draws it.
+   **What a typeface has to satisfy is not "it loads"**: every one of the specification's 33
+   labels, and every section title, still fits the frame the Mac measured for it.
+2. **The skin is chosen in the window.** `applySkin` re-dresses in place — every control, plot,
+   pad, item and the backdrop made again from the specification, at the same size, with the cards
+   torn down first because they hold the style. No new editor; the sound is not touched. The
+   choice is kept in `interface.json` beside the banks, so the standalone and the VST3 open in the
+   same skin, as the Mac keeps its own in preferences.
+3. **Settings is a real card**, as ADR-085 said it would be at X3-6: a button per skin with the
+   one in use lit, X3-5's "a preset carries its own tuning", and the list of all 150 parameters as
+   one entry in it rather than the whole of Settings.
+4. **The cabinet has its stick back.** The painting ships with the joystick cut OUT of it
+   (`generate.py` lifts it and fills the hole from the console beside it), so a window that does
+   not draw the two sprites shows an empty console — which is exactly what the owner saw. The
+   sprites are linked in, and **their boxes are MEASURED, not typed**: the Swift writer now emits
+   `template.joystick` (ball box, rod box, pivot, reach, in the painting's own pixels) and
+   `S1LayoutSpec` reads it (ADR-083's rule).
+   **It is live, as on the Mac** (ADR-061): the rod turns about its socket, the ball slides 7
+   painting pixels up for a push and 8 down for a pull, nothing stretches, and letting go springs
+   it back. Up is the mod wheel, sideways bends the pitch. It owns no parameter: the wheel goes
+   through a new interface path on the processor (an atomic the next block applies through the
+   same call CC 1 takes — the message thread never touches the kernel), and the bend through the
+   `pitchbend` host parameter. **Upstream's 15% dead zone is the PITCH's, not the picture's**: a
+   small lean moves the stick and not the note.
+5. **The pads throw their starfield**, upstream's `CAEmitterCell` drawn rather than animated:
+   birth rate 80 a second, lifetime 1.70 s, velocity 190 ± 60, the full circle, a spark growing
+   from 0.05, additive — and **from the pad's CENTRE, which is where the Mac's emitter sits**, not
+   from the touch. On while the pad is held, off when it is let go, which is when the clock runs.
+   **Amended 2026-09-21, at the owner's word, in the JUCE plugin only:** "barely visible … a little
+   bolder with smaller particles", "let the focus follow the cursor", and the target at half its
+   size. The motion is still upstream's; the look is small bright sparks (one to three points, a
+   hot core, nearly opaque while young), **each leaving from where the touch was when it was
+   born**, so the field streams behind the cursor — the cursor rather than the target, which on a
+   tempo-synced pad steps between note values. `Style::PadTouch`, `kPadTargetScale`. The random
+   draws now happen for every star whether or not it is drawn: before, a skipped star consumed
+   none, so every heading shifted as the hold went on. The Mac keeps its centre and its discs.
+6. **Cabinet's pads are framed as screens** (`S1CRTFrame`): a one-point border in the skin's frame
+   accent at 0.9, its glow at 0.45 and radius 6, and scanlines — one dark line every three points
+   at 16% black. The frame accent was already in the specification (`#2ee8ff` for Cabinet, none
+   for Studio), so this needed no new measurement.
+7. **The red power buttons are NOT in this task.** ADR-062's greyscale cycle — fifteen zones,
+   every held colour swapped and restored, a shuffled eight-second blink — is a task's worth on
+   its own. The owner agreed, 2026-09-20.
+
+**Tested.** `PluginTypefaceTests` (8 checks) — the three weights are the linked face and not the
+system's, no squeeze, and every label and section title fits. `PluginControlsKitTests` gains the
+bezel and the starfield (13 more): the frame draws its line and **leaves what it frames alone**,
+Studio gets none, a pad that is not held throws nothing, a held one throws more the longer it is
+held, and the burst's mean distance from the middle grows — 6.2 points at 0.05 s, 35.2 at 0.35.
+`PluginEditorTests` (105 checks now) adds the joystick and the skin: the stick is on the
+specification's own box and inside the window; a push moves the mod wheel and the kernel hears it
+at the next block; a lean bends the pitch; a lean inside the dead zone bends nothing **and still
+draws the stick leaning**; letting go centres the bend; Studio has no stick; the skin changes in
+place with every control rebuilt, the window still opaque everywhere, and the choice remembered.
+
+**Revert-checked, and one of the two found a check that could not fail.**
+- Let the bezel's glow paint where a layer shadow would not, and "no glow spilled inside it"
+  fails at 1,200 pixels. **Found by eye first**: the first cut tinted the pads it was framing,
+  because a `CALayer` shadow falls behind opaque content and a JUCE drop shadow is painted.
+- Apply the dead zone to the picture as well as to the pitch, and the first version of that check
+  **passed** — it read back the number it had just written. It measures the PIXELS now, and fails
+  at 0 changed. The fourth such check in five tasks (ADR-084, ADR-085, ADR-086).
+
+**And Linux found a third thing, which macOS could not.** `PluginTypefaceTests` failed there with
+two labels wider than their frames, the status-bar hint worst. The hint's specification text holds
+an Option sign and a non-breaking hyphen — glyphs the Mac's own face has, Barlow does not, and a
+Docker image with almost no fonts substitutes with something wider still. **The editor had always
+replaced those two before drawing**; the test was measuring the raw text, which the interface never
+paints. The substitution is `Style::drawable` now, in one place, used by both.
+
+**And then Windows failed on it, because I put the bug back.** The owner's run of 5028b6e did not
+build: two init-captures inside nested lambdas in the new Settings card — **the very form their own
+fix had removed at X3-5, and which had been written into CLAUDE.md's gotchas hours earlier in the
+same session.** Reading a rule is not obeying it, so the form is now banned outright and checked
+mechanically: a `juce::Component::SafePointer` is never made in a capture list, it is a named local
+captured by copy, and `ctest -R NoNestedInitCapture` greps every UI source for it on all three
+operating systems. All six sites were converted, not only the two that break, so no judgement about
+nesting is needed. Revert-checked: putting one back fails the check and names the file and line.
+
+**And the owner asked for the Windows script to stop lying.** Twice it reported `ok` for the tests
+and the validators after the build had failed, because the previous run's test programs and `.vst3`
+were still on disk — a stale pass, which is worse than no result. Each step now names what it needs;
+a step whose ground did not pass reports `not run` and its body never executes, and a skipped step
+blocks its own dependants in turn. Verified in a real PowerShell before it was sent: the failing
+path reports one `FAIL` and four `not run`, the passing path still runs everything.
+
+**And the owner found one by using it**, which no test had: leaned hard right, the ball was cut off
+against the console — *"the joystick becomes obscured by the yellow buttons to its right"*. **JUCE
+clips a component's painting to its bounds and UIKit does not**, so on the Mac the sprite draws
+outside its view and here it met the edge of `reach`. The component is wider than the grab area now
+(24 painting pixels a side, `Joystick::kSwing`) and `hitTest` keeps the clicks inside `reach`, so
+nothing painted beside the stick loses its own. Checked by comparing the leaned picture with the
+upright one: the ball reaches past the grab area's edge and stops short of the box's.
+Revert-checked at a margin of 0, where it is flush against the edge — 0 pixels clear.
+
+**Verification, 2026-09-20.** macOS — 39 of 39 CTest tests, Steinberg's validator 537 of 537,
+pluginval strictness 10 `SUCCESS`, and **343 Xcode tests green** (the Swift writer changed, so the
+specification was regenerated and its check-mode test had to agree). Linux arm64 in Docker — see
+STATE.md. **Windows: owed.**
+
+## ADR-089 — The window scales: one transform on a design-size stage, letterboxed (X3-7)
+
+**Date:** 2026-09-21 · **Status:** Accepted · **X3-7** · Follows ADR-083 (the layout is measured, in
+design points), ADR-085 (the editor was built at the design size and not resizable), ADR-019 (the
+Mac's `S1ScalingContainer`, which settled the same question for the Mac app in 2026-09)
+
+**Context.** Everything in the interface sits where a Swift test measured it on the Mac: 1440 × 900
+design points, 144 frames a skin, read from a generated file. There is no adaptive layout underneath
+and there was never meant to be one — a stretch would strand every control and open gaps between
+sections, which is what hard requirement 1 forbids. But a plugin does not choose its window: a host
+gives it one, a 1280 × 800 laptop has no room for 1440 × 900 at all, and pluginval at strictness 10
+resizes the editor to sizes nobody would pick.
+
+**Decision.**
+1. **Everything is a child of one `stage` component, which is always the design size.** The window
+   scales it with a single `AffineTransform`, uniform and centred. Nothing is re-laid out, no frame
+   is recomputed, and every control, card, label and hit area stays in the design points the
+   specification measured — the Mac's answer (ADR-019) in JUCE's terms. JUCE's own documentation
+   asks for exactly this shape: an editor must not carry a transform of its own, because the host
+   sets one for its scale factor, so *"put the component you want to transform in a child of the
+   editor and transform that instead"*.
+2. **The scale is the SMALLER of width/design and height/design**, so the whole interface always
+   fits and is never cropped, whatever shape the window is. What is left over is painted in the
+   skin's own window colour, centred — a letterbox, not a stretch.
+3. **The window resizes between 0.75× and 1.5×**, the plan's range, with the design's aspect ratio
+   fixed in the constrainer so a drag on one edge takes the other with it, and a bottom-right corner
+   resizer for hosts that do not draw their own. `spec.minimumSize` is the LAYOUT's minimum — the
+   design size itself — not the window's: below 1× the interface is drawn smaller, not reflowed.
+   A host may still hand the editor any size at all, and `resized` fits the interface into it.
+4. **Nothing remembers the size here.** A host stores its editor's size in its session and JUCE's
+   standalone window restores its own, so a third keeper would only give them something to disagree
+   with.
+
+**What the measurements say** (`PluginEditorTests`, 14 new checks, no window): the limits are 1080 ×
+675 to 2160 × 1350 and a drag to 2000 × 900 comes back at the design's 1.6 ratio; at 0.75×, 1×,
+1.25× and 1.5× every one of the 125 controls is drawn on its measured frame times the scale, centred
+— worst error 0.75 of a point, which is the rounding of a half-pixel offset; **the plan's acceptance,
+a 1280 × 800 laptop, shows the whole interface at 0.85× with nothing cropped**; the preset browser's
+card and the Tunings card scale with it and stay inside the window; a window of another shape
+(1600 × 675) scales by its tighter side and is centred to within a point, with the margin on either
+side painted in the window's colour.
+
+**Two checks that could not fail, found by reverting** — the fifth and sixth in seven tasks:
+- **A click is not a drawing.** The first hit-test check asked the window what was under each
+  control's centre and got nothing at any scale, because **a component is not visible until
+  something shows it** and an invisible one answers no clicks: the check passed at 0.75× and 1.5×
+  by comparing 0 with 0. With `setVisible(true)` — what a host does — all 125 controls answer at
+  every scale, and the count is required to be the same as 1×'s AND over 100.
+- **An opaque component's snapshot is always opaque.** The letterbox check counted pixels with an
+  alpha of 255 and passed with the fill taken out: `createComponentSnapshot` makes an RGB image for
+  an opaque component, and RGB has no alpha to be 0. It reads the margin's COLOUR now — Cabinet's
+  window is `#08070d`, which is not the black an unpainted image leaves. Reverted: six of six
+  sample points fail.
+
+**Reverted properly: with the transform removed, eleven checks fail** — cropping (55 controls
+outside the window), the geometry at 0.75×, 1.25× and 1.5×, the clicks, the centring, the letterbox,
+both cards, and the border at 1.5× (blue 13, where the interface is not drawn at all).
+
+**A thing worth knowing, from a revert that did NOT fail: in JUCE, caching does not cost sharpness.**
+The worry was the backdrop, which is one buffered image holding every panel, bar and section title:
+a buffer kept at 1× and scaled up would blur the lot. Buffering the WHOLE stage as a revert changed
+nothing — `StandardCachedComponentImage` renders at the graphics context's physical pixel scale,
+which includes the transforms above it, so a cached component is redrawn when the scale it is shown
+at changes.
+
+**Amended the same day, by the owner's Windows run — and the first crispness check was measuring the
+platform, not this code.** It compared the gradient energy of a native 1.5× render with a 1× render
+stretched into the same size: 1.31× on macOS, and 0.74× when the transform was taken away, so it
+discriminated here. On Windows it read **1.07 against a threshold of 1.15, and failed**, and the
+owner settled what it meant before reporting it: with the backdrop's buffering switched OFF the
+ratio was 1.0725, against 1.0711 with it on. **Nothing is cached and stretched there; the
+platforms' resamplers differ.** A baseline made by the platform's own `Image::rescaled` is not a
+constant, so a threshold fitted on one renderer cannot hold on another.
+
+**What replaced it is ADR-084's measurement, taken through the window's transform** — the owner's
+own suggestion, and the technique already proven on all three systems. The Transpose stepper's
+one-point border is a hard cyan edge (`#22A6B8`) over a near-black well, and its top sits at design
+y 868 — 1302.0 at 1.5×, a whole pixel — where it must still read its own colour. **This check was
+written twice.** The first version compared the border at 1.5× with the same border at 1×, and a
+half-pixel offset on the transform moved BOTH: `0E3540` in each, one level apart, passing. **A
+comparison whose two sides share the fault cannot see it** — the same lesson as a check that reads
+back what it just wrote, one step removed. The colour is read absolutely now: blue 185 with the
+interface on the pixel grid, 62 half a pixel off. That is also what makes the `std::floor` on the
+centring offset a decision rather than a detail: the interface lands on whole pixels at every scale.
+
+**Verification, 2026-09-21.** macOS — 40 of 40 CTest tests (new: `EditorSnapshotLaptop`, the 0.85×
+window painted so every OS is known to draw a scaled one), Steinberg's validator and pluginval
+strictness 10 with its editor tests on a resizable window. Linux arm64 in Docker — see STATE.md.
+Windows — 39 of 39 CTest, validator 537/537, pluginval 10 `SUCCESS` at `a9d5b6a`, the border
+reading its own colour under a third renderer. No Mac product source, no Swift and no specification
+change: the Xcode suite was not needed.
+
+## ADR-090 — The keyboard drawer: the interface plays MIDI, and the router is the only route (X3-8)
+
+**Date:** 2026-09-21 · **Status:** Accepted · **X3-8** · Follows ADR-031 (`S1HostMIDI`: the host's
+route is the only route), ADR-039 (the Mac's keyboard strip, and the window that does NOT resize
+for it), ADR-045 (the desktop layout has no keyboard), ADR-089 (the window scales)
+
+**Context.** The play bar has had three controls that said "comes with X3-8" since X3-3 — Hold,
+Wheels and the octave — and the status bar has promised musical typing for as long. The plan asks
+for the keyboard itself: *"the on-screen keyboard slides in on a shortcut, as the design's ⌘K
+proposed"*, with the acceptance that its notes *"go through the same path as host MIDI and sound
+identical"*, closed by default and remembered per instance.
+
+Two of the owner's own decisions shaped this. **The desktop layout has no keyboard** (ADR-045) —
+the Mac draws one only in the classic layout — so there is nothing to copy the placement from.
+And **ADR-039 reverted window-resizing for the keyboard** after they tried it in Logic: Show
+"only elongates the virtual keyboard a bit, and doesn't add much value".
+
+**Decision.**
+1. **The interface plays MIDI.** `sendMIDIFromInterface(status, data1, data2)` puts a message in a
+   fixed lock-free ring that the audio thread drains at the top of the next block, into the same
+   event array the host's MIDI goes into, **before** it. So a key in the drawer is not "like" a
+   host note, it **is** one: the octave shift, white keys, hold, mono, the arpeggiator and every
+   held-key bookkeeping happen once, in the router, where they already had tests. Nothing
+   allocates and nothing locks; a full queue drops and says so.
+2. **The drawer overlays, and stops above the play bar.** It does not resize the window — the
+   owner settled that once already (ADR-039), and under ADR-089 a taller interface in a window a
+   host refuses to grow would SHRINK everything. Hold, Octave, Transpose and Wheels stay visible
+   beneath the keys, which is where they belong while playing. Four octaves at the Mac's own
+   proportions (its keyboard is 898 × 88 in a 1024-point window; this is 1424 × 124 in a 1440-point
+   one). Command-K opens and closes it, as the design proposed.
+3. **`s1plugin::Keybed` is upstream's geometry, with no JUCE in it** (ADR-086's pattern): an octave
+   is `width/octaves − width/(octaves² × 7)` wide, a black key is 55% of the length
+   (`topKeyHeightRatio`) and two of the black band's **28 slots** plus four points wide, and
+   hit-testing is `noteFromTouchLocation12ET` — a y threshold at 55%, then integer division into a
+   7-slot or 28-slot table. It is a touch model, not a piano's, and it is kept because it is the
+   only on-screen keyboard either product has.
+   **One PORT FIX:** upstream's own arithmetic sounds a **D** in the sliver of the C that closes
+   the keyboard, because the octave it computes there is past the last one. That C sounds a C here.
+4. **The octave control moves what the keys SOUND, not where they are.** The router adds the shift
+   to every note that reaches it, so the drawer sends the note it draws and the shift is applied
+   once. The keys' labels say what they sound, and a note the router is holding lights the key
+   below it by the shift. **This was wrong first** — see below.
+5. **Hold is the router's latch** (`KeyboardView.holdMode`, already in the engine and already
+   saved per instance): a note-off is ignored while it is on, and switching it off releases every
+   key. The button lights from the router rather than remembering its own state, so a host's
+   automation or a second window cannot disagree with it.
+6. **Wheels is upstream's popover**: what the mod wheel moves (Cutoff / LFO 1 / LFO 2) and how far
+   the pitch wheel bends (`pitchbendMinSemitones`, `pitchbendMaxSemitones`) — two of the 26
+   parameters the desktop layout gives no control of their own (ADR-083), which now have one.
+7. **Musical typing is `Manager+ComputerKeyboard`'s map**, which the status bar has been promising:
+   A–K and W/E/T/Y/U/O/P/' play C to F♯ an octave and a half up, Z/X move the octave (the same one
+   the stepper moves — the Mac learned that lesson too), C/V move the velocity by 16. A key
+   carrying a modifier is a menu's, not a note's, or Command-S would play a D; a repeat does not
+   retrigger; and the octave keys release what is sounding first, because those notes belong to the
+   octave they were played in.
+8. **The drawer is remembered per instance**, in the session's state (`window.keyboardShown`), not
+   in `interface.json` — two instances can differ, as their tunings can. A state written before it
+   existed does not name it, and what a state does not name stays as it was: a fresh instance is
+   closed, so an old session opens closed.
+
+**The acceptance is measured as audio.** `PluginKeyboardTests` plays the same note into two
+identical plugins — once through `sendMIDIFromInterface`, once as the host's own MIDI — and
+compares 12,288 samples: **worst difference exactly 0**. Reverted (the interface's events delivered
+one sample later) it fails at 1.03e-4.
+
+**A bug the tests did not catch and a picture did.** The first version moved the drawer's keys with
+the octave control *and* let the router shift the note — so a key sounded **two** octaves up, not
+one. Every check passed: they asked where the keys were, not what they sounded. The render showed
+the keyboard relabelled while the shift was also being applied underneath. The check that exists
+now presses the key that sounded middle C and requires the note to be 72; reverted, it reads 84.
+**Ask what a control SOUNDS, not where it sits** — the same lesson as ADR-085's dependent knobs,
+which a side-by-side found and no test had.
+
+**Verification, 2026-09-21.** macOS — 43 of 43 CTest tests (new: `PluginKeyboard`, 29 checks, and
+the two `EditorSnapshotKeyboard…`; `PluginEditor` is 147 now), Steinberg's validator and pluginval
+strictness 10. Revert-checked three times: the double shift (84 where it should be 72), the
+acceptance (one sample late), and the state's fixture, which was rewritten for the new field — four
+lines, purely additive. Linux arm64 in Docker — see STATE.md. **Windows: owed for this commit.**
+No Mac product source, no Swift and no specification change: the Xcode suite was not needed.
+
+---
+
+## ADR-092 — The X3 gate: the Mac products become "Arcade Ruins Classic"; one repository, two public faces
+
+**Date:** 2026-09-21 · **Status:** accepted (the owner's decision; resolves ADR-055's deferral)
+
+**Context.** ADR-055 kept the Catalyst app and AUv3 through X2 and left their future to the X3
+gate. With X3 built, the owner: "I'd like to keep that since it has a unique interface, but maybe
+rename it so it's distinct from the new version? Or maybe we can create a new repository for
+Arcade Ruins VST or something to show that it's a cross platform product."
+
+**Decision.**
+1. **The Mac products stay, as "Arcade Ruins Classic"** — the edition with the iPad's interface.
+   The JUCE plugin takes the plain name "Arcade Ruins". **The NAME only:** `CFBundleDisplayName`
+   (app and extension, and all eight localisations), the AU component's name and description, and
+   the four alerts that name the app. **Unchanged:** `aumu`/`ruin`/`BP03` (a host stores the codes,
+   not the name — ADR-029 — so every session still opens), both bundle identifiers, the App Group,
+   the bundle file names (`ArcadeRuins.app`, which every script addresses), `~/Music/Arcade Ruins`,
+   the wordmark (the owner's artwork, and the family's name), and "About Arcade Ruins" (it is an
+   item of the layout specification the JUCE interface is built from).
+2. **The repository is NOT split.** One engine is compiled into both products; the plugin's layout
+   is measured from the Mac's by a Swift test (ADR-083); the goldens have two readers (ADR-071);
+   the router is held to the Mac's notes (ADR-075). Each of those links has caught a real fault.
+3. ~~**Two PUBLIC repositories instead, at X4**~~ — **overturned by the owner on 2026-09-22, before
+   anything was built: ONE public repository carries both products.** See ADR-098.
+4. **The JUCE build will ship an AU under a code of its own** (ADR-058's deferral) — not one that
+   differs from `ruin` by case alone. The code is still to be chosen, and like `ruin` it is
+   permanent from the first release.
+
+**Found on the way.** The Japanese and Turkish `InfoPlist.strings` still said `シンセ1` and
+`Synth Bir` — upstream's translations of "Synth One", missed by ADR-029, which fixed the six that
+said it in English. All eight carry the new name.
+
+**Left open.** Whether Classic should one day show ONLY the classic interface (it also holds the
+desktop layout and skins the JUCE plugin reproduces). Not now: the plugin's layout is generated
+from that code. And the README, release notes and the public page still say "Arcade Ruins" of
+the Mac product — X4-4 has rewritten those (ADR-098).
+
+**Verification.** The Xcode suite 343/343; `Scripts/build.sh` signed build, and the names and
+codes read off the built bundles (`PlistBuddy`). Not installed, and `auval` not run:
+`Scripts/validate-au.sh` replaces `/Applications/ArcadeRuins.app`, which is the owner's to ask for.
+
+---
+
+## ADR-093 — The JUCE build ships an AU: `aumu` / `ArRu` / `BP03`, and what auval found
+
+**Date:** 2026-09-21 · **Status:** accepted (the owner chose the code; resolves ADR-058's deferral)
+
+**Context.** ADR-092 put an AU in the JUCE build. ADR-058 had picked `Ruin` as the plugin code
+knowing that "in JUCE, one code serves every format" — the AU's subtype AND half of the VST3
+class ID — and deferred the AU. `Ruin` and the Classic AUv3's `ruin` differ by case alone.
+
+**Decision.**
+1. **`PLUGIN_CODE ArRu`** (the owner: "ArRu is fine"), `FORMATS VST3 AU Standalone` on Apple,
+   VST3 and Standalone elsewhere. **The VST3's identity changed with it** —
+   class ID `ABCDEF019182FAEB4250303341725275`, controller `ABCDEF011234ABCD4250303341725275`
+   (the last eight digits are the code) — free because nothing from the JUCE build has been
+   released; a session saved against a development build of the VST3 will not find it. **From
+   the first release this code is as permanent as `ruin`.**
+2. **The two AUs sit side by side:** "BadPackets: Arcade Ruins" (`ArRu`, a `.component` in
+   `~/Library/Audio/Plug-Ins/Components`) and "BadPackets: Arcade Ruins Classic" (`ruin`, the
+   AUv3 in the Catalyst app). Different codes, different kinds; neither knows of the other.
+3. **`Scripts/validate-plugin.sh --au`** installs the component for this user, runs Apple's
+   `auval` and pluginval strictness 10 on it. Opt-in, because it installs. Logic will not load an
+   AU that fails `auval`, so this stage is the AU's gate on the Mac.
+
+**What auval found — in every format, not just the AU.** One failure: *"Parameter did not retain
+set value when Initialized"*, Seq Step Length, 0.308594 written and 0.249022 read back. auval
+sets a parameter, uninitialises, initialises **with no audio between**, and reads. The engine
+snaps a tempo-related value to its nearest note value, and `prepareToPlay` told the host so at
+once and silently (X2-2's "quietly: the host asked for this state"). To a host that is a value
+changing under it for no reason it can see. **`prepareToPlay` no longer reports**: `engineValues`
+keeps what was WRITTEN, so the first rendered block sees the difference and reports it exactly as
+it reports every later snap — once, with a notification, no gesture. pluginval at strictness 10
+and Steinberg's validator had both passed this for a week; neither re-initialises without
+rendering. Five "did not retain default value when set" WARNINGS remain (two envelope times, the
+LFO rates): float rounding through the taper and the same snapping, and auval passes with them.
+
+**Verification.** `auval -v aumu ArRu BP03`: AU VALIDATION SUCCEEDED; pluginval 10 on the AU:
+SUCCESS. `PluginParameters` has the check in auval's own numbers, so Linux and Windows hold it
+too (reverted: 0.249022 where 0.308594 should be). macOS 43/43; VST3 validator 537/537.
+
+---
+
+## ADR-094 — X4-1 / X4-2: how "Arcade Ruins" is packaged on three systems
+
+**Date:** 2026-09-21 · **Status:** accepted; the macOS package and the Windows installer await the owner's certificates
+
+**Decision.**
+- **macOS — `Scripts/release-plugin.sh`:** ONE installer package over three component packages —
+  the VST3 (`/Library/Audio/Plug-Ins/VST3`), the AU (`…/Components`) and the standalone
+  (`/Applications`), each a choice. **Universal** (arm64 + x86_64, macOS 11.0), every bundle
+  signed Developer ID Application with the hardened runtime and a secure timestamp, no
+  entitlements. The PACKAGE needs a **Developer ID Installer** certificate — a different one,
+  which the owner's keychain does not have yet; the script says so before building.
+  Notarisation is `release.sh`'s no-wait / poll / resume flow (ADR-053), then stapled.
+  **`BundleIsRelocatable` false on every component**: by default the installer finds a bundle
+  with the same identifier ANYWHERE on the disk — a build folder — and installs there.
+  `BundleIsVersionChecked` false, so an older release can be put back. `uninstall.sh` beside it
+  removes the three and their receipts and leaves `~/Library/Application Support/BadPackets`.
+  The Catalyst products keep `Scripts/release.sh`.
+- **Linux — `Scripts/release-linux.sh`:** a tarball (VST3, standalone, `install.sh` to `~/.vst3`
+  and `~/.local/bin` with a menu entry, `uninstall.sh`, LICENSE, NOTICE) built in Docker on
+  **Ubuntu 22.04, not the validation image's 24.04**: a binary needs the glibc it was built
+  against or newer, so 24.04 would shut out everything of 22.04's age. Its README states the
+  glibc it needs and the libraries it links, read from the binaries. Not signed; the checksum
+  is the check. aarch64 here natively, x86-64 by `--x86` (emulated, slow — and worth the wait for more than the
+  artefact: it renders the goldens with no fused multiply-add, ADR-071's other arithmetic).
+- **Windows — `Scripts\release-windows.ps1` + `Scripts\windows\ArcadeRuins.iss`** (Inno Setup 6), on
+  the owner's machine: the VST3 to `Common Files\VST3`, the standalone to Program Files, each a
+  choice. **The release build links the C runtime in** (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`):
+  MSVC's default needs the Visual C++ Redistributable, which a developer's machine has and a
+  musician's may not, and a plugin that cannot find `VCRUNTIME140.dll` fails silently — the host
+  never lists it. The script reads the DLL's imports back and fails if the runtime is still
+  among them, and runs every CTest test on THOSE binaries. Authenticode when a certificate
+  thumbprint is given (the owner buys it, X4-2). The `AppId` GUID in the `.iss` is permanent.
+- **Every release script runs the whole test suite on the binaries it packages** — the plan's
+  "goldens green on the release commit" — and refuses a dirty working tree.
+
+**Found on the way.** The universal build was the first time anything here compiled for an Intel
+Mac: `GoldenHarness` used `FE_DFL_DISABLE_DENORMS_ENV`, which is Apple Silicon's name —
+Intel's is `FE_DFL_DISABLE_SSE_DENORMS_ENV`. **And the Intel half cannot be RUN here: this Mac has
+no Rosetta** (`arch -x86_64`: "Bad CPU type"). It compiles, links and is signed; nobody has
+heard it. An Intel Mac, or Rosetta installed by the owner, is X4-3's.
+
+**Verification, 2026-09-21.** macOS: `ALLOW_UNSIGNED_PKG=1 NOTARISE=0` — 43/43 on the universal
+build (goldens bit-exact at the 11.0 deployment target), the package expanded and read back:
+three components, the right locations, `relocatable="false"`, each bundle's signature valid
+with `flags=runtime` and a timestamp, both halves in each. NOT installed, NOT notarised (no
+Installer certificate). **Then, once the owner made the Developer ID Installer certificate
+(2026-09-21): the whole run, end to end — signed, submitted, `Accepted` in 60 seconds, stapled,
+and `spctl -a -t install` says `accepted / source=Notarized Developer ID`.**
+`ArcadeRuins-0.5.0-macOS.pkg`, 47 MB, SHA-256 beside it. Linux (aarch64): 42/42 under GCC 11 / glibc 2.35, goldens included; the
+tarball then taken to a CLEAN Debian 12 container (another distribution, glibc 2.36 — older than
+the validation image's) with only libasound2, libfreetype6 and libfontconfig1 added: it
+installs, `ldd` finds nothing missing in either binary, the plugin loads and exports
+`GetPluginFactory`, and after `uninstall.sh` 0 files are left. Windows: written, not run.
+
+---
+
+## ADR-095 — Two version lines, and what ships untested
+
+**Date:** 2026-09-21 · **Status:** accepted (the owner's decisions)
+
+**Context.** Both products were numbered 0.5.0 — one from `CMakeLists.txt`, one from
+`project.yml` — so the macOS package came out as `ArcadeRuins-0.5.0-macOS.pkg` beside Classic's
+released `ArcadeRuins-0.5.0-macOS.zip`: two different instruments, one letter apart.
+
+**Decision.** The owner: *"The classic version should stay at 0.5 and the new version should be
+1.0."* **Arcade Ruins is 1.0.0** and numbers itself from `CMakeLists.txt`; **Classic keeps 0.5.x**
+in `project.yml`. They are separate lines and will not be kept in step: the artefacts, the AU's
+version code, the state file's `plugin` field and both release scripts all read their own.
+
+**And the Intel half ships without being tried.** The owner: *"I'm not worried about the
+intel-half part, I'll let other users test that out for me."* So the universal build's **Intel
+half is released untested** — no Intel Mac here, and this one has no Rosetta (ADR-094). It is
+stated plainly in the release notes and the README rather than left to be discovered.
+
+**Whether Windows ships unsigned was left open here and decided in ADR-097: it ships unsigned.**
+
+**Consequences.** A release touches two numbers, never one. `Tests/Plugin/Fixtures/state-v1.json`
+carries `"plugin": "0.5.0"` and always will — `PluginStateTests` erases the field before
+comparing, deliberately, so a version bump is not a fixture rewrite.
+
+---
+
+## ADR-096 — Captions are drawn FITTED, because `drawText` curtails and every renderer curtails differently
+
+**Date:** 2026-09-21 · **Status:** accepted
+
+**Context.** The owner's Windows screenshot of 1.0.0 (2026-09-21, the standalone at a window scale
+of 1.10) showed **"Pitch Trac"** and **"Transpos"** — each missing its last letter. Linux, rendered
+from the same commit, showed both in full, and `PluginTypefaceTests` **passed on Windows**, so
+JUCE's own `GlyphArrangement::getStringWidth` there said both fitted the room they were given.
+
+**What is actually happening.** `Graphics::drawText` does not clip — it **curtails**
+(`addCurtailedLineOfText`): it deletes the glyphs that do not fit and says nothing. And it does so
+with the advances the renderer computes **through the window's transform**, which is not what the
+same renderer answers at 1×. So a caption can measure as fitting in a test and lose a letter on
+screen at 1.1×, on one platform only. Three measurements pinned it: "Semitones" and "Feedback"
+are the same width to the pixel on Windows and Linux (42 and 38 design points), so the typeface
+and its metrics are identical; only the two longest captions differ; and the Windows window was
+at 1.1035× (1589 × 1023 including its title bar, over a 1440 × 900 stage).
+
+**Decision.** The backdrop draws every caption and label with **`drawFittedText`**, one line, a
+minimum horizontal scale of `Style::kCaptionSqueeze` (0.7) — so a renderer that measures wide
+**squeezes the text imperceptibly instead of deleting a letter**, at any scale. `kCaptionRoom` is
+20 points a side (was 12). Together the tightest caption now needs 55% of its room on this Mac and
+a glyph is only dropped past 143%.
+
+**The check follows the fault, not the platform.** `PluginTypefaceTests` measured captions at 1×
+only, which is why it passed on Windows. It now measures **at 0.75×, 1×, 1.1× and 1.5× — every
+scale the window has** — asserts that each caption could be squeezed into its room rather than cut,
+and prints the tightest one with its margin, so each OS's own run reports its real numbers.
+
+**This cannot be verified here.** No Windows machine, and the fault only appears at a scale under
+that renderer. The fix is structural — with `drawFittedText` a letter cannot be dropped unless the
+text needs 143% of its room — but **the proof is the owner's next Windows screenshot**, and until
+then this ADR is reasoning, not evidence. Fourth time a picture found what every check passed:
+ADR-085 (the dependent knobs), ADR-090 (the octave), X4-4 (the same captions on Linux), this.
+
+---
+
+## ADR-097 — Windows ships unsigned, and the records keep the cabinet's extras
+
+**Date:** 2026-09-22 · **Status:** accepted (the owner's decisions)
+
+**Windows ships unsigned.** The owner, asked what it costs a person: *"ship Windows unsigned."*
+What they will meet, in order — a browser notice that the file is not commonly downloaded;
+SmartScreen's *"Windows protected your PC"* screen, whose default button is **Don't run** and which
+needs "More info" → "Run anyway"; and a UAC prompt naming an **unknown publisher**, because the
+installer writes to Program Files. Managed machines may refuse it outright.
+
+The decision is the cheaper one **because the middle option does not exist**: a standard (OV)
+certificate — a few hundred a year, and on a hardware token since 2023 — puts a name on the UAC
+prompt but leaves SmartScreen warning until the file earns a download reputation. Only an **EV**
+certificate buys a clean first run. So the choice is EV or nothing, and for a personal project
+shared for testing it is nothing. The README tells people what they will see and how to get past
+it, and the published SHA-256 is what a careful person checks instead. If a certificate is ever
+bought, `Scripts\release-windows.ps1` takes its thumbprint and nothing else changes.
+**macOS is unaffected** — that package is signed and notarised (ADR-094), and installs silently.
+
+**The cabinet's extras stay in the development records.** The owner, 2026-09-17: *"don't reveal
+the easter eggs on Github"*; asked again now that the cross-platform work has filled STATE.md,
+`PORT_PLAN.md`, `CLAUDE.md`, the ADR log and `Sources/S1Plugin/README.md` with about 35 mentions
+of them: *"Leave the easter eggs."* Nothing had been exported — the public mirror's last export
+predates all of it — so this is a choice, not a repair.
+
+**What it rests on:** the source has always been public and undisguised (`S1CabinetJoystick.swift`
+names itself), so a reader of the code finds them anyway; the records only make them searchable.
+The instruction that stands is about **user-facing** material, and that stays clean:
+`docs/private/cabinet-extras.md` is still excluded from the mirror, and the README, the release
+notes and the release pages say nothing. A filter over the exported documents was considered and
+refused — a rule that silently rewrites prose fails quietly, which is the one thing these records
+must not do.
+
+---
+
+## ADR-098 — One public repository, carrying both products
+
+**Date:** 2026-09-22 · **Status:** accepted (the owner's decision; overturns ADR-092's clause 3)
+
+**Context.** ADR-092 planned a second public repository for the cross-platform product, leaving
+the existing `badpackets303/ArcadeRuins` as Classic's. Writing X4-4's documentation made the cost
+of that plain, and the owner was asked again before any of it was built: *"Let's just do one
+repository."*
+
+**Why the earlier plan was wrong.** The existing public repository is already **named**
+`ArcadeRuins` and already exports this whole tree, the JUCE plugin included — so a second one
+would have been a near-duplicate of the same source, to be kept in step by hand, for the sake of
+a name. And the two products are not separable in the way two repositories would imply: one
+engine is compiled into both (`Sources/S1Engine`), the plugin's layout is measured from the Mac's
+by a Swift test (ADR-083), and the goldens and the MIDI fixture each have two readers. A reader
+who had only half of it could not run the tests that hold the halves together.
+
+**Decision.** **One public repository, `badpackets303/ArcadeRuins`, presenting two products** —
+Arcade Ruins (Windows, macOS, Linux: VST3, AU, standalone) and Arcade Ruins Classic (the Mac app
+and its AUv3). `Scripts/publish-public.sh` is unchanged and there is no second script to write.
+The README that X4-4 wrote already does this: a comparison table, one engine, both build routes,
+and each product's own download. Releases are distinguished by their tag and their artefacts'
+names, which is what the version split (ADR-095) is for.
+
+**Consequences.** Nothing to build, and one thing not to do: the GitHub release page will carry
+both products' downloads, so their names must stay unmistakable — `ArcadeRuins-1.0.0-macOS.pkg`
+and `ArcadeRuins-0.5.0-macOS.zip` are a `.pkg` and a `.zip` of different products, and the
+release notes name each.
+
+---
+
+## ADR-099 — The power cycle plans from where the zones ARE, and a repeated press is ignored
+
+**Date:** 2026-09-22 · **Status:** accepted
+
+**Context.** The owner, using the plugin: *"the red button turns off the colors, but neither of
+them turn them back on again."* Every check passed, the model's own tests passed, and pressing the
+buttons once each in a test on the real clock worked — 19 zones drained over eight seconds and 19
+came back. The report was still right.
+
+**What was wrong — two faults, compounding.** `PowerCycle::isLit` answered `!powered` for any zone
+it had not planned, and every zone is planned from the assumption that it starts in the state the
+cycle is leaving. That is true of a cycle begun at rest and false of anything else:
+
+1. **A repeated press restarted the eight seconds.** The first zone does not settle for a second,
+   so pressing the button shows almost nothing at first — and a person presses again. Each press
+   built a new cycle from zero. Pressing "on" once a second left the interface **dark
+   indefinitely**: measured, six presses a second apart, 0 of 19 zones lit, and only leaving it
+   alone for nine seconds brought it back. This is exactly what the owner met.
+2. **Pressing the other button part way through blacked out the half still lit.** Three seconds
+   into the drain, 13 zones were still lit; pressing "on" reported every unsettled zone as dark,
+   so the interface went black at once and then relit — the button appearing to do the opposite of
+   what it says. With fault 1 also in play it did not even recover fully (7 of 19).
+
+**Decision.** A cycle is given **only the zones that still have to change**, which is what ADR-062
+said all along ("zones still to change, shuffled"), and `isLit` answers **`powered`** for a zone
+nobody planned — it is already where this cycle is going. And `runPower` **ignores a press in the
+direction it is already going**, rather than starting again. Pressing the *other* button still
+abandons the cycle, as it always did.
+
+**How it was found, and the lesson.** Not by a test — by the owner using it, then by a scratch
+program that pressed the real buttons through `mouseDown`/`mouseUp` and watched the zones on the
+real clock, printing a line a second. The first two sequences it tried (once each, in order) were
+what every existing check already did, and they passed. **The third — pressing a button twice —
+failed at once.** Every check of this feature had driven it one press at a time from rest; nobody
+had asked what a second press does. The permanent checks now do both sequences, with the injected
+clock, and each fails when its half of the fix is removed (18 instead of 19; 0 lit instead of 13).
+
+**Consequences.** The four release artefacts of 1.0.0 predate this and must be built again before
+X4-5. Nothing else changes: the power is still a look and nothing else, still unsaved, and the
+pixel checks — the zones colourless when cut, off-then-on identical to never darkened — are
+untouched and still pass.
+

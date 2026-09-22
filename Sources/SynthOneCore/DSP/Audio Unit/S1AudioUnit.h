@@ -16,73 +16,9 @@
 #import <SynthOneCore/AKAudioUnit.h>
 #import <SynthOneCore/S1Parameter.h>
 
-#define S1_MAX_POLYPHONY (6)
-#define S1_NUM_MIDI_NOTES (128)
+#import <SynthOneCore/S1EngineTypes.h>
 
 @class AEMessageQueue;
-
-// helper for midi/render thread communication: held+playing notes
-typedef struct NoteNumber {
-    int noteNumber;
-    int transpose;
-    int velocity;
-    float amp;
-} NoteNumber;
-
-// helper for render/main thread communication:
-// DSP updates UI elements lfo1Rate, lfo2Rate, autoPanRate, delayTime when arpOn/tempoSyncArpRate update
-// DSP updates lfo1Rate, lfo2Rate, autoPanRate, delayTime based on current arpOn/tempoSyncArpRate
-typedef struct DependentParameter {
-    S1Parameter parameter;
-    float normalizedValue;// [0,1] for ui
-    float value;
-    int payload;
-} DependentParameter;
-
-// helper for main+render thread communication: array of playing notes
-typedef struct PlayingNotes {
-    int polyphony;
-    NoteNumber playingNotes[S1_MAX_POLYPHONY];
-} PlayingNotes;
-
-// helper for main+render thread communication: array of held notes
-typedef struct HeldNotes {
-    int heldNotesCount;
-    bool heldNotes[S1_NUM_MIDI_NOTES];
-} HeldNotes;
-
-// helper for main+render thread communcation: arp beat counter, and number of held notes
-typedef struct S1ArpBeatCounter {
-    int beatCounter;
-    int heldNotesCount;
-} S1ArpBeatCounter;
-
-/// The interface's MIDI settings, as the plugin's render thread applies them to host MIDI
-/// (ADR-031). Each field is a value the standalone reads on the main thread — see S1HostMIDI.hpp.
-typedef struct S1HostMIDISettings {
-    int octaveShift;          ///< Semitones added to each incoming note: `Manager.midiOctaveShift`
-    int midiChannel;          ///< 0–15. Ignored in omni mode
-    bool omniMode;
-    // No `velocitySensitive`: velocity is always played as sent, in both products (ADR-032).
-    bool whiteKeysOnly;
-    bool holdMode;            ///< The keyboard's Hold button
-} S1HostMIDISettings;
-
-/// A control change or program change from the host, on its way to the interface (ADR-031).
-/// `data2` is 0 for a program change.
-typedef struct S1HostMIDIMessage {
-    uint8_t status;
-    uint8_t data1;
-    uint8_t data2;
-} S1HostMIDIMessage;
-
-/// The keys host MIDI is holding, as a 128-bit set for the on-screen keyboard to light: bit `n`
-/// of `low` is note `n`, and bit `n` of `high` is note `64 + n`.
-typedef struct S1HostKeys {
-    uint64_t low;
-    uint64_t high;
-} S1HostKeys;
-
 
 @protocol S1Protocol <NSObject>
 

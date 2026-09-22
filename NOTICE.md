@@ -9,6 +9,17 @@ any of the parties named here.** See "Trademarks" at the end.
 
 ---
 
+## Barlow Condensed (the JUCE plugin's typeface on Windows and Linux)
+
+`Sources/S1Plugin/Fonts/BarlowCondensed-{Regular,Medium,SemiBold}.ttf`, linked into the JUCE
+plugin and used wherever the system has no Avenir Next Condensed — which is everywhere but macOS,
+where the Mac's own face is used and these are not (ADR-088, the owner's choice of 2026-09-20).
+
+Copyright 2017 The Barlow Project Authors (<https://github.com/jpt/barlow>), under the **SIL Open
+Font License, Version 1.1**. The licence is in `Sources/S1Plugin/Fonts/OFL.txt` beside the files,
+as the OFL requires it to travel with them. The OFL permits bundling in a product, including a
+commercial one; the font is not sold on its own and its name is not changed.
+
 ## AudioKit Synth One
 
 Copyright © 2017 Aurelius Prochazka · MIT
@@ -50,6 +61,37 @@ Licence text in the header of each file in [`Sources/SynthOneCore/DSP/TAAE/`](So
 `AEMessageQueue` and `AEArray` — the lock-free channel the render thread uses to reach the main
 thread. The zlib licence asks that an acknowledgement appear in product documentation, and this is
 it: **Arcade Ruins uses The Amazing Audio Engine 2 by A Tasty Pixel.**
+
+---
+
+## JSON for Modern C++ (nlohmann/json)
+
+Copyright © 2013–2022 Niels Lohmann · MIT
+Licence: [`Sources/S1Engine/third_party/nlohmann/LICENSE.MIT`](Sources/S1Engine/third_party/nlohmann/LICENSE.MIT)
+
+Version 3.11.3, the single header, vendored unmodified at
+[`Sources/S1Engine/third_party/nlohmann/json.hpp`](Sources/S1Engine/third_party/nlohmann/json.hpp).
+The portable engine reads and writes presets with it (X1-5, ADR-069); the Catalyst products keep
+using Foundation's JSON.
+
+---
+
+## JUCE (the cross-platform plugin only)
+
+Copyright © Raw Material Software Limited · used under the **JUCE 9 End User Licence Agreement,
+Starter tier** (ADR-054; terms re-read 2026-09-18 for ADR-072) — not under the AGPLv3.
+<https://juce.com/legal/juce-9-licence/>
+
+JUCE 9.0.2 is **not in this repository**. The CMake build of "Arcade Ruins" — the VST3, the
+Audio Unit and the standalone ([`Sources/S1Plugin`](Sources/S1Plugin)) — fetches it from
+<https://github.com/juce-framework/JUCE> at a pinned commit when it is configured; the EULA does
+not allow the framework to be distributed on its own. "Arcade Ruins Classic", the Catalyst app
+and its AUv3, does not contain JUCE. The binaries built with it also contain, through JUCE, the
+**VST 3 SDK 3.8.0** (© Steinberg Media Technologies GmbH, MIT), in the Audio Unit **Apple's
+AudioUnitSDK 1.1.0** (© Apple Inc., Apache License 2.0, <https://github.com/apple/AudioUnitSDK>), and the
+third-party code listed in JUCE's own `JUCE.spdx.json` (zlib, HarfBuzz, SheenBidi, libpng, jpeglib,
+FLAC, Ogg Vorbis, CHOC and others, under their permissive licences). *VST is a registered
+trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc.*
 
 ---
 

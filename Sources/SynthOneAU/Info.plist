@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Arcade Ruins</string>
+	<string>Arcade Ruins Classic</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,11 +30,11 @@
 			<array>
 				<dict>
 					<key>description</key>
-					<string>Arcade Ruins polyphonic synthesizer</string>
+					<string>Arcade Ruins Classic polyphonic synthesizer</string>
 					<key>manufacturer</key>
 					<string>BP03</string>
 					<key>name</key>
-					<string>BadPackets: Arcade Ruins</string>
+					<string>BadPackets: Arcade Ruins Classic</string>
 					<key>sandboxSafe</key>
 					<true/>
 					<key>subtype</key>

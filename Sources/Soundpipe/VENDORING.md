@@ -78,3 +78,12 @@ forks.)
   `oscmorph2d` producing correct-pitch audio through the band-limited API.
 - **The S1 kernel compiles against it unmodified** — no `sp_port` or `oscmorph2d` edits were needed
   once the correct fork was in place.
+
+## Local changes
+
+The fork is otherwise byte-for-byte AudioKit's. Each change is marked `PORT FIX` in the source.
+
+| File | Change | Why |
+|---|---|---|
+| `modules/revsc.c` | `(p->aux.ptr) + nBytes` → `(void *)((char *)(p->aux.ptr) + nBytes)` | X1-1, ADR-065. Arithmetic on `void *` is a GNU extension; MSVC stops with C2036. GCC and Clang step `void *` in bytes, so the address — and the reverb — is unchanged there. Found by the Windows job of the `engine` workflow on its first run. |
+

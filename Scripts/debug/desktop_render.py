@@ -182,6 +182,37 @@ if (arFound != nil) { (void)[arFound performSegueWithIdentifier:@"%s" sender:arF
 (id)(arFound != nil ? @"performed" : @"no such view controller")
 """
 
+# Optional: write the frame of every visible Swift-class view of the window, in window points,
+# one per line — "Class x y w h" (RENDER_FRAMES=1 -> <tag>.frames.txt). X3-1 (ADR-083):
+# Scripts/check-layout-spec.sh holds the layout specification to these, measured in the running app.
+FRAMES = WINDOW + """
+typedef struct { double x, y, w, h; } ARRect;
+void *arSend = (void *)dlsym((void *)-2, "objc_msgSend");
+id arViews = (id)[(id)NSClassFromString(@"NSMutableArray") arrayWithObject:arWindow];
+id arLines = (id)[(id)NSClassFromString(@"NSMutableString") string];
+unsigned long arCount = 0;
+while ((unsigned long)[arViews count] > 0) {
+    id arView = (id)[arViews firstObject];
+    (void)[arViews removeObjectAtIndex:(unsigned long)0];
+    if ((BOOL)[arView isHidden] || (double)[arView alpha] == 0.0) { continue; }
+    (void)[arViews addObjectsFromArray:(id)[arView subviews]];
+    id arName = (id)[(id)[arView class] description];
+    if (!(BOOL)[arName containsString:@"."]) { continue; }
+    ARRect arBounds = ((ARRect (*)(id, SEL))arSend)(arView, @selector(bounds));
+    ARRect arFrame = ((ARRect (*)(id, SEL, ARRect, id))arSend)(arView, @selector(convertRect:toView:), arBounds, (id)nil);
+    (void)[arLines appendString:arName];
+    double arParts[4] = { arFrame.x, arFrame.y, arFrame.w, arFrame.h };
+    for (int arPart = 0; arPart < 4; arPart++) {
+        (void)[arLines appendString:@" "];
+        (void)[arLines appendString:(id)[(id)[(id)NSClassFromString(@"NSNumber") numberWithDouble:arParts[arPart]] description]];
+    }
+    (void)[arLines appendString:@"\\n"];
+    arCount++;
+}
+(void)[arLines writeToFile:@"%s" atomically:(BOOL)1 encoding:(unsigned long)4 error:(void *)0];
+(id)[(id)[(id)NSClassFromString(@"NSNumber") numberWithUnsignedLong:arCount] description]
+"""
+
 def log(msg):
     print("[render] " + msg, flush=True)
 
@@ -265,6 +296,8 @@ def __lldb_init_module(debugger, internal_dict):
     for index in range(count):
         suffix = "" if index == 0 else "-%d" % index
         log("render %d -> %s" % (index, evaluate(process, RENDER % (index, OUT + suffix + ".png"))))
+    if os.environ.get("RENDER_FRAMES"):
+        log("frames -> %s views in %s" % (evaluate(process, FRAMES % (OUT + ".frames.txt")), OUT + ".frames.txt"))
     if os.environ.get("RENDER_PRESENTED"):
         log("presented -> " + evaluate(process, PRESENTED % (OUT + "-presented.png")))
     if os.environ.get("RENDER_NSWINDOWS"):

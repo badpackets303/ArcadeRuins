@@ -45,7 +45,7 @@ final class S1AppearanceSettings: UIView {
         isHosted
             ? NSLocalizedString("Applies the next time the host loads it.",
                                 comment: "Appearance note, in a plugin host")
-            : NSLocalizedString("Applies the next time Arcade Ruins opens.",
+            : NSLocalizedString("Applies the next time Arcade Ruins Classic opens.",
                                 comment: "Appearance note, standalone")
     }
 

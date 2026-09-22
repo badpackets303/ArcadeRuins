@@ -260,6 +260,8 @@ final class GoldenRenderTests: XCTestCase {
         var written = 0
         var missing: [String] = []
         var failures: [String] = []
+        /// X1 (ADR-065): the same toolchain must reproduce a golden exactly; the log says how many did.
+        var exactCount = 0
 
         for golden in goldens {
             let url = goldenDirectory.appendingPathComponent(golden.filename)
@@ -283,6 +285,7 @@ final class GoldenRenderTests: XCTestCase {
             XCTAssertEqual(rendered.left.count, reference.left.count,
                            "\(golden.preset): golden is a different length")
             let difference = compare(rendered, to: reference)
+            if difference.maximum == 0 { exactCount += 1 }
             if difference.maximum > maximumSampleDifference
                 || difference.relativeRMS > maximumRelativeRMSDifference {
                 failures.append(String(format: "%@/%@ — max %.6f at %@[%d], relative RMS %.6f",
@@ -297,6 +300,7 @@ final class GoldenRenderTests: XCTestCase {
             XCTAssertEqual(written, goldens.count)
             return
         }
+        print("GoldenRenderTests: \(exactCount) of \(goldens.count) goldens reproduced bit-exactly")
         XCTAssertTrue(missing.isEmpty,
                       "no golden for: \(missing.joined(separator: ", ")). " +
                       "Generate with SYNTHONE_WRITE_GOLDENS=1.")

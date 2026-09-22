@@ -89,8 +89,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, S1LaunchURLProviding {
         let alert = UIAlertController(
             title: NSLocalizedString("Layout changes at the next launch", comment: "Alert title"),
             message: classic
-                ? NSLocalizedString("Arcade Ruins will open with the desktop layout next time.", comment: "Alert")
-                : NSLocalizedString("Arcade Ruins will open with the classic layout next time.", comment: "Alert"),
+                ? NSLocalizedString("Arcade Ruins Classic will open with the desktop layout next time.", comment: "Alert")
+                : NSLocalizedString("Arcade Ruins Classic will open with the classic layout next time.", comment: "Alert"),
             preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK"), style: .default))
         // `keyWindow` needs Catalyst 15; our floor is 14 (CLAUDE.md), and there is one window.
@@ -105,7 +105,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, S1LaunchURLProviding {
         S1SkinChoice.choose(choice)
         let alert = UIAlertController(
             title: NSLocalizedString("Skin changes at the next launch", comment: "Alert title"),
-            message: String(format: NSLocalizedString("Arcade Ruins will open with the %@ skin next time.", comment: "Alert"), choice.title),
+            message: String(format: NSLocalizedString("Arcade Ruins Classic will open with the %@ skin next time.", comment: "Alert"), choice.title),
             preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK"), style: .default))
         UIApplication.shared.connectedScenes

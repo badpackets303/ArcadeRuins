@@ -273,6 +273,37 @@ final class PluginTransportTests: XCTestCase {
                           "changing the host tempo did not re-quantize lfo1Rate")
     }
 
+    /// X2 gate (ADR-082, the owner's decision): a host's tempo change keeps the NOTE VALUE of
+    /// what is synced to it. Upstream re-quantised by time, so a jump far enough landed on a
+    /// neighbour — 125 → 90 BPM turned a quarter-note delay (0.48 s) into a quarter triplet
+    /// (0.444 s), and a 3 Hz quarter-triplet LFO at 120 silently became an eighth note at 90.
+    func testAHostTempoJumpKeepsTheNoteValue() throws {
+        let unit = try makeUnit()
+        let clock = HostClock()
+        clock.tempo = 125
+        attach(clock, to: unit)
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+
+        unit.setSynthParameter(.tempoSyncToArpRate, value: 1)
+        try render(unit, seconds: 0.05)
+        unit.setSynthParameter(.delayTime, value: 0.48)      // a quarter note at 125
+        unit.setSynthParameter(.lfo1Rate, value: 125.0 / 60.0)
+        try render(unit, seconds: 0.05)
+        XCTAssertEqual(unit.getSynthParameter(.delayTime), 0.48, accuracy: 1e-5)
+
+        clock.tempo = 90
+        try render(unit, seconds: 0.05)
+        XCTAssertEqual(unit.getSynthParameter(.delayTime), 60.0 / 90.0, accuracy: 1e-5,
+                       "the quarter-note delay is not a quarter note at 90 BPM")
+        XCTAssertEqual(unit.getSynthParameter(.lfo1Rate), 1.5, accuracy: 1e-5,
+                       "the quarter-note LFO is not a quarter note at 90 BPM")
+
+        clock.tempo = 125
+        try render(unit, seconds: 0.05)
+        XCTAssertEqual(unit.getSynthParameter(.delayTime), 0.48, accuracy: 1e-5, "and back")
+    }
+
     /// An absurd tempo cannot push `arpRate` outside its own range — `setSynthParameter`
     /// clamps, and this pins that the render thread relies on it.
     func testAnAbsurdHostTempoIsClamped() throws {
@@ -376,6 +407,74 @@ final class PluginTransportTests: XCTestCase {
         XCTAssertLessThan(spy.lastCounter, beforeStop,
                           "the sequencer did not rewind — it was at \(spy.lastCounter)")
         XCTAssertEqual(unit.getSynthParameter(.arpIsOn), 1, "the arp itself must stay switched on")
+    }
+
+    /// X2-7 (ADR-078): the render cycle runs with subnormals flushed to zero, and the caller's
+    /// floating-point mode is back when it returns. The host's tempo block is called from inside
+    /// the render block, so what it computes is computed in the render's mode: two 1e-20 floats
+    /// multiply to 1e-40 where subnormals exist, and to 0 where they are flushed.
+    func testTheRenderFlushesSubnormalsAndHandsTheModeBack() throws {
+        let unit = try makeUnit()
+        let small: [Float] = [1e-20, Float(units.count) * 1e-20]
+        func tinyProduct() -> Float { small[0] * small[1] }
+        var seenInsideTheRender: Float = -1
+        unit.musicalContextBlock = { tempo, _, _, _, _, _ in
+            seenInsideTheRender = tinyProduct()
+            tempo?.pointee = 120
+            return true
+        }
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+
+        XCTAssertGreaterThan(tinyProduct(), 0, "this thread does not compute subnormals to begin with")
+        try render(unit, seconds: 0.1)
+        XCTAssertEqual(seenInsideTheRender, 0, "the render cycle computed a subnormal: flush-to-zero is not on")
+        XCTAssertGreaterThan(tinyProduct(), 0, "the render left flush-to-zero on in its caller's thread")
+    }
+
+    /// X2-6 (ADR-077), found by the JUCE plugin's transport test and true here since P4-5: the
+    /// stop released the voices without letting their envelopes see the gate fall. A voice that
+    /// had already died away (no sustain) was freed before it ran again, its envelope still held
+    /// open — and the next note given to it had no attack: the first note of the next phrase was
+    /// silent. The stop also left every key down, so the arpeggio went on after it.
+    func testAPhraseAfterAStopBeginsWithItsFirstNote() throws {
+        let unit = try makeUnit()
+        let clock = HostClock()
+        attach(clock, to: unit)
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+
+        unit.setSynthParameter(.attackDuration, value: unit.getMinimum(.attackDuration))
+        unit.setSynthParameter(.decayDuration, value: 0.01)
+        unit.setSynthParameter(.sustainLevel, value: 0)
+        unit.setSynthParameter(.releaseDuration, value: 0.01)
+        unit.setSynthParameter(.filterADSRMix, value: 0)
+        unit.setSynthParameter(.cutoff, value: 20_000)
+        unit.setSynthParameter(.reverbOn, value: 0)
+        unit.setSynthParameter(.delayOn, value: 0)
+        unit.setSynthParameter(.arpIsOn, value: 1)
+        unit.setSynthParameter(.arpSeqTempoMultiplier, value: 0.25)
+        try render(unit, seconds: 2.0)      // the glides from 0 (ADR-013)
+
+        func firstClick(_ samples: [Float]) -> Float {
+            samples.prefix(Int(0.05 * sampleRate)).map(abs).max() ?? 0
+        }
+        for note in [UInt8(48), 55, 64] { unit.startNote(note, velocity: 110) }
+        let before = try render(unit, seconds: 0.7)
+        XCTAssertGreaterThan(firstClick(before), 0.02, "the first phrase had no first note either")
+
+        clock.isMoving = false
+        try render(unit, seconds: 0.1)
+        let stopped = try render(unit, seconds: 1.0)
+        XCTAssertLessThan(stopped.map(abs).max() ?? 1, 0.001,
+                          "keys still down when the transport stopped went on arpeggiating")
+
+        clock.isMoving = true
+        try render(unit, seconds: 0.1)
+        for note in [UInt8(48), 55, 64] { unit.startNote(note, velocity: 110) }
+        let after = try render(unit, seconds: 0.7)
+        XCTAssertGreaterThan(firstClick(after), firstClick(before) * 0.5,
+                             "the first note of the phrase after a stop was silent")
     }
 
     /// Only the *edge* acts. A host reporting "playing" on every block must not be

@@ -1,0 +1,51 @@
+# Fails if any source under ROOTS (a |-separated list) reaches for Apple's frameworks or
+# Objective-C. The portable engine must compile where none of them exist.
+string(REPLACE "|" ";" ROOT_LIST "${ROOTS}")
+set(FORBIDDEN
+    "#[ \t]*import"
+    "<Foundation/" "<AudioToolbox/" "<AVFoundation/" "<CoreAudio" "<CoreMIDI/" "<Accelerate/"
+    "<UIKit/" "<AppKit/" "<dispatch/" "<mach/" "<os/lock"
+    "@interface" "@implementation" "@class" "__bridge" "NSString" "NSArray" "NSMutableArray"
+    "AUParameterAddress" "AUValue" "AUAudioFrameCount" "AURenderEvent")
+set(OFFENCES "")
+set(FILE_COUNT 0)
+foreach(ROOT ${ROOT_LIST})
+    file(GLOB_RECURSE FILES ${ROOT}/*.c ${ROOT}/*.h ${ROOT}/*.cpp ${ROOT}/*.hpp ${ROOT}/*.cc)
+    file(GLOB_RECURSE OBJC ${ROOT}/*.m ${ROOT}/*.mm)
+    foreach(F ${OBJC})
+        list(APPEND OFFENCES "${F}: Objective-C source in the portable tree")
+    endforeach()
+    foreach(F ${FILES})
+        math(EXPR FILE_COUNT "${FILE_COUNT}+1")
+        file(READ ${F} TEXT)
+        # Comments may name the Apple types they replaced; only code counts. Strip `//` lines,
+        # then `/* … */` blocks one at a time (CMake's regex is greedy, so not in one go).
+        string(REGEX REPLACE "//[^\n]*" "" TEXT "${TEXT}")
+        string(FIND "${TEXT}" "/*" OPEN)
+        while(NOT OPEN EQUAL -1)
+            string(SUBSTRING "${TEXT}" ${OPEN} -1 REST)
+            string(FIND "${REST}" "*/" CLOSE)
+            if(CLOSE EQUAL -1)
+                break()
+            endif()
+            math(EXPR CUT "${OPEN} + ${CLOSE} + 2")
+            string(SUBSTRING "${TEXT}" 0 ${OPEN} HEAD)
+            string(SUBSTRING "${TEXT}" ${CUT} -1 TAIL)
+            set(TEXT "${HEAD}${TAIL}")
+            string(FIND "${TEXT}" "/*" OPEN)
+        endwhile()
+        foreach(PATTERN ${FORBIDDEN})
+            if(TEXT MATCHES "${PATTERN}")
+                list(APPEND OFFENCES "${F}: matches ${PATTERN}")
+            endif()
+        endforeach()
+    endforeach()
+endforeach()
+if(FILE_COUNT EQUAL 0)
+    message(FATAL_ERROR "NoAppleHeaders scanned 0 files — the roots are wrong: ${ROOTS}")
+endif()
+if(OFFENCES)
+    string(REPLACE ";" "\n  " OFFENCES "${OFFENCES}")
+    message(FATAL_ERROR "Apple code in the portable engine:\n  ${OFFENCES}")
+endif()
+message(STATUS "NoAppleHeaders: ${FILE_COUNT} files clean")

@@ -1,0 +1,167 @@
+# The JUCE plugin on the toolchains the developer's Mac cannot run (cross-platform plan, X2-1,
+# ADR-072; macOS left this matrix on 2026-09-18, ADR-079 — it is built, tested and validated
+# locally before every merge). VST3 + Standalone with GCC on Linux, MSVC on Windows, then PluginRenderTests:
+# S1PluginProcessor::processBlock against the bare engine, sample for sample.
+# Separate from `engine`: this one fetches and compiles JUCE, and takes minutes, not seconds.
+name: plugin
+
+on:
+  push:
+    paths:
+      - CMakeLists.txt
+      - Sources/S1Plugin/**
+      - Sources/S1Engine/**
+      - Sources/Soundpipe/**
+      - Tests/Plugin/**
+      - Sources/SynthOneCore/DSP/BandlimitedWavetables/**
+      - .github/workflows/plugin.yml
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS is NOT here (owner's decision, 2026-09-18, ADR-079): on a private repository its
+        # minutes bill tenfold, and it spent the account's allowance. Clang on macOS is covered on
+        # the developer's Mac before every merge — the full CTest run (the goldens bit-exact, which
+        # only Apple Silicon can show), the Xcode suite, Scripts/validate-plugin.sh — so CI is for
+        # the two toolchains that Mac cannot run. To bring it back: add macos-latest to the list.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: JUCE's Linux dependencies
+        if: runner.os == 'Linux'
+        # JUCE 9's docs/Linux Dependencies.md for the modules linked here, less curl and WebKit
+        # (JUCE_USE_CURL=0, JUCE_WEB_BROWSER=0). libxi-dev is new with JUCE 9 (XInput2).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libjack-jackd2-dev libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
+            libxrandr-dev libxrender-dev libxi-dev
+      - name: Configure
+        run: cmake -S . -B build/plugin -DS1_BUILD_PLUGIN=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/plugin --config Release --parallel 4
+      - name: Test
+        # Every engine test again (the plugin build compiles the same engine), plus PluginRender.
+        run: ctest --test-dir build/plugin -C Release --verbose
+      - name: Steinberg's VST3 validator
+        # X2-8 (ADR-079). Built here from Steinberg's SDK at the version JUCE 9.0.2 bundles
+        # (3.8.0, MIT), pinned by tag AND commit; only the validator target, no VSTGUI, no
+        # examples. `-e` is its extensive run. pluginval is handed the same binary below:
+        # without a path it SKIPS its "vst3 validator" test and still says SUCCESS.
+        shell: bash
+        env:
+          VST3SDK_TAG: v3.8.0_build_66
+          VST3SDK_COMMIT: 9fad9770f2ae8542ab1a548a68c1ad1ac690abe0
+        run: |
+          set -euo pipefail
+          # On Linux the SDK's hosting samples will not configure without gtkmm (its editorhost
+          # asks pkg-config for it), and the validator is one of them. Found in Docker.
+          if [ "${{ runner.os }}" = "Linux" ]; then sudo apt-get install -y --no-install-recommends libgtkmm-3.0-dev >/dev/null; fi
+          git clone --quiet --depth 1 --branch "$VST3SDK_TAG" https://github.com/steinbergmedia/vst3sdk.git vst3sdk
+          test "$(git -C vst3sdk rev-parse HEAD)" = "$VST3SDK_COMMIT"
+          git -C vst3sdk submodule update --quiet --init --depth 1 base cmake pluginterfaces public.sdk
+          cmake -S vst3sdk -B vst3sdk-build -DCMAKE_BUILD_TYPE=Release \
+            -DSMTG_ENABLE_VSTGUI_SUPPORT=OFF -DSMTG_ENABLE_VST3_PLUGIN_EXAMPLES=OFF \
+            -DSMTG_ENABLE_VST3_HOSTING_EXAMPLES=ON -DSMTG_RUN_VST_VALIDATOR=OFF > vst3sdk-configure.log 2>&1 || { tail -40 vst3sdk-configure.log; exit 1; }
+          cmake --build vst3sdk-build --config Release --target validator --parallel 4 > vst3sdk-build.log 2>&1 || { tail -60 vst3sdk-build.log; exit 1; }
+          validator=$(find vst3sdk-build -type f \( -name validator -o -name validator.exe \) | head -1)
+          echo "validator: $validator"
+          echo "VST3_VALIDATOR=$PWD/$validator" >> "$GITHUB_ENV"
+          mkdir -p pluginval-logs
+          "$validator" -e "build/plugin/Sources/S1Plugin/ArcadeRuins_artefacts/Release/VST3/Arcade Ruins.vst3" > pluginval-logs/vst3-validator.txt 2>&1 || { tail -80 pluginval-logs/vst3-validator.txt; exit 1; }
+          grep -E "^\[|Result:|tests passed|tests failed" pluginval-logs/vst3-validator.txt | tail -40
+      - name: pluginval, strictness 10
+        # X2-8 (ADR-079). Tracktion's release binary, pinned by version AND by SHA-256: nothing
+        # unpinned runs against the build. pluginval 1.x carries Steinberg's VST3 validator
+        # inside it and runs it as one of its tests from strictness 5. Linux has no display:
+        # xvfb. The log is kept whether it passes or not.
+        shell: bash
+        env:
+          PLUGINVAL_VERSION: v1.0.4
+          SHA256_Linux: c01c49d8063965c4c2dea8324468336768f5c9139e0b1caebde14c2400b55352
+          SHA256_macOS: 3c4c533bda0c5059eea3ddaea752d757ee2025041f0f47e6bcb0e87f6082b29f
+          SHA256_Windows: c08e61ce3b96db41636f8ec7e76f4c7e2c13ebdac7fa1b5a1f52b4f32ec715ab
+        run: |
+          set -euo pipefail
+          os="${{ runner.os }}"
+          zip="pluginval_${os}.zip"
+          curl -fsSL -o "$zip" "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/${zip}"
+          if command -v sha256sum >/dev/null; then sum=$(sha256sum "$zip" | cut -d' ' -f1); else sum=$(shasum -a 256 "$zip" | cut -d' ' -f1); fi
+          echo "pluginval ${PLUGINVAL_VERSION} ${zip} sha256 ${sum}"
+          expected_name="SHA256_${os}"; expected="${!expected_name}"
+          if [ -n "$expected" ] && [ "$sum" != "$expected" ]; then echo "checksum mismatch: expected $expected"; exit 1; fi
+          unzip -q "$zip" -d pluginval-bin
+          case "$os" in
+            macOS)   pluginval="pluginval-bin/pluginval.app/Contents/MacOS/pluginval"; run="" ;;
+            Linux)   pluginval="pluginval-bin/pluginval"; run="xvfb-run -a"; sudo apt-get install -y --no-install-recommends xvfb >/dev/null ;;
+            Windows) pluginval="pluginval-bin/pluginval.exe"; run="" ;;
+          esac
+          mkdir -p pluginval-logs
+          # A skipped test is not a passed one: fail if pluginval says it skipped anything.
+          # Not on Linux: there pluginval 1.0.4 hands the validator the .so INSIDE the bundle, which
+          # SDK 3.8's validator refuses for any plugin. The step above has run it by itself.
+          handed=(--vst3validator "$VST3_VALIDATOR"); allowed="auval"
+          if [ "$os" = "Linux" ]; then handed=(); allowed="auval|vst3 validator"; fi
+          $run "$pluginval" --strictness-level 10 --validate-in-process --verbose \
+            "${handed[@]}" \
+            --output-dir pluginval-logs \
+            --validate "build/plugin/Sources/S1Plugin/ArcadeRuins_artefacts/Release/VST3/Arcade Ruins.vst3" | tee pluginval-logs/pluginval-console.txt
+          if grep -n "Skipping" pluginval-logs/pluginval-console.txt | grep -v -i -E "$allowed"; then echo "pluginval skipped a test"; exit 1; fi
+      - name: Keep pluginval's log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pluginval-${{ runner.os }}
+          path: pluginval-logs
+          retention-days: 14
+      - name: Keep what was built
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArcadeRuins-${{ runner.os }}
+          path: |
+            build/plugin/Sources/S1Plugin/ArcadeRuins_artefacts/Release/VST3
+            build/plugin/Sources/S1Plugin/ArcadeRuins_artefacts/Release/Standalone
+          retention-days: 7
+
+  # X2-8 (ADR-079): every test again under Clang's RealtimeSanitizer, with the engine's render
+  # calls and the plugin's processBlock marked nonblocking: an allocation, a lock or a blocking
+  # system call anywhere under them fails the job with its stack.
+  realtime-sanitizer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CC: clang-20
+      CXX: clang++-20
+      RTSAN_OPTIONS: halt_on_error=false:suppress_equal_stacks=true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clang 20 and JUCE's Linux dependencies
+        run: |
+          wget -q https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 20
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libjack-jackd2-dev libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
+            libxrandr-dev libxrender-dev libxi-dev
+      - name: Configure
+        run: cmake -S . -B build/rtsan -DS1_BUILD_PLUGIN=ON -DS1_RTSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - name: Build
+        # The tests only: a sanitizer's runtime is linked into executables, and the .vst3 is a
+        # shared library linked with --no-undefined.
+        run: cmake --build build/rtsan --parallel 4 --target S1AllTests
+      - name: Test
+        # Without "Goldens": Clang on Linux is not a product toolchain and its arithmetic is not
+        # this job's question (ADR-079); the twenty presets still render under the sanitizer in
+        # GoldensBlockIndependence and GoldensReject-*. Every finding is listed, then the job fails.
+        run: |
+          ctest --test-dir build/rtsan -E '^Goldens$' --verbose 2>&1 | tee rtsan-tests.txt
+          if grep -q "RealtimeSanitizer: " rtsan-tests.txt; then echo "the RealtimeSanitizer found something"; exit 1; fi
+          grep -q "100% tests passed" rtsan-tests.txt
+

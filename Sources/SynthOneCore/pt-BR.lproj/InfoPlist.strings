@@ -1,5 +1,5 @@
 /* Bundle display name */
-"CFBundleDisplayName" = "Arcade Ruins";
+"CFBundleDisplayName" = "Arcade Ruins Classic";
 
 /* Bundle name */
 "CFBundleName" = "$(PRODUCT_NAME)";

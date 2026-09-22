@@ -1,0 +1,68 @@
+# The portable engine on the toolchains the developer's Mac cannot run (cross-platform plan, X1-1):
+# GCC on Linux, MSVC on Windows — the same sources, the same behaviour tests. Clang on macOS is
+# run locally before every merge; it left this matrix on 2026-09-18 (ADR-079).
+# Only the CMake side: the Catalyst app and AUv3 are built by Scripts/build.sh, not here.
+name: engine
+
+on:
+  push:
+    paths:
+      - CMakeLists.txt
+      - Sources/S1Engine/**
+      - Sources/Soundpipe/**
+      - Tests/Engine/**
+      # What the engine's tests read: the goldens, the factory banks, the oscillator tables.
+      - Tests/Goldens/**
+      - Sources/SynthOneCore/Presets/Data/**
+      - Sources/SynthOneCore/DSP/BandlimitedWavetables/**
+      - .github/workflows/engine.yml
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS is NOT here (owner's decision, 2026-09-18, ADR-079): on a private repository its
+        # minutes bill tenfold, and it spent the account's allowance. Clang on macOS is covered on
+        # the developer's Mac before every merge — the full CTest run (the goldens bit-exact, which
+        # only Apple Silicon can show), the Xcode suite, Scripts/validate-plugin.sh — so CI is for
+        # the two toolchains that Mac cannot run. To bring it back: add macos-latest to the list.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build/engine -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/engine --config Release
+      - name: Test
+        # --verbose: the tests print what they measured (goldens exact, tables exact), and the log is where those numbers are read.
+        run: ctest --test-dir build/engine -C Release --verbose
+
+  # X1-7 (ADR-071): the same tests under AddressSanitizer (with LeakSanitizer) and
+  # UndefinedBehaviorSanitizer, Clang on Linux. The golden harness makes and destroys some
+  # eighty engines and plays every golden preset, so this is where a use-after-free, an overrun
+  # or a leak in the kernel's lifecycle (ADR-070) shows. ASan and LSan findings fail the job;
+  # UBSan findings are printed and read (upstream's DSP is not ours to rewrite on a hunch).
+  sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CC: clang
+      CXX: clang++
+      ASAN_OPTIONS: detect_leaks=1:abort_on_error=0
+      UBSAN_OPTIONS: print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: >
+          cmake -S . -B build/sanitize -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          "-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer"
+          "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer"
+          "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build/sanitize -j4
+      - name: Test
+        run: ctest --test-dir build/sanitize --output-on-failure --verbose

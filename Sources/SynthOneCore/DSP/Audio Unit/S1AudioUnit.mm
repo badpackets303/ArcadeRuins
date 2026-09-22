@@ -8,6 +8,7 @@
 
 #import "S1AudioUnit.h"
 #import "S1DSPKernel.hpp"
+#import "AudioKit/AKDSPKernel.hpp"   // X1-3: DSPKernel and AKOutputBuffered, for the adapter below
 #import "AEMessageQueue.h"
 #import "AudioKit/BufferedAudioBus.hpp"
 // PORT: AKSettings is Swift in a static library, so it has no Obj-C
@@ -16,6 +17,7 @@
 #import "AKSettingsBridge.h"
 
 #include <atomic>
+#include <fenv.h>   // X2-7: FE_DFL_DISABLE_DENORMS_ENV
 
 namespace {
 
@@ -119,9 +121,96 @@ struct S1Scope {
 
 @end
 
+
+// PORT (X1-2, ADR-066): the kernel's messages to the main thread, posted the way the kernel
+// itself used to post them.
+//
+// PORT FIX (P4-5), carried over: these post to `messageRelay`, not to the unit. The queue stores
+// its target as a raw pointer and delivers asynchronously, so addressing the unit itself is a
+// use-after-free the moment a unit is destroyed with a message in flight. See `S1MessageRelay`.
+// Every method runs on the render thread; `AEMessageQueuePerformSelectorOnMainThread` is
+// lock-free and allocation-free, which is why it is the one thing called here.
+// PORT (X1-3, ADR-067): the kernel no longer inherits Apple's DSPKernel (the AURenderEvent
+// splitter) or AKOutputBuffered (an AudioBufferList); those stay here, in the Apple adapter.
+// Every render cycle goes: host event list → this splitter (unchanged Apple sample code with the
+// P4-2 fix) → the kernel's `startRamp` / `handleMIDIEvent` / `process(frames, offset)`, exactly
+// as before, with the kernel's output pointers set from the buffer list first. The kernel's own
+// `processWithEvents(frames, S1Event[])` is the same split for hosts that speak S1Event (JUCE).
+class S1KernelAUAdapter final : public DSPKernel, public AKOutputBuffered {
+public:
+    explicit S1KernelAUAdapter(S1DSPKernel &kernel_) : kernel(kernel_) {}
+
+    void process(AUAudioFrameCount frameCount, AUAudioFrameCount bufferOffset) override {
+        kernel.process(frameCount, bufferOffset);
+    }
+    void startRamp(AUParameterAddress address, AUValue value, AUAudioFrameCount duration) override {
+        kernel.startRamp(address, value, duration);
+    }
+    void handleMIDIEvent(AUMIDIEvent const &event) override {
+        const S1MIDIEvent midi = {event.length, {event.data[0], event.data[1], event.data[2]}};
+        kernel.handleMIDIEvent(midi);
+    }
+    /// Once per render cycle, before `processWithEvents`.
+    void setBuffer(AudioBufferList *outBufferList) {
+        AKOutputBuffered::setBuffer(outBufferList);
+        kernel.setOutput((float *)outBufferList->mBuffers[0].mData,
+                         (float *)outBufferList->mBuffers[outBufferList->mNumberBuffers > 1 ? 1 : 0].mData);
+    }
+
+private:
+    S1DSPKernel &kernel;
+};
+
+struct S1AudioUnitKernelListener final : S1KernelListener {
+    AEMessageQueue *queue;          // owned by the unit, which outlives its kernel
+    S1MessageRelay *relay;          // immortal (see the relay's comment)
+
+    S1AudioUnitKernelListener(AEMessageQueue *q, S1MessageRelay *r) : queue(q), relay(r) {}
+
+    void hostTempoDidChange(float tempo) override {
+        // A local, not `AEArgumentScalar`: that macro builds a C compound literal and
+        // takes its address, which Obj-C++ rejects as the address of an rvalue.
+        float tempoValue = tempo;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(hostTempoDidChange:),
+                                                  AEArgumentStruct(tempoValue), AEArgumentNone);
+    }
+    void dependentParameterDidChange(const DependentParameter &parameter) override {
+        DependentParameter value = parameter;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(dependentParameterDidChange:),
+                                                  AEArgumentStruct(value), AEArgumentNone);
+    }
+    void arpBeatCounterDidChange(const S1ArpBeatCounter &counter) override {
+        S1ArpBeatCounter value = counter;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(arpBeatCounterDidChange:),
+                                                  AEArgumentStruct(value), AEArgumentNone);
+    }
+    void playingNotesDidChange(const PlayingNotes &notes) override {
+        PlayingNotes value = notes;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(playingNotesDidChange:),
+                                                  AEArgumentStruct(value), AEArgumentNone);
+    }
+    void heldNotesDidChange(const HeldNotes &notes) override {
+        HeldNotes value = notes;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(heldNotesDidChange:),
+                                                  AEArgumentStruct(value), AEArgumentNone);
+    }
+    void hostMIDIControlDidArrive(const S1HostMIDIMessage &message) override {
+        S1HostMIDIMessage value = message;
+        AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(hostMIDIControlDidArrive:),
+                                                  AEArgumentStruct(value), AEArgumentNone);
+    }
+    bool hostHeldKeysDidChange(const S1HostKeys &keys) override {
+        S1HostKeys value = keys;
+        return AEMessageQueuePerformSelectorOnMainThread(queue, relay, @selector(hostHeldKeysDidChange:),
+                                                         AEArgumentStruct(value), AEArgumentNone);
+    }
+};
+
 @implementation S1AudioUnit {
     // C++ members need to be ivars; they would be copied on access if they were properties.
     std::unique_ptr<S1DSPKernel> _kernel;
+    std::unique_ptr<S1KernelAUAdapter> _kernelAdapter;   // X1-3: Apple's event list → the kernel
+    std::unique_ptr<S1AudioUnitKernelListener> _kernelListener;   // the render thread is stopped before either is destroyed
     BufferedOutputBus _outputBusBuffer;
     AUHostMusicalContextBlock _musicalContext;
     AUHostTransportStateBlock _transportState;
@@ -400,12 +489,16 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
     self.defaultFormat = [[AVAudioFormat alloc] initStandardFormatWithSampleRate:ak_settings_sample_rate()
                                                                         channels:ak_settings_channel_count()];
     _kernel = std::make_unique<S1DSPKernel>(self.defaultFormat.channelCount, self.defaultFormat.sampleRate);
+    _kernelAdapter = std::make_unique<S1KernelAUAdapter>(*_kernel);
     _outputBusBuffer.init(self.defaultFormat, 2);
     self.outputBus = _outputBusBuffer.bus;
     self.outputBusArray = [[AUAudioUnitBusArray alloc] initWithAudioUnit:self
                                                                  busType:AUAudioUnitBusTypeOutput
                                                                   busses:@[self.outputBus]];
-    _kernel->audioUnit = self;
+    // PORT (X1-2, ADR-066): was `_kernel->audioUnit = self`. The kernel posts through a
+    // listener now; this one posts through the message queue to the relay, as the kernel did.
+    _kernelListener = std::make_unique<S1AudioUnitKernelListener>(_messageQueue, _messageRelay);
+    _kernel->listener = _kernelListener.get();
     __block S1DSPKernel *blockKernel = _kernel.get();
     
     // Create parameter tree
@@ -435,7 +528,7 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
         const AUValue minValue = _kernel->minimum(p);
         const AUValue maxValue = _kernel->maximum(p);
         const AUValue defaultValue = _kernel->defaultValue(p);
-        const AudioUnitParameterUnit unit = _kernel->parameterUnit(p);
+        const AudioUnitParameterUnit unit = (AudioUnitParameterUnit)_kernel->parameterUnit(p);   // same values (S1EngineTypes.h)
         NSString* friendlyName = [NSString stringWithCString:_kernel->cString(p) encoding:[NSString defaultCStringEncoding]];
         NSString* keyName = [NSString stringWithCString:_kernel->presetKey(p).c_str() encoding:[NSString defaultCStringEncoding]];
         NSArray<NSNumber *> *dependents =
@@ -467,33 +560,10 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
     // P4-5. Captured here, like the musical context, because the host only
     // guarantees these blocks are valid between allocate and deallocate.
     if (self.transportStateBlock) { _transportState = self.transportStateBlock; }
-    auto parameters = _kernel->parameters;
-
-    // PORT FIX (P4-4): the tuning table has to be carried across `init` too.
-    //
-    // `S1DSPKernel::init` rewrites all 128 entries back to 12-ET. Upstream saved and
-    // restored `parameters` around it, but not the tuning table, and the gap was
-    // invisible because the standalone's Tunings panel re-applies the tuning from
-    // the UI after the engine starts. A plugin has no such second chance: the host
-    // hands back `fullState` and then allocates, and the temperament the session was
-    // saved in would be silently replaced by 12-ET.
-    float tuningTable[S1_NUM_MIDI_NOTES];
-    for (int i = 0; i < S1_NUM_MIDI_NOTES; i++) {
-        tuningTable[i] = _kernel->getTuningTableFrequency(i);
-    }
-    const int tuningNPO = _kernel->getTuningTableNPO();
-
-    _kernel->init(self.outputBus.format.channelCount, self.outputBus.format.sampleRate);
-    _kernel->reset();
-    _kernel->restoreValues(parameters);
-
-    for (int i = 0; i < S1_NUM_MIDI_NOTES; i++) {
-        _kernel->setTuningTable(tuningTable[i], i);
-    }
-    // After `init`, because it re-creates the sequencer this also configures.
-    _kernel->setTuningTableNPO(tuningNPO);
-
-    _kernel->updateWavetableIncrementValuesForCurrentSampleRate();
+    // PORT (X1-7, ADR-071): the save / init / reset / restore sequence that stood here, tuning
+    // table included (PORT FIX P4-4), is `S1DSPKernel::prepareToRender` now — statement for
+    // statement — so the engine's other hosts prepare the kernel exactly as this one does.
+    _kernel->prepareToRender((int)self.outputBus.format.channelCount, self.outputBus.format.sampleRate);
     
     return YES;
 }
@@ -610,8 +680,24 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
     return _kernel->hostMIDI.trace.take(destination, (int)capacity);
 }
 
+// X2-7 (ADR-078): subnormals flushed to zero for one render cycle, the caller's floating-point
+// environment put back afterwards. Measured 2026-09-18: CoreAudio's render thread computes
+// subnormals (a 1e-20 × 1e-20 product is 1e-40 there), and the engine's effects decay into them
+// and stay — the smallest one, 1.4e-45, never rounds to zero — which costs a silent instrument
+// 1.15–1.5× per block on x86 and some 5% on Apple Silicon. Apple's <fenv.h> has the mode on both
+// architectures. The goldens are bit-exact under it (the CTest GoldensFlushToZero). The JUCE
+// plugin does the same with juce::ScopedNoDenormals.
+namespace {
+struct S1ScopedFlushToZero {
+    fenv_t saved;
+    S1ScopedFlushToZero() { fegetenv(&saved); fesetenv(FE_DFL_DISABLE_DENORMS_ENV); }
+    ~S1ScopedFlushToZero() { fesetenv(&saved); }
+};
+}
+
 - (AUInternalRenderBlock)internalRenderBlock {
     __block S1DSPKernel *state = _kernel.get();
+    __block S1KernelAUAdapter *adapter = _kernelAdapter.get();
     // ADR-031. The queue outlives every render cycle: it belongs to this unit, as does the block.
     __unsafe_unretained AEMessageQueue *messageQueue = _messageQueue;
     return ^AUAudioUnitStatus(
@@ -622,8 +708,9 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
                               AudioBufferList            *outputData,
                               const AURenderEvent        *realtimeEventListHead,
                               AURenderPullInputBlock      pullInputBlock) {
+        const S1ScopedFlushToZero flushToZero;
         self->_outputBusBuffer.prepareOutputBufferList(outputData, frameCount, true);
-        state->setBuffer(outputData);
+        adapter->setBuffer(outputData);
 
         // ADR-031: the keys the interface queued, then the router's once-a-cycle checks — both
         // before this cycle's host events, and on the thread that plays them. Polling an empty
@@ -633,7 +720,7 @@ static NSString *const kS1TuningNPOKey    = @"com.badpackets303.SynthOne.tuningN
             state->hostMIDI.beginRenderCycle(*state);
         }
 
-        state->processWithEvents(timestamp, frameCount, realtimeEventListHead);
+        adapter->processWithEvents(timestamp, frameCount, realtimeEventListHead);
 
         // P4-6: the waveform display. `outputData` is the buffer the host is about to
         // play, so this is the same signal the standalone's node tap sees. A no-op
