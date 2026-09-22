@@ -146,6 +146,18 @@ Step "what the denormal test measured here (x86)" -Needs $BuildStep {
     "`n      " + ($lines -join "`n      ")
 }
 
+# ADR-096: this renderer draws "Pitch Trac" where the others draw "Pitch Track", and the width
+# check passes here because it measures at 1x. The probe prints what THIS machine measures and what
+# JUCE's own fitter does with it, so the machine that has the fault reports the numbers.
+Step "what the caption probe measured here (ADR-096)" -Needs $BuildStep {
+    $lines = Select-String -Path "$Work\ctest.log" -Pattern "^\s*\d+:\s*probe " | ForEach-Object { ($_.Line -replace "^\s*\d+:\s*", "").Trim() }
+    if (-not $lines) {
+        [void](Native "$Work\typeface.log" "$Build\Tests\Plugin\PluginTypefaceTests_artefacts\Release\PluginTypefaceTests.exe" @())
+        $lines = Select-String -Path "$Work\typeface.log" -Pattern "^probe " | ForEach-Object { $_.Line.Trim() }
+    }
+    "`n      " + ($lines -join "`n      ")
+}
+
 $Validator = $null
 Step "Steinberg's validator, built from the SDK at $Vst3SdkTag" {
     if (-not (Test-Path "$Work\vst3sdk\.git")) {

@@ -5885,7 +5885,32 @@ and prints the tightest one with its margin, so each OS's own run reports its re
 **This cannot be verified here.** No Windows machine, and the fault only appears at a scale under
 that renderer. The fix is structural — with `drawFittedText` a letter cannot be dropped unless the
 text needs 143% of its room — but **the proof is the owner's next Windows screenshot**, and until
-then this ADR is reasoning, not evidence. Fourth time a picture found what every check passed:
+then this ADR is reasoning, not evidence.
+
+**Amended 2026-09-22 — the fix is HALF right, and the remaining half is not what this ADR says.**
+The owner, on a build carrying all of the above: *"The k in track is getting cut off. Transpose
+looks ok."* So the extra room cured "Transpose" and not "Pitch Track", and three things now say
+the cause is NOT the width:
+- **There is no ellipsis.** `addFittedText` that has to drop glyphs inserts one (`insertEllipsis`).
+  A clean "Pitch Trac" is therefore not the fitter curtailing.
+- **macOS renders it whole at the owner's own window scale** (1589 × 993, 1.1035×), measured in
+  the pixels, so the transform alone does not do it.
+- **The probe, here:** "Pitch Track" measures 46.2 points in an area 84 wide and the fitter keeps
+  all 11 glyphs — nearly double the room it needs.
+So either something CLIPS the last glyph on that renderer, or the glyph is not drawn (though `k`
+draws in "Attack" on the same screen). `PluginTypefaceTests` prints that probe now, and
+`Scripts\validate-windows.ps1` reports it in its block, so **the machine with the fault states its
+own numbers instead of being guessed at from one that does not have it**.
+
+**The probe answered it, 2026-09-22.** On the owner's Windows machine: *"Pitch Track": measures
+**46.2** in an area **84** wide; fitted to **11** glyphs -> "Pitch Track"* — **the same three
+numbers as macOS, to the decimal**, at 1920 × 1080 and 100% Windows scaling ("not a DPI effect",
+the owner). So Barlow's metrics are identical there, the area is ample, and **JUCE's fitter keeps
+every letter**. The arrangement handed to the renderer is whole and correctly placed; the last
+glyph is **not painted**. Nothing about width, room, squeezing or the layout can fix that, and
+`kCaptionRoom`/`kCaptionSqueeze` are left where they are because they did cure "Transpose" and
+cost nothing. **The fault is in the drawing on Direct2D**, below anything this project writes, and
+it is one letter of one caption: it does not block a release. Fourth time a picture found what every check passed:
 ADR-085 (the dependent knobs), ADR-090 (the octave), X4-4 (the same captions on Linux), this.
 
 ---

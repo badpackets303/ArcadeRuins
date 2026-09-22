@@ -52,9 +52,9 @@ In a plugin, the arpeggiator and sequencer follow the host's tempo and transport
 
 ## Status
 
-**Arcade Ruins 1.0.0** (cross-platform): complete and validated — Steinberg's VST3 validator, pluginval at
-strictness 10, Apple's `auval`, and a RealtimeSanitizer build, on macOS, Linux and Windows — and
-**being packaged for its first release**. There is no download yet.
+**Arcade Ruins 1.0.0** (cross-platform): released 2026-09-22 — validated with Steinberg's VST3
+validator, pluginval at strictness 10, Apple's `auval`, and a RealtimeSanitizer build, on macOS,
+Linux and Windows.
 **Arcade Ruins Classic**: version 0.5.0 is released, below.
 
 See [STATE.md](STATE.md) for live status, [PORT_PLAN.md](PORT_PLAN.md) for the task board and
@@ -64,13 +64,17 @@ This is a personal project, shared for testing. It is not on the App Store.
 
 ## Download and install
 
-### Arcade Ruins — Windows, macOS, Linux
+### Arcade Ruins 1.0.0 — Windows, macOS, Linux
 
-Not released yet. When it is, the [Releases](https://github.com/badpackets303/ArcadeRuins/releases)
-page will carry an installer for macOS (the VST3, the Audio Unit and the standalone, each a choice;
-signed and notarised), an installer for Windows (the VST3 and the standalone), and a tarball for
-Linux with an `install.sh` that needs no root — each with its SHA-256. Every one leaves your
-presets alone when it is uninstalled. Until then it [builds from source](#building) in a few minutes.
+| | |
+|---|---|
+| **macOS** 11+ | [⬇ ArcadeRuins-1.0.0-macOS.pkg](https://github.com/badpackets303/ArcadeRuins/releases/download/v1.0.0/ArcadeRuins-1.0.0-macOS.pkg) — the VST3, the Audio Unit and the standalone, each a choice. Signed and notarised; installs without a warning. Universal. |
+| **Windows** 10+ | [⬇ ArcadeRuins-1.0.0-Windows-x64.exe](https://github.com/badpackets303/ArcadeRuins/releases/download/v1.0.0/ArcadeRuins-1.0.0-Windows-x64.exe) — the VST3 and the standalone. **Not signed**: see the note below. |
+| **Linux** glibc 2.35+ | [⬇ x86-64](https://github.com/badpackets303/ArcadeRuins/releases/download/v1.0.0/ArcadeRuins-1.0.0-linux-x86_64.tar.gz) · [⬇ aarch64](https://github.com/badpackets303/ArcadeRuins/releases/download/v1.0.0/ArcadeRuins-1.0.0-linux-aarch64.tar.gz) — the VST3 and the standalone, with an `install.sh` that needs no root. |
+
+Every one carries its SHA-256 on the [release page](https://github.com/badpackets303/ArcadeRuins/releases/tag/v1.0.0),
+and every one leaves your presets alone when it is uninstalled. It also
+[builds from source](#building) in a few minutes.
 
 *Version 1.0.0 — its own number; Classic keeps the 0.x line. On an Intel Mac the build is signed
 and universal but has not been tested on one.*

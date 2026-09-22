@@ -230,12 +230,58 @@ as wide as the Mac's text in Avenir, and Barlow runs wider. `PluginTypefaceTests
 labels and the section titles but NOT the 62 captions a skin has; it does now (with no room it
 names "Pitch Track", 2.7 points over, and "Transpose"), and the backdrop gives captions the 12
 points a side centred labels always had (`Style::kCaptionRoom`).
-**⚠️ THE FOUR 1.0.0 ARTEFACTS ARE SUPERSEDED — rebuild all of them before X4-5** (ADR-099 landed
-after they were built: the macOS `.pkg` needs `Scripts/release-plugin.sh` again, the Linux pair
-`Scripts/release-linux.sh` and `--x86`, and the Windows installer another run on the owner's
-machine). Do not publish the ones on disk.
+**The 1.0.0 artefacts were REBUILT at `ffcc2e6` (with ADR-099), 2026-09-22:**
+`ArcadeRuins-1.0.0-macOS.pkg` `6c628753…` (notarised, stapled, `spctl` accepted),
+`…-linux-x86_64.tar.gz` `1ec22edb…`, `…-linux-aarch64.tar.gz` `81cc6d8f…`.
+**ALL FOUR ARTEFACTS NOW EXIST, past ADR-099:** the Windows installer was rebuilt by the owner at
+`ebed4b6` (2026-09-22 10:35) — `ArcadeRuins-1.0.0-Windows-x64.exe`, 13.6 MB, `bfd06a04…`
+(the pre-fix one was `761b33d4…`), the C runtime linked in, **42/42 CTest on those binaries**,
+unsigned by decision (ADR-097). `ebed4b6` differs from `ffcc2e6` in STATE.md alone, so all four
+are built from the same code. **Windows is GREEN and nothing is owed there** — that run covers
+everything from `3ad9d87` on, ADR-096 and ADR-099 included. *A trap worth naming: the aarch64 tarball was left
+behind in the first sweep, because `Scripts/release-linux.sh` and `--x86` are two runs and only
+the second was started. Its checksum was unchanged, which is how it was caught — **compare the
+checksum, not the timestamp**, when a rebuild is supposed to have happened.*
 
-**EVERY DECISION IS SETTLED; what is left of X4 is the owner's hands and their go-ahead.**
+**THE PUBLIC REPOSITORY IS UPDATED — the cross-platform product is public** (2026-09-22, the
+owner's word): `badpackets303/ArcadeRuins` at `faa1fd6`, exported from `ffcc2e6`. The previous
+export was `4dd7e79`, which predated every bit of X3 and X4, so this published 212 files and
+~56,000 lines at once — the JUCE plugin, its tests, the release scripts, the two-product README
+and the six new screenshots. Checked before the push: no `docs/private`, no `upstream`, no App
+Store assets, no email, and the only "password" matches are prose. Checked after: all 13 of the
+README's images return 200 from `raw.githubusercontent.com`. **No tag and no release yet** — the
+README says "no download yet", which is true until X4-5.
+
+**⚠️ ADR-096 IS HALF FIXED AND THE REST IS NOT UNDERSTOOD.** The owner, 2026-09-22, on the rebuilt
+Windows installer: *"The k in track is getting cut off. Transpose looks ok."* The extra room cured
+Transpose. "Pitch Track" still loses its last letter, and **the width is not the reason**: there is
+no ellipsis (JUCE's fitter inserts one when it drops glyphs), macOS renders it whole at the
+owner's exact window size (1589 × 993, measured in the pixels), and the probe here shows it
+measuring 46.2 in an area 84 wide with all 11 glyphs surviving the fitter. So something clips the
+last glyph on that renderer, or does not draw it — and `k` draws in "Attack" on the same screen.
+**The probe has now answered, and it rules out everything this project controls.** The owner's
+run at `ab34455` (Windows green, 42/42, validator 537/537, pluginval 10) reported:
+`"Pitch Track": measures 46.2 in an area 84 wide; fitted to 11 glyphs -> "Pitch Track"` — **the
+same numbers as macOS to the decimal**, at 1920 × 1080 and 100% scaling. So the metrics match, the
+room is ample, and JUCE's fitter keeps every letter: **the glyph arrangement is whole when it
+reaches the renderer and the last glyph is simply not painted.** No amount of width or squeeze can
+change that. **NEXT, and it is one cheap observation, not a rebuild: resize the standalone's
+window** — if the `k` appears at some sizes and not others, it is the stage transform interacting
+with Direct2D (the backdrop is `setBufferedToImage(true)`, and turning that off is then the
+experiment); if it is cut at EVERY size, the transform is innocent and the glyph run itself is.
+**Nothing further is changed from this side until that is known** — two attempts have been made
+from here and one was wrong. It is one letter of one caption and **does not block a release**.
+
+**The owner looked again at the Windows caption and said (2026-09-22): "No, it looks ok - let's
+move ahead."** Recorded as their judgement of the interface, not as a fix: nothing changed between
+the two looks, and the resize experiment was not run. ADR-096 stands as it is.
+
+**X4-5 RELEASED 2026-09-22 on the owner's word.** Tagged `v1.0.0`. **X4-3, the host matrix, was
+NOT done** — the plugin has never been confirmed loading in a DAW by hand; what stands in its
+place is Apple's `auval`, pluginval at strictness 10 and Steinberg's validator on three systems,
+and the owner's own use of it (which is how ADR-099 and ADR-096 were found).
+
+**EVERY DECISION IS SETTLED.**
 ~~one public repository or two~~ — **ONE** (ADR-098, 2026-09-22, overturning ADR-092's clause 3
 before anything was built: the existing public repository is already named `ArcadeRuins` and
 already exports this whole tree, and the two products share an engine, a measured layout, the

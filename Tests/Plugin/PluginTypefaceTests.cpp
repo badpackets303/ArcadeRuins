@@ -127,6 +127,32 @@ int main() {
         check(uncuttable == 0, "…and none could lose a letter at any scale the window has, drawn fitted", uncuttable);
     }
 
+    // MARK: a PROBE, for the platform that is drawing "Pitch Trac" (ADR-096). It prints what this
+    // renderer measures and what JUCE's own fitter then does with it, so the machine that has the
+    // fault reports the numbers rather than being guessed at from another machine's.
+    {
+        const s1plugin::LayoutSkin *cabinet = spec.skin("cabinet");
+        const s1ui::Style style(*cabinet);
+        for (const s1plugin::LayoutControl &control : cabinet->controls) {
+            if (!control.titleFrame || control.title.empty()) { continue; }
+            if (control.title != "Pitch Track" && control.title != "Transpose" && control.title != "Semitones") { continue; }
+            const juce::String drawn = s1ui::Style::drawable(juce::String::fromUTF8(control.title.c_str()));
+            const juce::Font font = style.font(12.0f);
+            const juce::Rectangle<int> area = juce::Rectangle<float>(control.titleFrame->x, control.titleFrame->y,
+                                                                     control.titleFrame->width, control.titleFrame->height)
+                                                 .expanded(s1ui::Style::kCaptionRoom, 0.0f).toNearestInt();
+            juce::GlyphArrangement fitted;
+            fitted.addFittedText(font, drawn, float(area.getX()), float(area.getY()), float(area.getWidth()),
+                                 float(area.getHeight()), juce::Justification::centred, 1, s1ui::Style::kCaptionSqueeze);
+            juce::String glyphs;
+            for (int i = 0; i < fitted.getNumGlyphs(); ++i) { glyphs += juce::String::charToString(fitted.getGlyph(i).getCharacter()); }
+            std::printf("probe  \"%s\": measures %.1f in an area %d wide; fitted to %d glyphs -> \"%s\"%s\n",
+                        control.title.c_str(), widthOf(font, drawn), area.getWidth(), fitted.getNumGlyphs(),
+                        glyphs.toRawUTF8(), glyphs == drawn ? "" : "   <-- NOT THE WHOLE STRING");
+            check(glyphs == drawn, ("every letter of \"" + control.title + "\" survives the fitter here").c_str(), fitted.getNumGlyphs());
+        }
+    }
+
     // MARK: and the toolbar's and sections' words fit too, at the sizes the interface uses
     {
         const s1plugin::LayoutSkin *skin = spec.defaultSkin();

@@ -5,7 +5,7 @@ Audio Unit and standalone, on Windows, macOS and Linux (its version is `project(
 `CMakeLists.txt`). **Arcade Ruins Classic** is the Mac app and its AUv3, with Synth One's own iPad
 interface (`MARKETING_VERSION` in `project.yml`). Same engine, same 150 parameters, same presets.
 
-## Arcade Ruins 1.0.0 (Windows · macOS · Linux) — unreleased
+## Arcade Ruins 1.0.0 (Windows · macOS · Linux) — 2026-09-22
 
 The first release of the cross-platform instrument. The sound is Classic's exactly: twenty factory
 presets render bit for bit the same on Apple Silicon, and within a measured tolerance under GCC
