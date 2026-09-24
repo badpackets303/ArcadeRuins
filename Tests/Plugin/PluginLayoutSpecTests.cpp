@@ -90,12 +90,14 @@ int main(int argc, char **argv) {
 
     const LayoutSkin *studio = spec.skin("studio");
     const LayoutSkin *cabinet = spec.skin("cabinet");
-    check(studio != nullptr && cabinet != nullptr && spec.skins.size() == 2, "two skins: studio and cabinet", double(spec.skins.size()));
-    if (studio == nullptr || cabinet == nullptr) { return 1; }
+    const LayoutSkin *darkArcade = spec.skin("darkArcade");
+    check(studio != nullptr && cabinet != nullptr && darkArcade != nullptr && spec.skins.size() == 3,
+          "three skins: studio, cabinet and darkArcade (2026-09-24)", double(spec.skins.size()));
+    if (studio == nullptr || cabinet == nullptr || darkArcade == nullptr) { return 1; }
     check(spec.defaultSkin() == cabinet, "Cabinet is the default (ADR-064)", spec.defaultSkin() == cabinet);
 
     const LayoutRect window { 0, 0, spec.designWidth, spec.designHeight };
-    for (const LayoutSkin *skin : { studio, cabinet }) {
+    for (const LayoutSkin *skin : { studio, cabinet, darkArcade }) {
         const std::string name = skin->key + ": ";
         check(skin->sections.size() == 15, name + "fifteen sections", double(skin->sections.size()));
         check(skin->palette.size() == cabinet->palette.size() || skin->palette.size() + 1 == cabinet->palette.size(),
@@ -145,6 +147,8 @@ int main(int argc, char **argv) {
         }
         for (const char *item : { "presetField", "presetName", "dice", "scope", "button.Save", "button.Panic", "button.Settings",
                                   "button.Previous preset", "button.Next preset", "button.Hold", "button.Mono", "octave", "tuning", "button.Snap" }) {
+            // Dark Arcade's painting has no screen, so no scope (2026-09-24)
+            if (skin == darkArcade && std::string(item) == "scope") { continue; }
             const bool found = std::any_of(skin->items.begin(), skin->items.end(), [&](const LayoutItem &i) { return i.id == item; });
             if (!found) { check(false, name + "item " + item, 0); }
         }
@@ -202,13 +206,44 @@ int main(int argc, char **argv) {
     check(cabinet->dress.count("knobRingScale") == 1 && cabinet->dress.at("knobRingScale") == 1.5f && cabinet->dress.at("bareSections") == 1.0f
               && studio->dress.at("bareSections") == 0.0f, "the dress came through: Cabinet's ring is 1.5x and its sections are bare", cabinet->dress.count("knobRingScale") ? cabinet->dress.at("knobRingScale") : 0);
 
-    // The same controls under both skins, by id and parameter
-    int unmatched = 0;
-    for (const LayoutControl &control : studio->controls) {
-        const LayoutControl *other = cabinet->control(control.id);
-        if (other == nullptr || other->parameter != control.parameter || other->kind != control.kind) { ++unmatched; }
+    check(cabinet->painting && cabinet->painting->display && cabinet->painting->display->green == 0xe8,
+          "Cabinet's display shows the preset in its cyan", cabinet->painting && cabinet->painting->display ? cabinet->painting->display->green : 0);
+
+    // Dark Arcade (2026-09-24): the calmer painting, measured the way Cabinet's is
+    check(darkArcade->painting.has_value() && !darkArcade->isDefault, "Dark Arcade has a painting and is not the default", darkArcade->isDefault);
+    if (darkArcade->painting) {
+        const LayoutTemplate &painting = *darkArcade->painting;
+        check(painting.width == 1586 && painting.height == 992 && painting.image == "s1_template_darkarcade", "the painting is 1586 x 992, s1_template_darkarcade", painting.width);
+        check(painting.sections.size() == 15 && painting.places.size() == 11 && painting.places.count("scope") == 0,
+              "fifteen section rectangles and eleven places: no screen, so no scope", double(painting.places.size()));
+        check(!painting.joystick && !painting.power, "no joystick and no power buttons: those are the cabinet's", painting.power.has_value());
+        check(!painting.paintedButtons && cabinet->painting && cabinet->painting->paintedButtons,
+              "its header has no painted buttons, so the editor draws them; Cabinet's are painted", painting.paintedButtons);
+        check(painting.display && painting.display->red == 0xff && painting.display->green == 0x8a, "the display shows the preset in orange, #ff8a1e",
+              painting.display ? painting.display->green : 0);
+        float worst = 0;
+        for (const LayoutSection &section : darkArcade->sections) {
+            const auto painted = painting.sections.find(section.key);
+            if (painted == painting.sections.end()) { check(false, "the painting has a rectangle for " + section.key, 0); continue; }
+            const LayoutRect expected = painting.inWindow(painted->second, spec.designWidth, spec.designHeight);
+            worst = std::max({ worst, std::fabs(expected.x - section.frame.x), std::fabs(expected.y - section.frame.y),
+                               std::fabs(expected.right() - section.frame.right()), std::fabs(expected.bottom() - section.frame.bottom()) });
+        }
+        check(worst <= 0.75f, "every Dark Arcade section sits on its painted rectangle, to three quarters of a point", worst);
     }
-    check(unmatched == 0 && studio->controls.size() == cabinet->controls.size(), "both skins hold the same controls on the same parameters", unmatched);
+    accented = 0;
+    for (const LayoutSection &section : darkArcade->sections) { if (section.accent) { ++accented; } }
+    check(accented == 0, "Dark Arcade gives no section an accent of its own: one orange", accented);
+
+    // The same controls under every skin, by id and parameter
+    for (const LayoutSkin *other_ : { cabinet, darkArcade }) {
+        int unmatched = 0;
+        for (const LayoutControl &control : studio->controls) {
+            const LayoutControl *other = other_->control(control.id);
+            if (other == nullptr || other->parameter != control.parameter || other->kind != control.kind) { ++unmatched; }
+        }
+        check(unmatched == 0 && studio->controls.size() == other_->controls.size(), other_->key + " holds Studio's controls on the same parameters", unmatched);
+    }
 
     // What is not a specification is refused, and says where
     struct Bad { const char *what; std::string json; const char *mention; };

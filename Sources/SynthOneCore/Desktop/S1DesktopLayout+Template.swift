@@ -87,16 +87,16 @@ extension S1DesktopLayout {
         field.layer.borderWidth = 0
         if let display = header.displayLabel {
             display.font = UIFont.monospacedSystemFont(ofSize: 19, weight: .semibold)
-            display.textColor = S1CabinetSkin.cyan
+            display.textColor = template.displayColour
             display.adjustsFontSizeToFitWidth = true
             display.minimumScaleFactor = 0.6
-            display.layer.shadowColor = S1CabinetSkin.cyan.cgColor
+            display.layer.shadowColor = template.displayColour.cgColor
             display.layer.shadowOpacity = 0.9
             display.layer.shadowRadius = 5
             display.layer.shadowOffset = .zero
         }
         for case let chevron as UILabel in field.subviews where chevron.text == "▾" {
-            chevron.textColor = S1CabinetSkin.cyan
+            chevron.textColor = template.displayColour
         }
         pin(field, to: template.presetField, of: template)
 
@@ -159,13 +159,14 @@ extension S1DesktopLayout {
             pin(plate, to: template.record, of: template)
         }
 
-        // The scope, in the cabinet's screen
-        if let plot = manager.conductor.audioPlotter {
+        // The scope, in the cabinet's screen. A painting with no screen leaves it in the hidden
+        // toolbar (Dark Arcade).
+        if let scope = template.scope, let plot = manager.conductor.audioPlotter {
             plot.removeFromSuperview()
             NSLayoutConstraint.deactivate(plot.constraints.filter { $0.firstItem === plot && $0.secondItem == nil })
             plot.backgroundColor = .clear
             plot.layer.cornerRadius = 14
-            pin(plot, to: template.scope, of: template)
+            pin(plot, to: scope, of: template)
         }
         _ = canvas
     }

@@ -86,7 +86,7 @@ int main() {
                 }
             }
         }
-        check(labels == 33, "the specification's 33 labels are measured", labels);
+        check(labels == 41, "the specification's 41 labels are measured (Dark Arcade brought 8, as Cabinet has)", labels);
         std::printf("note  %d labels measured in Barlow Condensed; %d wider than their frame%s\n",
                     labels, tooWide, tooWide > 0 ? (", worst \"" + worstLabel + "\"").c_str() : "");
         check(tooWide == 0, "every one of them fits the frame the Mac measured for it", tooWide);

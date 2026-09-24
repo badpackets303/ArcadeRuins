@@ -56,7 +56,7 @@ enum MenuBuilder {
     /// P7 (ADR-046): View ▸ Skin ▸ Studio | Arcade. The chosen one is checked by
     /// `AppDelegate.validate(_:)`; the change applies at the next launch.
     private static func skinMenu() -> UIMenu {
-        let items = S1SkinChoice.allCases.map { choice in
+        let items = S1SkinChoice.offered.map { choice in
             UICommand(title: choice.title, action: #selector(AppDelegate.chooseSkin(_:)), propertyList: choice.rawValue)
         }
         let skin = UIMenu(title: NSLocalizedString("Skin", comment: "View menu"),

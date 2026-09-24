@@ -122,7 +122,9 @@ struct LayoutTemplate {
     std::string image;
     float width = 0, height = 0;
     std::map<std::string, LayoutRect> sections;   ///< by section key
-    std::map<std::string, LayoutRect> places;     ///< presetField, previous, next, wordmark, scope, save, record, panic, settings, presets, playBar, statusBar
+    std::map<std::string, LayoutRect> places;     ///< presetField, previous, next, wordmark, scope (when painted), save, record, panic, settings, presets, playBar, statusBar
+    std::optional<LayoutColour> display;          ///< the preset name's colour in the painted display: Cabinet's cyan, Dark Arcade's orange
+    bool paintedButtons = true;                   ///< Save, Panic, Settings, Presets painted in (Cabinet) — or drawn by the editor (Dark Arcade)
     float diceX = 0, diceY = 0;
     std::optional<LayoutJoystick> joystick;
     std::optional<LayoutPower> power;

@@ -133,9 +133,18 @@ LayoutTemplate readTemplate(const Json &json, const std::string &where) {
     const Json &sections = field(json, where, "sections");
     if (!sections.is_object()) { throw Fault(where + ".sections is not an object"); }
     for (const auto &[key, value] : sections.items()) { painting.sections[key] = rect(value, where + ".sections." + key); }
-    for (const char *place : { "presetField", "previous", "next", "wordmark", "scope", "save", "record", "panic",
+    for (const char *place : { "presetField", "previous", "next", "wordmark", "save", "record", "panic",
                                "settings", "presets", "playBar", "statusBar" }) {
         painting.places[place] = rect(json, where, place);
+    }
+    // A painting with no screen has no scope (Dark Arcade, 2026-09-24); nor does its map.
+    if (const auto scope = rectIfPresent(json, where, "scope")) { painting.places["scope"] = *scope; }
+    if (const auto found = json.find("display"); found != json.end() && !found->is_null()) {
+        painting.display = colour(*found, where + ".display");
+    }
+    if (const auto found = json.find("paintedButtons"); found != json.end() && !found->is_null()) {
+        if (!found->is_boolean()) { throw Fault(where + ".paintedButtons is not true or false"); }
+        painting.paintedButtons = found->get<bool>();
     }
     std::tie(painting.diceX, painting.diceY) = pair(json, where, "dice");
     if (const Json &stick = field(json, where, "joystick"); !stick.is_null()) {

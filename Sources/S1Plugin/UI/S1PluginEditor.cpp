@@ -46,10 +46,11 @@ public:
         setInterceptsMouseClicks(false, false);
         setBufferedToImage(true);
         setAccessible(false);
-        if (style.skin().painting) {
-            painting = linkedImage("s1_template_cabinet@2x.jpg");
+        if (const auto &template_ = style.skin().painting) {
+            // The painting the skin names: Cabinet's, or Dark Arcade's (2026-09-24)
+            painting = linkedImage((template_->image + "@2x.jpg").c_str());
             // X3-9 (ADR-091): the grey copy the red buttons lay over a dead zone.
-            if (style.skin().painting->power) { dark = linkedImage("s1_template_cabinet_dark@2x.jpg"); }
+            if (template_->power) { dark = linkedImage((template_->power->darkImage + "@2x.jpg").c_str()); }
         }
         else {
             // The owner's wordmark, cut at the sizes it is shown at (generate.py's `plugin_wordmarks`)
@@ -370,7 +371,10 @@ public:
     void paint(juce::Graphics &g) override {
         const juce::Rectangle<float> bounds = getLocalBounds().toFloat();
         if (painted) {
-            const juce::Colour cyan = style.colour("secondAccent");
+            // The painting's own colour for its display: Cabinet's cyan, Dark Arcade's orange
+            const auto &template_ = style.skin().painting;
+            const juce::Colour cyan = template_ && template_->display ? style.dimmed(juce::Colour(template_->display->red, template_->display->green, template_->display->blue, template_->display->alpha))
+                                                                     : style.colour("secondAccent");
             g.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), "Bold", 19.0f).withPointHeight(19.0f)));
             juce::GlyphArrangement glyphs;
             glyphs.addFittedText(g.getCurrentFont(), name, 8, 0, bounds.getWidth() - 28, bounds.getHeight(), juce::Justification::centred, 1, 0.6f);
@@ -786,9 +790,11 @@ void S1PluginEditor::buildItems() {
     };
 
     for (const s1plugin::LayoutItem &item : skin().items) {
-        // Painted: Cabinet's header, where the painting has the button and this takes the click
+        // Painted: Cabinet's header, where the painting has the button and this takes the click.
+        // Dark Arcade's painting has the arrows but no buttons, so those are drawn (2026-09-24).
         const bool isPainted = painted && item.region.empty();
-        const ItemButton::Look dressed = isPainted ? ItemButton::Look::painted : ItemButton::Look::dressed;
+        const bool buttonIsPainted = isPainted && skin().painting->paintedButtons;
+        const ItemButton::Look dressed = buttonIsPainted ? ItemButton::Look::painted : ItemButton::Look::dressed;
         const std::string &id = item.id;
         if (id == "presetField") {
             auto field = std::make_unique<PresetField>(styleFor(zoneOfItem(item)), painted);
@@ -810,7 +816,8 @@ void S1PluginEditor::buildItems() {
         } else if (id == "button.Panic") {
             button(item, dressed, [this] { plugin.requestAllNotesOff(); say("All notes off."); }, accent);
         } else if (id == "button.About" || id == "button.About Arcade Ruins") {
-            button(item, dressed, [this] { showAbout(); }, accent);
+            // Over a painting this is the wordmark's click, never a drawn button
+            button(item, isPainted ? ItemButton::Look::painted : ItemButton::Look::dressed, [this] { showAbout(); }, accent);
         } else if (id == "button.Settings") {
             button(item, dressed, [this] { showSettings(true); }, accent);
         } else if (id == "button.Presets" || id == "button.Presets.2") {
@@ -860,7 +867,9 @@ void S1PluginEditor::buildItems() {
                 if (found != skin().painting->places.end()) { plate.frame = skin().painting->inWindow(found->second, S1LinkedLayoutSpec().designWidth, S1LinkedLayoutSpec().designHeight); }
             }
             plate.title = "About";
-            ItemButton *about = button(plate, ItemButton::Look::plain, [this] { showAbout(); }, accent);
+            // On a painted plate the word alone; in a bare header, a button like its neighbours
+            const ItemButton::Look look = skin().painting->paintedButtons ? ItemButton::Look::plain : ItemButton::Look::dressed;
+            ItemButton *about = button(plate, look, [this] { showAbout(); }, accent);
             about->setComponentID("button.About");
         }
         // Not built, on purpose: `record` / `recordStatus` (the host records), `button.MIDI Learn`
@@ -1319,7 +1328,7 @@ void S1PluginEditor::applySkin(const std::string &skinKey) {
     resized();
     refreshLiveState();
     plugin.setInterfaceSkin(juce::String(skinKey));
-    say(juce::String(chosen->key == "cabinet" ? "Cabinet" : "Studio") + ".");
+    say(juce::String::fromUTF8(chosen->title.c_str()) + ".");
 }
 
 /// The Settings card: what the interface is, rather than what the sound is. The list of all 150
@@ -1328,15 +1337,17 @@ class S1PluginEditor::SettingsBody final : public juce::Component {
 public:
     SettingsBody(S1PluginEditor &owner, const s1ui::Style &s) : editor(owner), style(s) {
         heading.setText("Skin", juce::dontSendNotification);
-        subheading.setText("The sound is the same in either.", juce::dontSendNotification);
+        subheading.setText("The sound is the same in every one.", juce::dontSendNotification);
         for (juce::Label *label : { &heading, &subheading }) {
             label->setFont(style.font(label == &heading ? 13.0f : 11.0f,
                                       label == &heading ? s1ui::FontWeight::demiBold : s1ui::FontWeight::regular));
             label->setColour(juce::Label::textColourId, style.colour(label == &heading ? "text" : "dim"));
             addAndMakeVisible(*label);
         }
-        for (const char *key : { "cabinet", "studio" }) {
-            auto made = std::make_unique<juce::TextButton>(juce::String(key) == "cabinet" ? "Cabinet" : "Studio");
+        for (const char *key : { "cabinet", "darkArcade", "studio" }) {
+            const s1plugin::LayoutSkin *listed = S1LinkedLayoutSpec().skin(key);
+            if (listed == nullptr) { continue; }
+            auto made = std::make_unique<juce::TextButton>(juce::String::fromUTF8(listed->title.c_str()));
             made->setComponentID(juce::String("skin.") + key);
             made->setColour(juce::TextButton::buttonColourId, style.colour("controlFace"));
             made->setColour(juce::TextButton::buttonOnColourId, style.colour("accent"));

@@ -107,6 +107,7 @@ add_test(NAME PluginEditor COMMAND PluginEditorTests)
 s1_plugin_test(EditorSnapshot)
 add_test(NAME EditorSnapshotStudio COMMAND EditorSnapshot studio "${CMAKE_CURRENT_BINARY_DIR}/editor-studio.png")
 add_test(NAME EditorSnapshotCabinet COMMAND EditorSnapshot cabinet "${CMAKE_CURRENT_BINARY_DIR}/editor-cabinet.png")
+add_test(NAME EditorSnapshotDarkArcade COMMAND EditorSnapshot darkArcade "${CMAKE_CURRENT_BINARY_DIR}/editor-darkarcade.png")
 
 # X3-4 (ADR-086): the preset browser's model with no window — the folder it seeds from the banks
 # the Mac starts with, the category rows and their upstream numbers, what each row shows, the

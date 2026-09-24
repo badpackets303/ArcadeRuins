@@ -149,6 +149,8 @@ juce_add_binary_data(ArcadeRuinsArt
         ${CMAKE_SOURCE_DIR}/Sources/SynthOneCore/Assets/Assets.xcassets/s1_template_cabinet.imageset/s1_template_cabinet@2x.jpg
         # X3-9 (ADR-091): the grey copy the red buttons lay over a zone that has lost its power.
         ${CMAKE_SOURCE_DIR}/Sources/SynthOneCore/Assets/Assets.xcassets/s1_template_cabinet_dark.imageset/s1_template_cabinet_dark@2x.jpg
+        # 2026-09-24: Dark Arcade's painting, the calmer skin (the plugin's alone).
+        ${CMAKE_SOURCE_DIR}/Sources/SynthOneCore/Assets/Assets.xcassets/s1_template_darkarcade.imageset/s1_template_darkarcade@2x.jpg
         # The wordmark, cut by Scripts/branding/generate.py at the sizes it is SHOWN at (the Mac's
         # `s1_logo` is a 13-pixel-tall iPhone asset, and stretched it read as misaligned).
         ${CMAKE_CURRENT_SOURCE_DIR}/Art/wordmark-180.png

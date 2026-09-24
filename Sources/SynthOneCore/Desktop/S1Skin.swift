@@ -30,8 +30,16 @@ public enum S1SkinChoice: String, CaseIterable {
 
     case studio
     case cabinet
+    /// 2026-09-24: the owner's calmer painted window, for the JUCE plugin (Arcade Ruins) only.
+    /// It is here because the plugin's layout is MEASURED here (ADR-083); Classic does not offer
+    /// it — see `offered`.
+    case darkArcade
 
     public static let defaultsKey = "S1Skin"
+
+    /// The skins Classic's Settings and View menu list. Dark Arcade is the plugin's alone
+    /// (the owner, 2026-09-24): Classic stays at 0.5 as it shipped.
+    public static let offered: [S1SkinChoice] = [.studio, .cabinet]
 
     /// The skin the desktop layout opens with when none has been chosen: Cabinet, at the owner's
     /// word (2026-09-17, ADR-064). It was Studio through 0.5.0.
@@ -43,7 +51,8 @@ public enum S1SkinChoice: String, CaseIterable {
         let stored = S1Preferences.store.string(forKey: defaultsKey) ?? ""
         // P7-10 (ADR-060): Cabinet replaced Neon Ruins, so whoever chose that gets its successor
         if stored == "neonRuins" { return .cabinet }
-        return S1SkinChoice(rawValue: stored) ?? .default
+        guard let choice = S1SkinChoice(rawValue: stored), offered.contains(choice) else { return .default }
+        return choice
     }
 
     /// Remembered for the next launch; the running interface does not change.
@@ -55,6 +64,7 @@ public enum S1SkinChoice: String, CaseIterable {
         switch self {
         case .studio: return NSLocalizedString("Studio", comment: "Skin name")
         case .cabinet: return NSLocalizedString("Cabinet", comment: "Skin name")
+        case .darkArcade: return NSLocalizedString("Dark Arcade", comment: "Skin name")
         }
     }
 
@@ -62,6 +72,7 @@ public enum S1SkinChoice: String, CaseIterable {
         switch self {
         case .studio: return S1StudioSkin()
         case .cabinet: return S1CabinetSkin()
+        case .darkArcade: return S1DarkArcadeSkin()
         }
     }
 }
@@ -251,6 +262,11 @@ struct S1SkinDress {
     var bareSections = false
     /// The header strip's height; the template's strips are taller than the layout's.
     var sectionHeaderHeight: CGFloat = S1DesktopTheme.sectionHeaderHeight
+    /// Dark Arcade (2026-09-24): its painted top two rows are shorter than Cabinet's (by about
+    /// 20 and 13 points), and the compact oscillator, Filter, Voice and envelope stacks, sized
+    /// for Cabinet, squeezed their value lines. This tightens those stacks; nothing else, and no
+    /// other skin, moves.
+    var shortRows = false
 }
 
 protocol S1Skin: AnyObject {
@@ -518,6 +534,7 @@ final class S1CabinetSkin: S1Skin {
             "Pads": rect(1_205, 672, 1_554, 931)
         ],
         presetField: rect(572, 26, 868, 68),
+        displayColour: S1CabinetSkin.cyan,
         previous: rect(534, 28, 572, 66),
         next: rect(898, 28, 936, 66),
         dice: CGPoint(x: 882, y: 47),
@@ -530,6 +547,7 @@ final class S1CabinetSkin: S1Skin {
         presets: rect(1_478, 64, 1_558, 100),
         playBar: rect(6, 950, 990, 992),
         statusBar: rect(1_000, 950, 1_578, 992),
+        paintedButtons: true,
         // `JOYSTICK_BALL_BOX` and `JOYSTICK_ROD_BOX` in generate.py; the pivot is the socket
         joystick: S1TemplateJoystick(ballImageName: "s1_template_joystick_ball", ballBox: rect(88, 834, 126, 872),
                                      rodImageName: "s1_template_joystick_rod", rodBox: rect(94, 846, 114, 898),
@@ -539,6 +557,150 @@ final class S1CabinetSkin: S1Skin {
                                zones: ["display": rect(500, 4, 968, 88), "buttons": rect(1_136, 54, 1_568, 106),
                                        "screen": rect(14, 92, 232, 296), "bar": rect(0, 944, 1_585, 992)],
                                frameReach: 11)
+    )
+}
+
+// MARK: - Dark Arcade: the calmer painted window (2026-09-24)
+
+/// The owner's second painting: Cabinet's header and sections without the cabinet, the console
+/// or the neon — "something a little easier on the eyes". One orange for every section, the
+/// Studio greys under the controls, cyan only where a second colour is needed (LFO 2, pad 2).
+/// **The JUCE plugin's only** (`S1SkinChoice.offered`); defined here because the plugin's layout
+/// is measured from this one (ADR-083).
+final class S1DarkArcadeSkin: S1Skin {
+
+    let choice = S1SkinChoice.darkArcade
+    let glow: CGFloat = 1.5
+    let sectionTexture: UIImage? = nil
+    let sectionGlow: UIColor? = nil
+    let frameAccent: UIColor? = nil
+    func makeWordmark() -> UIView? { nil }
+    func makeToolbarArt() -> UIView? { nil }
+    func makePanelArt() -> UIView? { nil }
+
+    let dress: S1SkinDress = {
+        var dress = S1SkinDress()
+        dress.knobRingScale = 1.25
+        dress.faderLitTrack = true
+        dress.litFromAccent = true
+        dress.bareSections = true
+        dress.sectionHeaderHeight = 30
+        dress.shortRows = true
+        return dress
+    }()
+
+    /// The painting's orange, and the one cool colour it uses.
+    static let orange = UIColor(hex: 0xff8a1e)
+    static let cyan = UIColor(hex: 0x38d6f0)
+
+    let palette = S1Palette(
+        accent: S1DarkArcadeSkin.orange,
+        accentLight: UIColor(hex: 0xffb35c),
+        accentBorder: UIColor(hex: 0xffd3a0),
+        accentOnTop: UIColor(hex: 0xffa64a),
+        secondAccent: S1DarkArcadeSkin.cyan,
+        windowBackground: UIColor(hex: 0x0d0f12),
+        panelBackground: UIColor(hex: 0x16181c),
+        toolbarTop: UIColor(hex: 0x1c1f24),
+        toolbarBottom: UIColor(hex: 0x131519),
+        playBarTop: UIColor(hex: 0x14161a, alpha: 0.5),       // the painting's floor shows through
+        playBarBottom: UIColor(hex: 0x0e1013, alpha: 0.5),
+        statusBarBackground: UIColor(hex: 0x0c0d10, alpha: 0.5),
+        sectionTop: UIColor(hex: 0x1d2025),
+        sectionBottom: UIColor(hex: 0x15171b),
+        sectionBorder: UIColor(hex: 0x3a3e45),
+        sectionHeaderTop: UIColor(white: 1, alpha: 0.04),
+        sectionHeaderBottom: UIColor(white: 1, alpha: 0),
+        hairline: UIColor(hex: 0xff8a1e, alpha: 0.45),
+        text: UIColor(hex: 0xf0f0f2),
+        label: UIColor(hex: 0xdadade),
+        value: UIColor(hex: 0x9c9fa6),
+        dim: UIColor(hex: 0x9a9da4),
+        fieldBackground: UIColor(hex: 0x0e1013),
+        controlFace: UIColor(hex: 0x24272d),
+        controlBorder: UIColor(hex: 0x3d4148),
+        knobTrack: UIColor(hex: 0x101215),
+        knobCapFill: UIColor(hex: 0x202328),
+        knobCap: [UIColor(hex: 0x575b63), UIColor(hex: 0x33363c), UIColor(hex: 0x202328), UIColor(hex: 0x16181b)],
+        knobCapBorder: UIColor(hex: 0x0b0c0e),
+        glyph: UIColor(hex: 0x8e9199),
+        chipText: UIColor(hex: 0xdadade),
+        knobPointer: nil,
+        wellTop: UIColor(hex: 0x0f1114),
+        wellBottom: UIColor(hex: 0x181a1e),
+        wellBorder: UIColor(hex: 0x2c2f35),
+        buttonTop: UIColor(hex: 0x2c3036),
+        buttonBottom: UIColor(hex: 0x1f2227),
+        buttonPressedTop: UIColor(hex: 0x181a1e),
+        buttonBorder: UIColor(hex: 0x3d4148),
+        litTop: UIColor(hex: 0x9a4d10),          // the accent-derived colours replace these
+        litBottom: UIColor(hex: 0x5c2e0a),
+        litBorder: UIColor(hex: 0xffd3a0),
+        plateTop: UIColor(hex: 0x9a4d10),
+        plateBottom: UIColor(hex: 0x5c2e0a),
+        chipTop: UIColor(hex: 0x282b31),
+        chipBottom: UIColor(hex: 0x1d2025),
+        chipBorder: UIColor(hex: 0x3d4148),
+        chipActiveTop: UIColor(hex: 0x9a4d10),
+        chipActiveBottom: UIColor(hex: 0x5c2e0a),
+        faderTick: UIColor(hex: 0x3a3e45),
+        grooveEdge: UIColor(hex: 0x08090b),
+        grooveMid: UIColor(hex: 0x1b1d21),
+        faderCapTop: UIColor(hex: 0xffc080),
+        faderCapBottom: UIColor(hex: 0xe0660c),
+        faderCapBorder: UIColor(hex: 0xffe2c0),
+        stepOffTop: UIColor(hex: 0x282b31),
+        stepOffBottom: UIColor(hex: 0x1d2025),
+        stepOffBorder: UIColor(hex: 0x3d4148),
+        switchOffTop: UIColor(hex: 0x111316),
+        switchOffBottom: UIColor(hex: 0x23262b),
+        thumbOff: UIColor(hex: 0x62666e),
+        thumbOn: .white,
+        plotBorder: UIColor(hex: 0x2c2f35)
+    )
+
+    /// Measured on `Scripts/branding/source/dark-arcade.png` (the owner's clean painting, the
+    /// second of 2026-09-24): each frame's inner edge, seven pixels in from the dark gutter between
+    /// frames (a frame here is six pixels and a dark line). No screen, joystick or power buttons —
+    /// and no painted header buttons: the plugin draws those (`paintedButtons`).
+    let template: S1SkinTemplate? = S1SkinTemplate(
+        imageName: "s1_template_darkarcade",
+        size: CGSize(width: 1_586, height: 992),
+        sections: [
+            // The top row as `generate.py` re-cuts it (the owner: narrower oscillators, a wider Mix)
+            "OSC 1": rect(30, 119, 215, 265),
+            "OSC 2": rect(238, 119, 449, 265),
+            "Mix": rect(473, 119, 1_097, 265),
+            "Filter": rect(1_120, 119, 1_383, 265),
+            "Voice": rect(1_406, 119, 1_555, 265),
+            "Filter Envelope": rect(30, 288, 581, 454),
+            "Amplitude Envelope": rect(605, 288, 1_076, 454),
+            "LFO & Mod Targets": rect(1_099, 288, 1_555, 454),
+            "Reverb": rect(30, 477, 356, 621),
+            "Delay": rect(379, 477, 711, 621),
+            "Phaser": rect(734, 477, 1_052, 621),
+            "Bitcrusher": rect(1_075, 477, 1_357, 621),
+            "Master": rect(1_381, 477, 1_555, 621),
+            "Sequencer": rect(30, 644, 1_166, 903),
+            "Pads": rect(1_189, 644, 1_555, 903)
+        ],
+        presetField: rect(610, 28, 930, 72),
+        displayColour: S1DarkArcadeSkin.orange,
+        previous: rect(557, 30, 597, 70),
+        next: rect(976, 30, 1_016, 70),
+        dice: CGPoint(x: 952, y: 50),
+        wordmark: rect(56, 14, 478, 62),
+        scope: nil,
+        save: rect(1_190, 58, 1_258, 92),
+        record: rect(1_264, 58, 1_332, 92),
+        panic: rect(1_338, 58, 1_400, 92),
+        settings: rect(1_406, 58, 1_480, 92),
+        presets: rect(1_486, 58, 1_556, 92),
+        playBar: rect(24, 914, 1_000, 952),
+        statusBar: rect(1_000, 914, 1_562, 952),
+        paintedButtons: false,
+        joystick: nil,
+        power: nil
     )
 }
 
@@ -552,11 +714,14 @@ struct S1SkinTemplate {
     /// By the section keys `S1DesktopLayout.sections` uses.
     let sections: [String: CGRect]
     let presetField: CGRect
+    /// The preset's name in the painted display: Cabinet's cyan, Dark Arcade's orange.
+    let displayColour: UIColor
     let previous: CGRect
     let next: CGRect
     let dice: CGPoint
     let wordmark: CGRect
-    let scope: CGRect
+    /// The oscilloscope, in a painted screen — or nil where the painting has none (Dark Arcade).
+    let scope: CGRect?
     let save: CGRect
     let record: CGRect
     let panic: CGRect
@@ -564,6 +729,11 @@ struct S1SkinTemplate {
     let presets: CGRect
     let playBar: CGRect
     let statusBar: CGRect
+    /// Whether the painting has Save, Panic, Settings and Presets painted in (Cabinet), so a
+    /// clear button over each takes the click — or leaves the header bare (Dark Arcade), so the
+    /// JUCE plugin draws them. The Mac layout lays clear buttons either way: Classic offers no
+    /// painting without them.
+    let paintedButtons: Bool
     /// P7-11 (ADR-061): a live joystick over the painted one, or nil.
     let joystick: S1TemplateJoystick?
     /// P7-12 (ADR-062): the painted buttons that cut and restore the power, the grey painting,

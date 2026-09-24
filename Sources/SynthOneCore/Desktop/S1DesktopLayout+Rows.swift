@@ -24,6 +24,8 @@ extension S1DesktopLayout {
     /// P7-9 (ADR-059): a template's frames are smaller than the rows' own — the painting gives a
     /// sixth of the window to the cabinet — so the three tightest sections draw a size down.
     private var isCompact: Bool { skin.template != nil }
+    /// Dark Arcade's shorter painted rows (`S1SkinDress.shortRows`).
+    private var isShort: Bool { isCompact && skin.dress.shortRows }
 
     func buildRows() {
         let rows = [generatorsRow(), envelopesRow(), effectsRow(), sequencerRow()]
@@ -77,9 +79,13 @@ extension S1DesktopLayout {
 
     /// A view on a line of its own, centred, for a body that otherwise fills.
     private func centred(_ view: UIView) -> UIStackView {
-        let line = UIStackView(arrangedSubviews: [flexibleSpace(), view, flexibleSpace()])
+        let (before, after) = (flexibleSpace(), flexibleSpace())
+        let line = UIStackView(arrangedSubviews: [before, view, after])
         line.axis = .horizontal
         line.alignment = .center
+        // The two spaces EQUAL: without this one of them took all the slack. Studio's 2 points of
+        // slack hid it; Dark Arcade's OSC 2 put its selector 34 points left of centre (2026-09-24).
+        before.widthAnchor.constraint(equalTo: after.widthAnchor).isActive = true
         return line
     }
 
@@ -110,19 +116,21 @@ extension S1DesktopLayout {
         // P8-0: the sidebar is gone and the row has the whole 1440 (owner, 2026-09-13: "more
         // wiggle room"). The fixed sections grew — wider selectors, 44-point knobs — and Mix
         // still has about 560 points for its seven.
-        let oscKnob: CGFloat = isCompact ? 36 : 44
+        let oscKnob: CGFloat = isShort ? 28 : isCompact ? 36 : 44
+        let oscSpacing: CGFloat = isShort ? 0 : isCompact ? 3 : 8
+        let pickerHeight: CGFloat = isShort ? 24 : isCompact ? 30 : 36
         let osc1 = section("OSC 1", width: 184)   // 152 selector + 2 × 14 margin, with 4 to spare
-        verticalBody(osc1, spacing: isCompact ? 3 : 8)
+        verticalBody(osc1, spacing: oscSpacing)
         osc1.body.alignment = .center
         move(g.morph1Selector, into: nil); remember(g.morph1Selector, from: g)
-        sized(g.morph1Selector, width: isCompact ? 136 : 152, height: isCompact ? 30 : 36)
+        sized(g.morph1Selector, width: isCompact ? 136 : 152, height: pickerHeight)
         osc1.add(g.morph1Selector)
         osc1.add(knobCell(g.morph1SemitoneOffset, "Semitones", oscKnob, .semitones, from: g))
 
         let osc2 = section("OSC 2", width: 204)   // 172 selector + 2 × 14 margin, with 4 to spare
-        verticalBody(osc2, spacing: isCompact ? 3 : 8)
+        verticalBody(osc2, spacing: oscSpacing)
         move(g.morph2Selector, into: nil); remember(g.morph2Selector, from: g)
-        sized(g.morph2Selector, width: isCompact ? 148 : 172, height: isCompact ? 30 : 36)
+        sized(g.morph2Selector, width: isCompact ? 148 : 172, height: pickerHeight)
         osc2.add(centred(g.morph2Selector))
         // P8-1: the two knobs each take half the width, so they sit apart (owner: "scrunched
         // together"); the body fills, and the selector is centred on its own line above.
@@ -149,8 +157,8 @@ extension S1DesktopLayout {
         // The classic cycling button stays where it is, hidden and bound; the picker in the
         // header drives it and follows `.filterType` (P6-2).
         filter.addHeaderAccessory(makeFilterPicker(for: g.filterTypeToggle))
-        filter.body.layoutMargins = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-        filter.add(knobCell(g.cutoff, "Cutoff", 68, .hertz, from: g))
+        filter.body.layoutMargins = UIEdgeInsets(top: 4, left: 10, bottom: isShort ? 2 : 4, right: 10)
+        filter.add(knobCell(g.cutoff, "Cutoff", isShort ? 60 : 68, .hertz, from: g))
         filter.add(knobCell(g.resonance, "Resonance", 52, .decimal, from: g))
         let e = manager.envelopesPanel
         filter.add(knobCell(e.filterADSRMixKnob, "Env Amt", 52, .percent, from: e))
@@ -161,11 +169,11 @@ extension S1DesktopLayout {
         let voice = section("Voice", width: 156)
         if isCompact {
             // The painted frame is 120 points wide: the switches go under the knob, not beside it
-            verticalBody(voice, spacing: 2)
+            verticalBody(voice, spacing: isShort ? 0 : 2)
             voice.body.alignment = .center
-            voice.body.layoutMargins = UIEdgeInsets(top: 0, left: 6, bottom: 2, right: 6)
+            voice.body.layoutMargins = UIEdgeInsets(top: 0, left: 6, bottom: isShort ? 0 : 2, right: 6)
         }
-        voice.add(knobCell(g.glideKnob, "Glide", isCompact ? 34 : 52, .decimal, from: g))
+        voice.add(knobCell(g.glideKnob, "Glide", isShort ? 26 : isCompact ? 34 : 52, .decimal, from: g))
         voice.add(S1SwitchColumn([switchCell(g.isMonoToggle, "Mono", from: g),
                                   switchCell(g.legatoModeToggle, "Legato", from: g)]))
 
@@ -178,10 +186,11 @@ extension S1DesktopLayout {
         let e = manager.envelopesPanel
         let fx = manager.fxPanel
 
-        let envelopeKnob: CGFloat = isCompact ? 38 : 46
+        let envelopeKnob: CGFloat = isShort ? 36 : isCompact ? 38 : 46
+        let envelopeMargins = UIEdgeInsets(top: isShort ? 2 : isCompact ? 4 : 8, left: 12, bottom: isShort ? 0 : isCompact ? 2 : 6, right: 12)
         let filterEnvelope = section("Filter Envelope")
         verticalBody(filterEnvelope)
-        filterEnvelope.body.layoutMargins = UIEdgeInsets(top: isCompact ? 4 : 8, left: 12, bottom: isCompact ? 2 : 6, right: 12)
+        filterEnvelope.body.layoutMargins = envelopeMargins
         plot(e.filterADSRView, in: filterEnvelope)
         filterEnvelope.add(knobRow([knobCell(e.filterAttackKnob, "Attack", envelopeKnob, .seconds, from: e),
                                     knobCell(e.filterDecayKnob, "Decay", envelopeKnob, .seconds, from: e),
@@ -190,7 +199,7 @@ extension S1DesktopLayout {
 
         let amplitudeEnvelope = section("Amplitude Envelope")
         verticalBody(amplitudeEnvelope)
-        amplitudeEnvelope.body.layoutMargins = UIEdgeInsets(top: isCompact ? 4 : 8, left: 12, bottom: isCompact ? 2 : 6, right: 12)
+        amplitudeEnvelope.body.layoutMargins = envelopeMargins
         plot(e.adsrView, in: amplitudeEnvelope)
         amplitudeEnvelope.add(knobRow([knobCell(e.attackKnob, "Attack", envelopeKnob, .seconds, from: e),
                                        knobCell(e.decayKnob, "Decay", envelopeKnob, .seconds, from: e),

@@ -360,6 +360,92 @@ def cabinet_template():
     return path, image.size
 
 
+def _cut_band(band, remove, keep_left, keep_right, search=10, feather=8):
+    """`band` with about `remove` columns cut out of its plain middle. The painting's hatching is
+    diagonal, so a cut only disappears where the columns either side of it match: the width
+    removed is searched within `search` of `remove` (and the place, across the middle) for the
+    closest match, and the join blended over `feather` columns. Resizing the middle instead, or
+    cross-fading a wide join, showed as light vertical stripes."""
+    grey = band.convert("L")
+    px = grey.load()
+    rows = range(2, band.height - 2)     # every row: the header strip is shaded too, and showed a step
+    best = None
+    for r in range(remove - search, remove + search + 1):
+        for c in range(keep_left, band.width - keep_right - r - feather, 3):
+            error = sum(abs(px[c + i, y] - px[c + r + i, y]) for i in range(feather) for y in rows)
+            if best is None or error < best[0]:
+                best = (error, r, c)
+    _, r, c = best
+    out = Image.new("RGB", (band.width - r, band.height))
+    out.paste(band.crop((0, 0, c + feather, band.height)), (0, 0))
+    right = band.crop((c + r, 0, band.width, band.height))
+    mask = Image.new("L", right.size, 255)
+    mask.paste(Image.linear_gradient("L").rotate(90).resize((feather, band.height)).transpose(Image.FLIP_LEFT_RIGHT), (0, 0))
+    out.paste(right, (c, 0), mask)
+    return out
+
+
+def _stretched_band(band, width, keep_left, keep_right, feather=30):
+    """`band` made `width` wide by stretching its plain middle; the corners, frame and title kept."""
+    height = band.height
+    middle_width = width - keep_left - keep_right
+    middle = band.crop((keep_left, 0, band.width - keep_right, height)).resize((middle_width + 2 * feather, height), Image.LANCZOS)
+    out = Image.new("RGB", (width, height))
+    out.paste(middle, (keep_left - feather, 0))
+    ramp = Image.linear_gradient("L").rotate(90).resize((feather, height))      # 255 at the left edge, 0 at the right
+    left_mask = Image.new("L", (keep_left + feather, height), 255)
+    left_mask.paste(ramp, (keep_left, 0))
+    out.paste(band.crop((0, 0, keep_left + feather, height)), (0, 0), left_mask)
+    right_mask = Image.new("L", (keep_right + feather, height), 255)
+    right_mask.paste(ImageOps.mirror(ramp), (0, 0))
+    out.paste(band.crop((band.width - keep_right - feather, 0, band.width, height)), (width - keep_right - feather, 0), right_mask)
+    return out
+
+
+# Dark Arcade's top row, re-cut (the owner, 2026-09-24): "narrow down the 2 OSC panels and stretch
+# out the Mix panel". In the painting's own 1586-wide frame; y 103..282 is the row between its
+# gutters, so the header and the envelopes are not touched. Filter and Voice stay put.
+DARK_ARCADE_TOP_ROW = (103, 282)
+
+
+def dark_arcade_top_row(image):
+    """Returns the image and where the three panels now end (the gutters' new x)."""
+    y0, y1 = DARK_ARCADE_TOP_ROW
+    row = image.crop((0, y0, image.width, y1))
+    osc1 = _cut_band(row.crop((0, 0, 316, row.height)), 92, 110, 22)          # the window's edge and OSC 1: 292 wide -> ~200
+    osc2 = _cut_band(row.crop((326, 0, 607, row.height)), 66, 90, 22)         # OSC 2: 281 -> ~215
+    gutter1, gutter2 = row.crop((316, 0, 326, row.height)), row.crop((607, 0, 618, row.height))
+    mix_width = 1104 - (osc1.width + 10 + osc2.width + 11)
+    mix = _stretched_band(row.crop((618, 0, 1104, row.height)), mix_width, 90, 22)   # Mix: 486 -> what is left
+    x = 0
+    for piece in (osc1, gutter1, osc2, gutter2, mix):
+        image.paste(piece, (x, y0))
+        x += piece.width
+    assert x == 1104, x
+    return image
+
+
+def dark_arcade_template():
+    """The Dark Arcade skin's window (2026-09-24): the owner's calmer painting, no cabinet, no
+    console, and — unlike Cabinet's — no header buttons (the plugin draws those). The owner's
+    second, clean version: empty panels. It still has a preset name painted in the display, which
+    is taken off here as Cabinet's was. 1586×992, the painting's own size, so doubled like
+    Cabinet's; a full-size original would be sharper."""
+    source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source", "dark-arcade.png")
+    image = Image.open(source).convert("RGB")
+    rowfill(image, (668, 30, 916, 70), 636)          # "0: Synthwave 1974"; the arrows stay
+    image = dark_arcade_top_row(image)                # narrower oscillators, a wider Mix
+    image = image.resize((1586 * 2, 992 * 2), Image.LANCZOS)
+    folder = os.path.join(ASSETS, "s1_template_darkarcade.imageset")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, "s1_template_darkarcade@2x.jpg")
+    image.save(path, quality=90)
+    with open(os.path.join(folder, "Contents.json"), "w") as contents:
+        json.dump({"images": [{"filename": "s1_template_darkarcade@2x.jpg", "idiom": "universal", "scale": "2x"}],
+                   "info": {"author": "xcode", "version": 1}}, contents, indent=2)
+    return path, image.size
+
+
 def app_icon():
     """SynthOneCore's iOS icon set: all 18 sizes, from the owner's artwork.
 
@@ -394,6 +480,7 @@ if __name__ == "__main__":
     print("%-52s %s" % fitted_logo("s1_logo.imageset", "s1_logo.png", (196, 28)))
     # P7-4 (ADR-048): the Neon Ruins skin's wordmark, a 220×24-point frame (@2x)
     print("%-52s %s" % cabinet_template())
+    print("%-52s %s" % dark_arcade_template())
     print("%-52s %s" % plugin_wordmarks())
     for filename, pixels in app_icon():
         print(f"  SynthOneCore AppIcon.appiconset/{filename:22} {pixels}x{pixels}")

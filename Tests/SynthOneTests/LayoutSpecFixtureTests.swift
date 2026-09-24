@@ -401,11 +401,12 @@ final class LayoutSpecFixtureTests: XCTestCase {
             ("size", size(template.size)),
             ("sections", .object(template.sections.sorted { $0.key < $1.key }.map { ($0.key, corners($0.value)) })),
             ("presetField", corners(template.presetField)),
+            ("display", .string(hex(template.displayColour))),
             ("previous", corners(template.previous)),
             ("next", corners(template.next)),
             ("dice", .array([.number(template.dice.x), .number(template.dice.y)])),
             ("wordmark", corners(template.wordmark)),
-            ("scope", corners(template.scope)),
+            ("scope", template.scope.map(corners) ?? .null),
             ("save", corners(template.save)),
             ("record", corners(template.record)),
             ("panic", corners(template.panic)),
@@ -413,6 +414,7 @@ final class LayoutSpecFixtureTests: XCTestCase {
             ("presets", corners(template.presets)),
             ("playBar", corners(template.playBar)),
             ("statusBar", corners(template.statusBar)),
+            ("paintedButtons", .bool(template.paintedButtons)),
             // X3-6: the cabinet's stick. The painting has it cut out (generate.py lifts it and
             // fills the hole), so a window that does not draw these two sprites shows an empty
             // console. Measured here, never typed into C++.

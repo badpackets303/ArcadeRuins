@@ -21,7 +21,7 @@ DSP, the interface and the sounds to the desktop, and makes them available insid
 | **Runs on** | Windows 10+, macOS 11+, Linux (glibc 2.35+) | macOS 11+ |
 | **Plugin** | VST3 everywhere · Audio Unit on macOS (`aumu` / `ArRu` / `BP03`) | AUv3 (`aumu` / `ruin` / `BP03`) |
 | **Standalone** | yes, on all three | yes — a Mac Catalyst app |
-| **Interface** | the desktop layout, in the Cabinet and Studio skins; the window scales 75–150% | **Synth One's own iPad interface**, and the desktop layout behind a switch |
+| **Interface** | the desktop layout, in the Cabinet and Studio skins (and Dark Arcade from 1.1.0); the window scales 75–150% | **Synth One's own iPad interface**, and the desktop layout behind a switch |
 | **Built with** | [JUCE](https://juce.com) 9 and CMake | UIKit (Mac Catalyst) and Xcode |
 | **Where** | [`Sources/S1Plugin`](Sources/S1Plugin) | [`Sources/SynthOne`](Sources/SynthOne), [`Sources/SynthOneAU`](Sources/SynthOneAU), [`Sources/SynthOneCore`](Sources/SynthOneCore) |
 
@@ -133,9 +133,10 @@ has been tested in Logic Pro; other hosts are untested. Please report problems, 
 
 ### Arcade Ruins
 
-**Studio**, the plain skin — the same layout, and the same controls:
+**Dark Arcade**, new in 1.1.0 — the calmer skin, for anyone who finds Cabinet a lot to look at: the
+same layout and the same controls, on charcoal, in one orange:
 
-![Arcade Ruins, the Studio skin](docs/screenshots/plugin-studio.png)
+![Arcade Ruins, the Dark Arcade skin](docs/screenshots/plugin-darkarcade.png)
 
 **The preset browser** drops down from the preset name — 695 factory presets in 13 banks plus your
 own, with search, favourites, categories, notes and reordering:

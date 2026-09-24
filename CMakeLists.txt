@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.22)
 # 1.0.0 is the CROSS-PLATFORM product's number (the owner, 2026-09-21: "the new version should be
 # 1.0"). Classic — the Catalyst app and its AUv3 — keeps its own in project.yml, at 0.5.0, so the
 # two downloads cannot be confused for one another. ADR-092, ADR-095.
-project(ArcadeRuins VERSION 1.0.0 LANGUAGES C CXX)
+project(ArcadeRuins VERSION 1.1.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)

@@ -80,7 +80,7 @@ final class S1AppearanceSettings: UIView {
     private init(isHosted: Bool) {
         self.isHosted = isHosted
         layoutPicker = S1SegmentedControl(titles: Self.layouts.map(S1AppearanceSettings.title(for:)))
-        skinPicker = S1SegmentedControl(titles: S1SkinChoice.allCases.map(\.title))
+        skinPicker = S1SegmentedControl(titles: S1SkinChoice.offered.map(\.title))
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
@@ -93,11 +93,11 @@ final class S1AppearanceSettings: UIView {
             self?.refresh()
         }
 
-        skinPicker.selectedIndex = S1SkinChoice.allCases.firstIndex(of: S1SkinChoice.chosen) ?? 0
+        skinPicker.selectedIndex = S1SkinChoice.offered.firstIndex(of: S1SkinChoice.chosen) ?? 0
         skinPicker.heightAnchor.constraint(equalToConstant: 26).isActive = true
         skinPicker.accessibilityLabel = NSLocalizedString("Skin", comment: "Accessibility")
         skinPicker.onSelect = { index in
-            guard let choice = S1SkinChoice.allCases[safe: index] else { return }
+            guard let choice = S1SkinChoice.offered[safe: index] else { return }
             S1SkinChoice.choose(choice)
         }
 
@@ -158,7 +158,7 @@ final class S1AppearanceSettings: UIView {
     // MARK: - For tests
 
     var selectedLayout: S1Layout? { Self.layouts[safe: layoutPicker.selectedIndex] }
-    var selectedSkin: S1SkinChoice? { S1SkinChoice.allCases[safe: skinPicker.selectedIndex] }
+    var selectedSkin: S1SkinChoice? { S1SkinChoice.offered[safe: skinPicker.selectedIndex] }
     var skinPickerIsEnabled: Bool { skinPicker.isUserInteractionEnabled }
     var noteString: String? { note.text }
     var skinTitleString: String? { skinTitle.attributedText?.string }
@@ -171,7 +171,7 @@ final class S1AppearanceSettings: UIView {
     }
 
     func select(_ skin: S1SkinChoice) {
-        guard let index = S1SkinChoice.allCases.firstIndex(of: skin) else { return }
+        guard let index = S1SkinChoice.offered.firstIndex(of: skin) else { return }
         skinPicker.selectedIndex = index
         skinPicker.onSelect?(index)
     }

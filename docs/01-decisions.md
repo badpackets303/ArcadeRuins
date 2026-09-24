@@ -6023,3 +6023,83 @@ X4-5. Nothing else changes: the power is still a look and nothing else, still un
 pixel checks — the zones colourless when cut, off-then-on identical to never darkened — are
 untouched and still pass.
 
+
+## ADR-100 — Dark Arcade: a third skin, the plugin's alone, on the owner's calmer painting
+
+**Date:** 2026-09-24 · **Status:** accepted — on the owner's clean painting (the second of the day)
+
+**Context.** The owner: some people *"really got a kick out of"* Cabinet, and a few asked for
+*"something a little easier on the eyes."* They supplied `Dark-Arcade.png`: Cabinet's header and
+fifteen framed sections on a charcoal ground, one orange, no cabinet, console, joystick or CRT.
+It is a MOCKUP — several panels have controls painted in (the LFO targets, the arpeggiator, the
+XY pads, the toggles, the preset name, a "Record" button, the bars' text) — and it is 1586×992,
+the painting's own size, where Cabinet's is twice that.
+
+**The owner's choices (2026-09-24).** Build it on this image now and swap in a clean, empty-panel
+backdrop later (a file change, not a code change); **Arcade Ruins only** — Classic stays at 0.5
+as it shipped; named **Dark Arcade**; **Cabinet stays the default**.
+
+**Decision.**
+- **Defined on the Mac side, offered only by the plugin.** The plugin's layout is MEASURED from the
+  Mac desktop layout (ADR-083), so the skin is `S1DarkArcadeSkin` in `S1Skin.swift` with a
+  `S1SkinTemplate` of its own — the same painted-window mechanism as Cabinet (ADR-059), with no
+  joystick, no power and **no scope** (the painting has no screen; `template.scope` is optional
+  now). `S1SkinChoice.offered` is what Classic's Settings and View menu list — `[.studio,
+  .cabinet]` — and `chosen` opens the default for any stored skin Classic does not list. Classic's
+  behaviour is unchanged; only its source is.
+- **The rectangles are measured, not eyeballed:** each section's inner edge is six painting
+  pixels in from the dark gutter between frames, found by scanning rows and columns for the
+  gutters (`Scripts/branding/source/dark-arcade.png`). The header places were read off a gridded
+  zoom.
+- **The preset display's colour is the painting's** (`template.displayColour`, the spec's
+  `template.display`): Cabinet's cyan as before, Dark Arcade's orange. It goes through the style's
+  dimming, or the power cut would leave it lit (the first run of the editor tests caught that).
+- **Its top two rows are shorter than Cabinet's** (by about 20 and 13 points), and the compact
+  oscillator, Filter, Voice and envelope stacks — sized for Cabinet — squeezed their value lines
+  (to 2 points tall on the mockup): inside the frame, unreadable, and invisible to a check that
+  asks whether things are INSIDE. A dress switch, `shortRows`, tightens those stacks under Dark
+  Arcade only (28-point oscillator knobs, no spacing, a 24-point wave picker, a 60-point cutoff, a
+  26-point glide, 36-point envelope knobs with trimmed margins). **Every Studio and Cabinet frame
+  is what it was** — compared field by field against the committed specification.
+- **The clean painting (the owner's second file) has no header buttons**, where Cabinet's has
+  Save, Panic, Settings and Presets painted in and the editor lays invisible clicks over them.
+  `template.paintedButtons` says which: false here, so the plugin DRAWS those four and About in
+  the header's lower band. The ◀ ▶ arrows are still painted, so they stay clicks; so does the
+  wordmark's About. It still had a preset name painted in its display, which `generate.py` takes
+  off (`rowfill`, as Cabinet's was). The Mac layout lays clear buttons either way — Classic never
+  shows this skin. The frames are seven pixels in from each gutter on this painting (a six-pixel
+  frame and a dark line).
+- **The plugin reads the painting's name from the specification** rather than a hard-coded file,
+  lists its skins from it by title, and links `s1_template_darkarcade@2x.jpg` beside Cabinet's.
+
+**The check that could not fail, again.** The first "nothing squeezed out of its frame" check
+asked whether each knob's title and value lines lay inside the section — and passed with the fault
+present, because a label Auto Layout crushes to 2 points is still inside. Found by the
+revert-check, not by reading. It asks for each line's full text height now, fails five times on
+Dark Arcade without the tightening, and passes with it, and on Cabinet either way. (ADR-084's
+lesson, ninth time.)
+
+**Also found: a toggle pressed once per skin.** The editor test pressed Hold, Mono, Snap and
+Wheels once in each skin's pass. With two skins they ended where they began; with three, Hold was
+left latched and the keyboard drawer's checks, much later in the same program, failed. Each pass
+now presses them back.
+
+**Then the owner's tweak (same day): narrower oscillators, a wider Mix, OSC 2's selector centred.**
+- **The painting's top row is RE-CUT by `generate.py`** (`dark_arcade_top_row`): OSC 1 292 → ~200
+  pixels, OSC 2 281 → ~215, Mix takes the rest (486 → ~640); Filter and Voice, the header and the
+  envelopes untouched (the band is y 103–282, gutter to gutter). The shrinking panels are CUT, not
+  resized: the hatching is diagonal, so resizing changed its spacing and a wide cross-fade blurred
+  it, both showing as light vertical stripes. The cut's width and place are searched (±10 pixels)
+  for the columns that match either side across the WHOLE panel height — matching the interior
+  alone left a step in the shaded header strip — and blended over 8 pixels. Mix, which grows, is
+  stretched, which showed no seam. Rectangles re-measured after.
+- **`centred` in the desktop layout never centred**: two flexible spaces with nothing making them
+  equal, so one took all the slack. Invisible in Studio (2 points) and Cabinet (none); 34 points
+  in Dark Arcade's wide OSC 2. The spaces are equal now — which moves **Studio's** OSC 2 selector
+  2 points right, the one change to another skin, and a correct one.
+
+**Consequences.** Not in a release yet: the README and release notes describe 1.0.0 and do not
+mention it. The painting is 1586×992, so its 2× file is an upscale — softer on a Retina screen
+than Cabinet's; a full-size original from the owner would be a file swap (`generate.py`), and a
+re-measure only if a panel moved. The first file was a mockup with controls painted in and was
+replaced the same afternoon.

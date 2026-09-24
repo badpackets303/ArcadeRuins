@@ -5,6 +5,14 @@ Audio Unit and standalone, on Windows, macOS and Linux (its version is `project(
 `CMakeLists.txt`). **Arcade Ruins Classic** is the Mac app and its AUv3, with Synth One's own iPad
 interface (`MARKETING_VERSION` in `project.yml`). Same engine, same 150 parameters, same presets.
 
+## Arcade Ruins 1.1.0 (Windows · macOS · Linux) — not yet released
+
+- **A third skin, Dark Arcade** — for anyone who finds Cabinet a lot to look at: the same painted
+  header and framed sections on charcoal, in one orange, with no cabinet and no neon. Settings ▸
+  Dark Arcade; it changes at once, and the sound is the same in every skin. Cabinet is still what
+  a new instance opens in.
+- Studio: OSC 2's wave selector is centred in its panel (it sat two points left).
+
 ## Arcade Ruins 1.0.0 (Windows · macOS · Linux) — 2026-09-22
 
 The first release of the cross-platform instrument. The sound is Classic's exactly: twenty factory

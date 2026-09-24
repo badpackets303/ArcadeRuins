@@ -267,7 +267,11 @@ final class SkinTests: XCTestCase {
     }
 
     func testTheChoiceListsCabinetAndAStoredNeonRuinsOpensIt() {
-        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .cabinet], "Arcade went at P7-7; Cabinet replaced Neon Ruins at P7-10")
+        XCTAssertEqual(S1SkinChoice.allCases, [.studio, .cabinet, .darkArcade], "Arcade went at P7-7; Cabinet replaced Neon Ruins at P7-10; Dark Arcade 2026-09-24")
+        // Dark Arcade is measured here for the plugin and not offered by Classic, which stays as it shipped
+        XCTAssertEqual(S1SkinChoice.offered, [.studio, .cabinet])
+        S1Preferences.store.set("darkArcade", forKey: S1SkinChoice.defaultsKey)
+        XCTAssertEqual(S1SkinChoice.chosen, S1SkinChoice.default, "Classic never opens in a skin it does not list")
         S1SkinChoice.choose(.cabinet)
         XCTAssertEqual(S1SkinChoice.chosen, .cabinet)
         XCTAssertEqual(S1SkinChoice.cabinet.rawValue, "cabinet", "the launch argument and the default's value")
@@ -279,10 +283,22 @@ final class SkinTests: XCTestCase {
     // MARK: - Cabinet: the owner's painted window (P7-9, ADR-059)
 
     func testCabinetPinsEverySectionToItsPaintedFrameAndKeepsEveryControl() throws {
+        try assertPinsEverySectionAndKeepsEveryControl(S1CabinetSkin())
+    }
+
+    /// 2026-09-24: the plugin's calmer painting, held to everything Cabinet is.
+    func testDarkArcadePinsEverySectionToItsPaintedFrameAndKeepsEveryControl() throws {
+        try assertPinsEverySectionAndKeepsEveryControl(S1DarkArcadeSkin())
+        let template = try XCTUnwrap(S1DarkArcadeSkin().template)
+        XCTAssertNil(template.scope, "no painted screen")
+        XCTAssertNil(template.joystick)
+        XCTAssertNil(template.power)
+    }
+
+    private func assertPinsEverySectionAndKeepsEveryControl(_ skin: S1Skin, file: StaticString = #filePath, line line_: UInt = #line) throws {
         let (_, studio) = try makeDesktop(skin: S1StudioSkin())
         let studioKnobs = studio.sections.mapValues { views(of: Knob.self, under: $0).count }
 
-        let skin = S1CabinetSkin()
         let template = try XCTUnwrap(skin.template)
         XCTAssertNotNil(UIImage.synthOne(template.imageName), "the painting is an asset, generated from the owner's template")
         let (manager, layout) = try makeDesktop(skin: skin)
@@ -304,6 +320,17 @@ final class SkinTests: XCTestCase {
             for knob in views(of: Knob.self, under: section) {
                 XCTAssertTrue(section.bounds.insetBy(dx: -0.5, dy: -0.5).contains(knob.convert(knob.bounds, to: section)), "\(name)")
                 XCTAssertGreaterThan(knob.bounds.width, 20, name)
+            }
+            // …nor a knob's title and value lines: Dark Arcade's shorter top row first SQUEEZED
+            // them — a value line 2 points tall, inside the frame and unreadable — while every
+            // knob still fitted (2026-09-24). So: each keeps the height its text needs.
+            for cell in views(of: S1ControlCell.self, under: section) {
+                for text in [cell.titleLabel, cell.valueLabel] where !text.isHidden && text.superview != nil {
+                    XCTAssertTrue(section.bounds.insetBy(dx: -0.5, dy: -0.5).contains(text.convert(text.bounds, to: section)),
+                                  "\(name): \(cell.titleLabel.text ?? "?") \(text === cell.titleLabel ? "title" : "value") inside", file: file, line: line_)
+                    XCTAssertGreaterThanOrEqual(text.bounds.height, text.font.lineHeight - 0.5,
+                                                "\(name): \(cell.titleLabel.text ?? "?") \(text === cell.titleLabel ? "title" : "value") squeezed", file: file, line: line_)
+                }
             }
         }
         XCTAssertTrue(layout.toolbar.isHidden)

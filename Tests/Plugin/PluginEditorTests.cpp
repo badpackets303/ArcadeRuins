@@ -62,8 +62,8 @@ int main() {
     juce::AudioBuffer<float> audio(2, 512);
     juce::MidiBuffer midi;
 
-    // MARK: both skins build, at the design size, with every control of the specification
-    for (const char *skinKey : { "studio", "cabinet" }) {
+    // MARK: every skin builds, at the design size, with every control of the specification
+    for (const char *skinKey : { "studio", "cabinet", "darkArcade" }) {
         S1PluginEditor editor(processor, skinKey);
         const std::string name = std::string(skinKey) + ": ";
         check(editor.getWidth() == 1440 && editor.getHeight() == 900 && editor.skin().key == skinKey, name + "the editor opens at the design size", editor.getWidth());
@@ -106,6 +106,10 @@ int main() {
         for (const char *item : { "button.Panic", "button.Save", "button.Hold", "button.Mono", "button.Snap", "button.Wheels", "button.Previous preset", "button.Next preset", "dice", "octave", "tuning" }) {
             if (!editor.pressItem(item)) { check(false, name + "the item " + item + " is there to press", 0); }
         }
+        // Hold, Mono, Snap and Wheels are toggles: pressed once per skin they were left latched
+        // whenever the number of skins was odd (three since Dark Arcade), and the drawer's checks
+        // below found Hold on. Pressed again, each skin leaves them as it found them.
+        for (const char *toggle : { "button.Hold", "button.Mono", "button.Snap", "button.Wheels" }) { editor.pressItem(toggle); }
         check(editor.pressItem("button.About") && !editor.isShowingAllParameters(), name + "About opens its own card", 1);
         check(!editor.pressItem("button.MIDI Learn") && !editor.pressItem("record"), name + "MIDI learn (ADR-056) and the recorder are not part of this interface", 0);
     }
@@ -727,7 +731,7 @@ int main() {
                 for (juce::Component *child : component->getChildren()) { queue.push_back(child); }
             }
         }
-        check(found == 2 && lit == 1, "the card holds a button per skin, with the one in use lit", found);
+        check(found == 3 && lit == 1, "the card holds a button per skin (Cabinet, Dark Arcade, Studio), with the one in use lit", found);
         editor.showSettings(false);
 
         const std::string was = editor.skin().key;

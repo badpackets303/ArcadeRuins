@@ -5,7 +5,7 @@
 // banks, so it is given a folder of its own under the system's temporary folder — the plugin's
 // real one is the OWNER'S.
 //
-//   EditorSnapshot <studio|cabinet> <out.png> [--program "<Bank: Name>"] [--scale 2] [--presets] [--tunings] [--linked-face] [--lean <points>]
+//   EditorSnapshot <studio|cabinet|darkArcade> <out.png> [--program "<Bank: Name>"] [--scale 2] [--presets] [--tunings] [--linked-face] [--lean <points>]
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>

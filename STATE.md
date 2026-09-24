@@ -2,6 +2,42 @@
 
 > Update this at the end of every session. It is the first thing the next session reads.
 
+## ▶ NEWEST (2026-09-24) — Dark Arcade, a third skin; and two things left open
+
+**Dark Arcade (ADR-100) — built, verified on macOS, not released.** The owner's calmer painting
+as a third skin, **Arcade Ruins (the plugin) only**, Cabinet still the default, on the owner's
+CLEAN painting (`Scripts/branding/source/dark-arcade.png`, their second file of the day — the
+first was a mockup with controls painted in). Its header has no painted buttons, so the plugin
+draws them (`template.paintedButtons`). Installed in `~/Library/Audio/Plug-Ins/Components` for the
+owner to try in Logic. Verified here: ctest **44/44** (the new
+`EditorSnapshotDarkArcade` among them), Steinberg's validator **537/537**, pluginval strictness 10
+**SUCCESS**, and the Xcode suite **344 run, 342 pass** — the two failures are Xcode 27's, not
+this work's (below). **Owed:** Linux
+(`Scripts/validate-linux.sh`) and Windows (`Scripts\validate-windows.ps1`) for this commit; the
+owner's eye on it in a host; README/release notes when it ships.
+
+**Open, the owner's to decide:**
+- **Xcode 27 refuses Classic's macOS 11 deployment target** (CLAUDE.md gotcha): every Mac build
+  fails until `project.yml` is raised, which changes Classic's minimum macOS. Tests and the spec
+  writer run with `IPHONEOS_DEPLOYMENT_TARGET=15.0` on the command line meanwhile.
+- **Xcode 27's UIKit breaks an upstream line in Classic:** `WheelSettingsViewController.swift:46`
+  labels `modWheelSegment.subviews[2]`, a private subview a segmented control no longer has when
+  the view loads — `NSRangeException`, so the mod-wheel settings popover would CRASH in a Classic
+  built with Xcode 27 (0.5 as shipped was built before it). It fails `MacIdiomControlTests` and
+  `TextInputAppearanceTests`, which load every scene. A `PORT FIX` guarding the count is the fix;
+  not made, because it is a Classic change.
+- **The public repository's RealtimeSanitizer job fails** (the emails the owner was getting —
+  2026-09-23). Three findings: two engine tests rendered before making their voices (fixed in the
+  working tree, uncommitted, unverified), `processBlock` reporting engine-driven parameter changes
+  through JUCE's `sendValueChangedMessageToListeners` (a lock on the audio thread — exempt with an
+  ADR, or redesign; the owner has not chosen), and **the local rtsan stage was blind**
+  (`--output-on-failure` never shows a finding that does not fail its test; now `--verbose`,
+  uncommitted). **ADR-079's "RealtimeSanitizer clean" was produced by that blind check.** The
+  private repository's workflows were DISABLED by the owner (`gh workflow enable` restores them).
+- **"The last used preset is not loading when using the AU in Logic"** (2026-09-24, JUCE AU) —
+  investigation stopped at the owner's word; nothing changed. A saved state carries the preset and
+  its name by design; a new instance deliberately starts at Init.
+
 ## ▶ RESUME HERE — the cross-platform track (rewritten 2026-09-21 after X3-8)
 
 **Where things stand.** Branch **`main`**, clean, pushed to the private origin. The cross-platform
